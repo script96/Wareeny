@@ -1,4 +1,4 @@
-# Warene (وارين) 👁️
+# Warene (واريني) 👁️
 
 Warene is an AI-powered assistive application designed for visually impaired users in Egypt. It uses real-time object detection and Arabic Text-to-Speech (TTS) to describe the environment.
 
