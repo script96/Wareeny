@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor Blind User as Blind User
+    participant VH as Voice Handler
+    participant App as Mobile App
+    participant GPS as GPS Module
+    participant Audio as Audio Engine
+
+    Blind User-->>VH: Voice Command
+    VH-->>App: Parse Command
+    App-->>GPS: Request Route
+    GPS-->>App: Route (Steps, Path)
+    App-->>Audio: Send Next Step to TTS
+    Audio-->>VH: Audio Output
+    VH-->>Blind User: Listen
+
+    loop Repeat Until Destination
+        GPS-->>App: GPS Position
+        App-->>GPS: Send Position
+        GPS-->>App: Updated Step
+        App-->>Audio: New Step to TTS
+        Audio-->>VH: Audio Output
+        VH-->>Blind User: Listen
+    end

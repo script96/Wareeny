@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    title Feature: Danger Mode (Hazard Detection)
+
+    actor Blind User
+    participant Cam as Camera Sensor
+    participant AI as Object Detection
+    participant Safety as Safety Module
+    participant Audio as Feedback Service
+
+    Note over Cam, Audio: System is scanning in background...
+
+    loop Every 200ms
+        Cam->>AI: Send Live Frame
+        AI->>Safety: Result: [Label: "Stairs", Confidence: 95%]
+        
+        opt Hazard Detected
+            Safety->>Safety: Check Hazard Level (High)
+            
+            %% The Critical Interrupt
+            Safety-->>Audio: INTERRUPT: Play "Stairs Alert"
+            
+            par Immediate Feedback
+                Audio->>Blind User: "Warning! Stairs Ahead!"
+                Audio->>Blind User: [Strong Continuous Vibration]
+            end
+        end
+    end

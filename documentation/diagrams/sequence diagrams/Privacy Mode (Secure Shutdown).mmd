@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    title Feature: Privacy Mode (Secure Shutdown)
+
+    actor Blind User
+    participant App as App UI / Mic
+    participant Mgr as Mode Manager
+    participant Cloud as Cloud/Storage
+    participant Cam as Camera Hardware
+
+    %% Step 1: Blind User Command
+    Blind User->>App: Toggle "Privacy Mode" ON
+    App->>Mgr: Event: PRIVACY_ENABLED
+
+    %% Step 2: Locking Down
+    activate Mgr
+    Note right of Mgr: Critical: Stop all data collection
+
+    Mgr->>Cam: Command: STOP_STREAM
+    Cam-->>Mgr: Ack: Stream Stopped
+
+    Mgr->>Cloud: Command: DISABLE_LOGGING
+    Cloud-->>Mgr: Ack: Logging Paused
+    deactivate Mgr
+
+    %% Step 3: Confirmation
+    Mgr->>App: Update UI (Show Lock Icon)
+    App-->>Blind User: "Privacy Mode Active. Camera blocked."

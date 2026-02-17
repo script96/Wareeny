@@ -1,0 +1,63 @@
+graph LR
+    Blind User((Blind User))
+    Contact((Emergency Contact))
+
+    subgraph "Assistive AI System"
+        direction TB
+        
+        subgraph "Indoor Module"
+            UC1(Scan Indoor Environment)
+            UC2(Detect Object in Hand)
+            UC3(Identify Product Brand)
+            UC4(Read Currency Denomination)
+            UC5(Activate Privacy Mode)
+            UC6(Recognize Saved Item)
+        end
+
+        subgraph "Outdoor Module"
+            UC7(Monitor Outdoor Obstacles)
+            UC8(Search for Outdoor Items)
+            UC9(Scan Signage and Billboards)
+            UC10(Check Traffic Light Status)
+        end
+
+        subgraph "OCR Module"
+            UC11(Read Printed Document)
+            UC12(Enter QA Mode)
+            UC13(Monitor for Danger Words)
+        end
+
+        subgraph "Safety and Feedback"
+            UC14(Trigger Danger Mode)
+            UC15(Place Emergency Auto-Call)
+            UC17(Transmit Real-Time Location)
+        end
+    end
+
+    %% Blind User Interactions
+    Blind User --- UC1
+    Blind User --- UC2
+    Blind User --- UC3
+    Blind User --- UC4
+    Blind User --- UC5
+    Blind User --- UC6
+    
+    Blind User --- UC7
+    Blind User --- UC8
+    Blind User --- UC9
+    Blind User --- UC10
+
+    Blind User --- UC11
+    Blind User --- UC13
+    Blind User --- UC14
+
+    %% System Relationships
+    UC12 -.->|extend| UC11
+    
+    %% Danger Mode Logic
+    UC14 -.->|include| UC15
+    UC14 -.->|include| UC17
+    
+    %% Outputs to Contact
+    UC15 --- Contact
+    UC17 --- Contact

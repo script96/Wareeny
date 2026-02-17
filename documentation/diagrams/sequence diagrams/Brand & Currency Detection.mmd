@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    title Feature: Brand & Currency Detection
+    
+    actor Blind User
+    participant Cam as Camera
+    participant AI as AI Classifier
+    participant TTS as Feedback Service
+
+    Blind User->>Cam: Points at Money/Product
+    Cam->>AI: Send Frame
+    
+    alt Currency Mode
+        AI->>AI: Run Currency Model (Identify Bill)
+        AI-->>TTS: "50 Dollar Bill"
+    else Brand Mode
+        AI->>AI: Run Logo Detection
+        AI-->>TTS: "Starbucks Coffee"
+    end
+    
+    TTS->>Blind User: "50 Dollars"

@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    title Feature: Traffic Light Status
+    
+    actor Blind User
+    participant Cam as Camera
+    participant AI as Color Analyzer
+    participant TTS as Feedback Service
+
+    Blind User->>Cam: Points at Intersection
+    Cam->>AI: Send Frame
+    
+    activate AI
+    AI->>AI: Detect Traffic Light Object
+    AI->>AI: Analyze Color (Histogram/Pixel Logic)
+    
+    alt Color is Red
+        AI-->>TTS: Status: RED (Don't Cross)
+        TTS->>Blind User: "Light is Red. Stop."
+    else Color is Green
+        AI-->>TTS: Status: GREEN
+        TTS->>Blind User: "Light is Green."
+    end
+    deactivate AI

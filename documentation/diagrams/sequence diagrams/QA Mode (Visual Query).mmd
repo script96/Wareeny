@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    title Feature: QA Mode (Visual Query)
+
+    actor Blind User
+    participant Mic as Microphone
+    participant Parser as Command Parser
+    participant Mgr as Mode Manager
+    participant AI as AI Engine
+    participant TTS as Feedback Service
+
+    %% Step 1: Blind User asks a question
+    Blind User->>Mic: "What is in my hand?"
+    Mic->>Parser: Audio Stream
+    Parser-->>Mgr: Intent: QA_IDENTIFY_OBJECT
+
+    %% Step 2: System takes control to see
+    Mgr->>Mgr: Switch State -> QA_PROCESSING
+    Mgr->>AI: Command: Capture & Analyze Frame
+
+    activate AI
+    AI->>AI: Process Image (YOLO + OCR)
+    AI-->>Mgr: Return: "Medicine Bottle, 500mg"
+    deactivate AI
+
+    %% Step 3: System answers
+    Mgr->>TTS: Speak("It is a Medicine Bottle, 500mg")
+    TTS->>Blind User: "It is a Medicine Bottle, 500mg"

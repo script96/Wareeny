@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    title Feature: Indoor Object Detection & Distance
+    
+    actor Blind User
+    participant Cam as Camera
+    participant AI as Vision Engine
+    participant Depth as Distance Calc
+    participant TTS as Feedback Service
+
+    Note over Cam, TTS: Continuous Scanning Mode
+
+    loop Every Frame
+        Cam->>AI: Stream RGB Frame
+        AI->>AI: Detect Objects (YOLO)
+        AI-->>Depth: Bounding Box Coordinates
+        
+        activate Depth
+        Depth->>Depth: Calculate Distance (e.g., based on box height)
+        Depth-->>TTS: Object: "Chair", Distance: "2 meters"
+        deactivate Depth
+        
+        TTS->>Blind User: "Chair, 2 meters ahead"
+    end

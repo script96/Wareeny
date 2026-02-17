@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    title Feature: Danger Word Alerts
+    
+    actor Blind User
+    participant Cam as Camera
+    participant OCR as OCR Engine
+    participant Logic as Keyword Matcher
+    participant Audio as Audio Service
+
+    Cam->>OCR: Stream Frame
+    OCR->>Logic: Raw Text: "Welcome to... CAUTION WET FLOOR... the store"
+    
+    activate Logic
+    Logic->>Logic: Check vs Danger List ["Danger", "Caution", "Stop"]
+    
+    opt Keyword Found
+        Logic-->>Audio: Trigger Warning: "WET FLOOR"
+        Audio->>Blind User: "Alert! Wet Floor Detected!"
+    end
+    deactivate Logic

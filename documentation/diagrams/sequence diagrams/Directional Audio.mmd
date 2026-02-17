@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    title Feature: Directional Audio
+    
+    actor Blind User
+    participant AI as Object Detection
+    participant Logic as Audio Spatializer
+    participant Speaker as Headphones
+
+    AI->>Logic: Object: "Door", BoundingBox: [Left: 10, Right: 50]
+    
+    activate Logic
+    Logic->>Logic: Calculate Center X (Left side of screen)
+    Logic->>Logic: Map X to Stereo Pan (-0.8 Left)
+    Logic-->>Speaker: Play "Door" (Pan: Left)
+    deactivate Logic
+    
+    Speaker->>Blind User:  "Door" (Heard in Left Ear)

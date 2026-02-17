@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    title Feature: In-Hand Object Detection
+    
+    actor Blind User
+    participant Cam as Camera
+    participant Pre as Image Pre-processor
+    participant AI as AI Classifier
+    participant TTS as Feedback Service
+
+    Blind User->>Cam: Holds object in front of camera
+    Cam->>Pre: Send Full Frame
+    
+    activate Pre
+    Pre->>Pre: Crop Center 40% (Focus Area)
+    Pre-->>AI: Send Cropped Image
+    deactivate Pre
+    
+    activate AI
+    AI->>AI: Classify Object (MobileNet/YOLO)
+    AI-->>TTS: Result: "Soda Can"
+    deactivate AI
+    
+    TTS->>Blind User: "Soda Can"

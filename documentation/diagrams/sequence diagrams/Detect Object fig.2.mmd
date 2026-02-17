@@ -1,0 +1,18 @@
+sequenceDiagram
+    actor Blind User as Blind User
+    participant VH as Voice Handler
+    participant App as Mobile App
+    participant Cam as Camera Module
+    participant OCR as OCR Server
+    participant Audio as Audio Engine
+
+    Blind User-->>VH: Voice Command
+    VH-->>App: Parse Command
+    App-->>Cam: Activate
+    Cam-->>OCR: Capture Frame
+    Cam-->>App: Frame
+    App-->>OCR: Send Frame
+    OCR-->>App: Detected Objects
+    App-->>Audio: Send Results
+    Audio-->>VH: Audio Output
+    VH-->>Blind User: Listen

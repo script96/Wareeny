@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    title Feature: Outdoor Reader (Signs)
+    
+    actor Blind User
+    participant Cam as Camera
+    participant OCR as OCR Engine
+    participant TTS as Feedback Service
+
+    Blind User->>Cam: Points at Shop Sign
+    Cam->>OCR: Send Frame
+    
+    activate OCR
+    OCR->>OCR: Detect Text Blocks
+    OCR->>OCR: Filter Small Text (Noise)
+    OCR-->>TTS: Text: "Pharmacy"
+    deactivate OCR
+    
+    TTS->>Blind User: "Pharmacy"

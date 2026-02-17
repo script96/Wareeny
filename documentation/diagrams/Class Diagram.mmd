@@ -1,0 +1,158 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% 1. PRESENTATION & INPUT LAYER (TOP)
+    %% ==========================================
+    namespace Presentation_Layer {
+        class CameraHandler {
+            <<Input>>
+            -CameraController controller
+            -Size resolution
+            -Boolean isFlashOn
+            +startStream()
+            +captureFrame() : Image
+            +toggleFlash()
+        }
+
+        class VoiceHandler {
+            <<Input>>
+            -String recognitionLanguage
+            -Boolean isListening
+            +startListening()
+            +parseCommand() : Command
+        }
+        
+        class LocationService {
+            <<Input_Sensor>>
+            -Coordinates currentLocation
+            -Boolean isTracking
+            +getCurrentCoordinates() : Coordinates
+            +calculateDistance(targetLoc) : Double
+            +getDirections(target) : Path
+        }
+
+        class VisualUI {
+            <<Output>>
+            -Color overlayColor
+            -Double boxThickness
+            +showOverlay(rect)
+            +showDangerPopup()
+        }
+    }
+
+    %% ==========================================
+    %% 2. APPLICATION LOGIC LAYER (MIDDLE)
+    %% ==========================================
+    namespace Application_Logic {
+        class LLM {
+            <<Cloud AI>>
+            -String apiKey
+            -String apiEndpoint
+            -List~Message~ chatHistory
+            +Generate_description(image) : String
+            +Answer_Question(query) : String
+        }
+
+        class CoreController {
+            -Mode currentMode
+            -AppState state
+            +switchMode(Mode)
+            +checkPermissions() : Boolean
+        }
+
+        class ObjectDetector {
+            -String modelPath
+            -Float confidenceThreshold
+            -List~String~ targetLabels
+            +indoorNavigation()
+            +whatIsInMyHand()
+            +obstacleAvoidance()
+        }
+
+        class OCRService {
+            -String targetLanguage
+            -Boolean privacyModeEnabled
+            -List~String~ redactedWords
+            +readDocument()
+            +identifyCurrency()
+            +enablePrivacyMode()
+        }
+
+        class SafetySystem {
+            -String emergencyContactNumber
+            -Boolean dangerModeActive
+            +triggerEmergencyCall()
+            +shareLiveLocation()
+        }
+
+        class AudioEngine {
+            <<Output>>
+            -Float speechRate
+            -Float volumeLevel
+            -String voiceType
+            +speak(text)
+            +vibrate()
+            +playAlarm()
+        }
+    }
+
+    %% ==========================================
+    %% 3. DATA LAYER (BOTTOM)
+    %% ==========================================
+    namespace Data_Layer {
+        class DataManager {
+            -List~Contact~ contacts
+            -List~Log~ itemLog
+            +getContact() : Contact
+            +saveLog(Log)
+        }
+
+        class LocalStorage {
+            -String cachePath
+            -Map Blind UserPreferences
+            +loadOfflineModel(name) : File
+            +savePreference(key, value)
+        }
+    }
+
+    %% ==========================================
+    %% CONNECTIONS
+    %% ==========================================
+
+    %% Inputs -> Logic
+    CameraHandler --> ObjectDetector :     'Video_Frame
+    CameraHandler --> OCRService : Video_Frame
+    VoiceHandler --> CoreController : Voice_Cmd
+    
+    %% GPS Connections
+    LocationService --> ObjectDetector : GPS_Coords
+    LocationService --> SafetySystem : Live_Location
+
+    %% UI Connections
+    CameraHandler --> VisualUI : Live_Preview
+
+    %% Core Logic Control
+    CoreController --> ObjectDetector : Activate
+    CoreController --> OCRService : Activate
+    CoreController --> SafetySystem : Monitor
+
+    %% LLM Integration
+    ObjectDetector --> LLM : Image_Context
+    OCRService --> LLM : Extracted_Text
+    LLM --> AudioEngine : AI_Response
+
+    %% Logic -> Outputs
+    ObjectDetector --> AudioEngine : Speak_Object
+    OCRService --> AudioEngine : Read_Text
+    SafetySystem --> AudioEngine : Alarm_Sound
+
+    ObjectDetector --> VisualUI : Draw_Box
+    OCRService --> VisualUI : Highlight_Text
+    SafetySystem --> VisualUI : Popup_Alert
+
+    %% Data Connections
+    SafetySystem --> DataManager : Get_Contact
+    ObjectDetector --> LocalStorage : Load_Model
+    OCRService --> LocalStorage : Load_Model
+    DataManager --> LocalStorage : Save_Data

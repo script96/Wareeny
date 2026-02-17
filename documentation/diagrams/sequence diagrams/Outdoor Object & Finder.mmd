@@ -1,0 +1,20 @@
+sequenceDiagram
+    autonumber
+    title Feature: Outdoor Object & Finder
+    
+    actor Blind User
+    participant Sensors as Cam/GPS
+    participant AI as AI Engine
+    participant Map as Map Service
+    participant TTS as Feedback Service
+
+    par Visual Detection
+        Sensors->>AI: Camera Frame
+        AI->>TTS: Detect "Car" / "Tree"
+    and Location Finder
+        Sensors->>Map: Current GPS Coords
+        Map->>Map: Find nearest "Bench"
+        Map-->>TTS: "Bench is 10 meters North"
+    end
+    
+    TTS->>Blind User: "Car ahead... Bench is 10 meters North"

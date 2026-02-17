@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    title Feature: Emergency Auto Call & Location
+    
+    actor Blind User
+    participant App as App Logic
+    participant GPS as Location Service
+    participant Dialer as Phone/GSM
+    participant SMS as SMS Service
+    actor Contact as Emergency Contact
+
+    Blind User->>App: Shakes Phone (Panic Gesture)
+    App->>GPS: Get Current Location
+    GPS-->>App: Location (Lat, Long)
+    App->>Dialer: Initiate Emergency Call
+    Dialer-->>App: Call Connected
+    App->>SMS: Send Location SMS
+    SMS-->>Contact: "Emergency! Location: [Lat, Long]"
+    App-->>Blind User: "Emergency Call & SMS Sent"
