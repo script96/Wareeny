@@ -1,99 +1,54 @@
-import 'dart:isolate';
+// Warene — YoloDetector wrapper for flutter_vision
+//
+// Uses yoloOnImage() with JPEG bytes to bypass flutter_vision's
+// broken YUV stride-padding handling in yoloOnFrame().
+// Center-crops portrait images to square before inference
+// to avoid aspect-ratio distortion that kills accuracy.
+
+import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:camera/camera.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
+import 'dart:ui' as ui;
+import 'package:flutter_vision/flutter_vision.dart';
 
-// ── Serializable payload sent to the preprocessing isolate ──────────
-class _PreprocessRequest {
-  final Uint8List yBytes;
-  final Uint8List uBytes;
-  final Uint8List vBytes;
-  final int imgWidth;
-  final int imgHeight;
-  final int yRowStride;
-  final int uvRowStride;
-  final int uvPixelStride;
+// ── Detection result ────────────────────────────────────────────────
+class Detection {
+  final String label;
+  final String arabicLabel;
+  final double confidence;
+  final List<double> bbox;  // [x1, y1, x2, y2] in ORIGINAL image coords
 
-  _PreprocessRequest({
-    required this.yBytes,
-    required this.uBytes,
-    required this.vBytes,
-    required this.imgWidth,
-    required this.imgHeight,
-    required this.yRowStride,
-    required this.uvRowStride,
-    required this.uvPixelStride,
+  Detection({
+    required this.label,
+    required this.arabicLabel,
+    required this.confidence,
+    required this.bbox,
   });
+
+  @override
+  String toString() =>
+      'Detection($arabicLabel / $label, ${(confidence * 100).toStringAsFixed(0)}%)';
 }
 
-// ── Top-level function — runs inside an isolate ─────────────────────
-Float32List _preprocessYuv420Isolate(_PreprocessRequest req) {
-  const int size = 640;
-  final int srcW = req.imgWidth;
-  final int srcH = req.imgHeight;
+class DetectionResult {
+  final List<Detection> detections;
+  final int imageWidth;   // original image width
+  final int imageHeight;  // original image height
 
-  final yBytes = req.yBytes;
-  final uBytes = req.uBytes;
-  final vBytes = req.vBytes;
-  final int yRow = req.yRowStride;
-  final int uvRow = req.uvRowStride;
-  final int uvPx = req.uvPixelStride;
-
-  final Float32List out = Float32List(1 * size * size * 3);
-
-  for (int y = 0; y < size; y++) {
-    final int srcY = (y * srcH) ~/ size;
-    final int yRowOffset = srcY * yRow;
-    final int uvRowOffset = (srcY >> 1) * uvRow;
-
-    for (int x = 0; x < size; x++) {
-      final int srcX = (x * srcW) ~/ size;
-      final int uvColOffset = (srcX >> 1) * uvPx;
-
-      final int yVal = yBytes[yRowOffset + srcX];
-      final int uVal = uBytes[uvRowOffset + uvColOffset];
-      final int vVal = vBytes[uvRowOffset + uvColOffset];
-
-      int r = (yVal + 1.402 * (vVal - 128)).round();
-      int g = (yVal - 0.344136 * (uVal - 128) - 0.714136 * (vVal - 128)).round();
-      int b = (yVal + 1.772 * (uVal - 128)).round();
-
-      if (r < 0) r = 0; if (r > 255) r = 255;
-      if (g < 0) g = 0; if (g > 255) g = 255;
-      if (b < 0) b = 0; if (b > 255) b = 255;
-
-      final int idx = (y * size + x) * 3;
-      out[idx]     = r / 255.0;
-      out[idx + 1] = g / 255.0;
-      out[idx + 2] = b / 255.0;
-    }
-  }
-
-  return out;
+  DetectionResult({
+    required this.detections,
+    required this.imageWidth,
+    required this.imageHeight,
+  });
 }
 
 // ── Main detector class ─────────────────────────────────────────────
 class YoloDetector {
-  Interpreter? _interpreter;
+  final FlutterVision _vision = FlutterVision();
   bool _isReady = false;
 
   bool get isReady => _isReady;
-
-  static const List<String> classNames = [
-    'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train',
-    'truck', 'boat', 'traffic light', 'fire hydrant', 'stop sign',
-    'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse', 'sheep',
-    'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack', 'umbrella',
-    'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard',
-    'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard',
-    'surfboard', 'tennis racket', 'bottle', 'wine glass', 'cup', 'fork',
-    'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich', 'orange',
-    'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair',
-    'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv',
-    'laptop', 'mouse', 'remote', 'keyboard', 'cell phone', 'microwave',
-    'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase',
-    'scissors', 'teddy bear', 'hair drier', 'toothbrush',
-  ];
 
   static const Map<String, String> arabicNames = {
     'person': 'شخص',
@@ -179,169 +134,172 @@ class YoloDetector {
   };
 
   Future<void> loadModel() async {
-    print('🔵 Starting model load...');
+    print('🔵 Loading YOLOv8 model via flutter_vision...');
     try {
-      final options = InterpreterOptions()..threads = 2;
-      _interpreter = await Interpreter.fromAsset(
-        'assets/models/yolov8n.tflite',
-        options: options,
+      await _vision.loadYoloModel(
+        labels: 'assets/models/labels.txt',
+        modelPath: 'assets/models/yolov8n.tflite',
+        modelVersion: 'yolov8',
+        quantization: false,
+        numThreads: 4,
+        useGpu: false,
       );
       _isReady = true;
       print('✅ YOLOv8 model loaded');
-      print('✅ Input:  ${_interpreter!.getInputTensor(0).shape}');
-      print('✅ Output: ${_interpreter!.getOutputTensor(0).shape}');
     } catch (e) {
       print('❌ Model load error: $e');
       _isReady = false;
     }
   }
 
-  Future<List<Detection>> detect(CameraImage image) async {
-    if (!_isReady || _interpreter == null) return [];
+  /// Center-crop image to square (preserves aspect ratio for model).
+  ///
+  /// A 720x1280 portrait image squished to 640x640 distorts objects
+  /// and kills accuracy. Center-cropping to 720x720 first means the
+  /// model only needs to mildly downscale — much better detection.
+  Future<Uint8List?> _centerCropToSquare(Uint8List imageBytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(imageBytes);
+      final frame = await codec.getNextFrame();
+      final srcImage = frame.image;
+      final w = srcImage.width;
+      final h = srcImage.height;
+
+      // Already square (or close enough)
+      if ((w - h).abs() < 10) {
+        srcImage.dispose();
+        codec.dispose();
+        return null; // signal: use original
+      }
+
+      final side = math.min(w, h);
+      final cropX = (w - side) / 2;
+      final cropY = (h - side) / 2;
+
+      // Draw center crop to new canvas
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      canvas.drawImageRect(
+        srcImage,
+        ui.Rect.fromLTWH(cropX, cropY, side.toDouble(), side.toDouble()),
+        ui.Rect.fromLTWH(0, 0, side.toDouble(), side.toDouble()),
+        ui.Paint(),
+      );
+      final picture = recorder.endRecording();
+      final croppedImage = await picture.toImage(side, side);
+
+      // Encode as PNG
+      final byteData =
+          await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+
+      srcImage.dispose();
+      croppedImage.dispose();
+      picture.dispose();
+      codec.dispose();
+
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      print('⚠️ Center crop failed: $e');
+      return null;
+    }
+  }
+
+  /// Run YOLOv8 detection on a JPEG image file.
+  ///
+  /// Center-crops to square first for better accuracy,
+  /// then maps coordinates back to original image space.
+  Future<DetectionResult?> detectFromFile(String imagePath) async {
+    if (!_isReady) return null;
 
     try {
-      // 1. Copy plane bytes
-      final request = _PreprocessRequest(
-        yBytes: Uint8List.fromList(image.planes[0].bytes),
-        uBytes: Uint8List.fromList(image.planes[1].bytes),
-        vBytes: Uint8List.fromList(image.planes[2].bytes),
-        imgWidth: image.width,
-        imgHeight: image.height,
-        yRowStride: image.planes[0].bytesPerRow,
-        uvRowStride: image.planes[1].bytesPerRow,
-        uvPixelStride: image.planes[1].bytesPerPixel ?? 1,
+      final Uint8List originalBytes = await File(imagePath).readAsBytes();
+
+      // Get original image dimensions.
+      final origCodec = await ui.instantiateImageCodec(originalBytes);
+      final origFrame = await origCodec.getNextFrame();
+      final int origW = origFrame.image.width;
+      final int origH = origFrame.image.height;
+      origFrame.image.dispose();
+      origCodec.dispose();
+
+      // Center-crop to square for better accuracy.
+      final int side = math.min(origW, origH);
+      final double cropX = (origW - side) / 2;
+      final double cropY = (origH - side) / 2;
+
+      Uint8List inferenceBytes;
+      int inferenceW, inferenceH;
+
+      final cropped = await _centerCropToSquare(originalBytes);
+      if (cropped != null) {
+        inferenceBytes = cropped;
+        inferenceW = side;
+        inferenceH = side;
+        print('📷 Cropped ${origW}x$origH → ${side}x$side');
+      } else {
+        inferenceBytes = originalBytes;
+        inferenceW = origW;
+        inferenceH = origH;
+        print('📷 Image ${origW}x$origH (already square)');
+      }
+
+      // Run inference on the (cropped) image.
+      final results = await _vision.yoloOnImage(
+        bytesList: inferenceBytes,
+        imageHeight: inferenceH,
+        imageWidth: inferenceW,
+        iouThreshold: 0.4,
+        confThreshold: 0.25,
+        classThreshold: 0.25,
       );
 
-      // 2. Preprocess in background isolate
-      final Float32List preprocessed =
-          await Isolate.run(() => _preprocessYuv420Isolate(request));
+      print('🔍 Detections: ${results.length}');
 
-      // 3. Reshape to 4D list
-      const int size = 640;
-      final input = List.generate(
-        1,
-        (_) => List.generate(
-          size,
-          (y) => List.generate(
-            size,
-            (x) {
-              final int base = (y * size + x) * 3;
-              return [
-                preprocessed[base],
-                preprocessed[base + 1],
-                preprocessed[base + 2],
-              ];
-            },
-          ),
-        ),
+      if (results.isEmpty) {
+        return DetectionResult(
+          detections: [],
+          imageWidth: origW,
+          imageHeight: origH,
+        );
+      }
+
+      // Convert detections — map from cropped coords back to original.
+      final detections = results.map((result) {
+        final String tag = result['tag'] as String;
+        final List<dynamic> box = result['box'] as List<dynamic>;
+        final double confidence = (box[4] as num).toDouble();
+
+        // Coordinates are in cropped-image space.
+        // Add crop offset to get original-image coordinates.
+        final double x1 = (box[0] as num).toDouble() + cropX;
+        final double y1 = (box[1] as num).toDouble() + cropY;
+        final double x2 = (box[2] as num).toDouble() + cropX;
+        final double y2 = (box[3] as num).toDouble() + cropY;
+
+        return Detection(
+          label: tag,
+          arabicLabel: arabicNames[tag] ?? tag,
+          confidence: confidence,
+          bbox: [x1, y1, x2, y2],
+        );
+      }).toList();
+
+      detections.sort((a, b) => b.confidence.compareTo(a.confidence));
+
+      return DetectionResult(
+        detections: detections,
+        imageWidth: origW,
+        imageHeight: origH,
       );
-
-      // 4. Output buffer
-      final output = [
-        List.generate(84, (_) => List.filled(8400, 0.0)),
-      ];
-
-      // 5. Run inference
-      _interpreter!.run(input, output);
-
-      // 6. Parse output
-      return _parseOutput(output[0]);
     } catch (e) {
       print('❌ Detection error: $e');
-      return [];
+      return null;
     }
   }
 
-  List<Detection> _parseOutput(List<List<double>> output) {
-    const double confThreshold = 0.45;
-    final List<Detection> raw = [];
-
-    for (int i = 0; i < 8400; i++) {
-      double maxScore = 0;
-      int classId = 0;
-
-      for (int c = 4; c < 84; c++) {
-        if (output[c][i] > maxScore) {
-          maxScore = output[c][i];
-          classId = c - 4;
-        }
-      }
-
-      if (maxScore > confThreshold) {
-        raw.add(Detection(
-          classId: classId,
-          confidence: maxScore,
-          bbox: [output[0][i], output[1][i], output[2][i], output[3][i]],
-          label: classId < classNames.length
-              ? classNames[classId]
-              : 'unknown',
-          arabicLabel: classId < classNames.length
-              ? (arabicNames[classNames[classId]] ?? classNames[classId])
-              : 'شيء',
-        ));
-      }
-    }
-
-    raw.sort((a, b) => b.confidence.compareTo(a.confidence));
-    return _nms(raw, 0.5);
+  Future<void> dispose() async {
+    try {
+      await _vision.closeYoloModel();
+    } catch (_) {}
   }
-
-  List<Detection> _nms(List<Detection> dets, double iouThreshold) {
-    final List<Detection> keep = [];
-    for (final det in dets) {
-      bool suppressed = false;
-      for (final kept in keep) {
-        if (det.classId == kept.classId &&
-            _iou(det.bbox, kept.bbox) > iouThreshold) {
-          suppressed = true;
-          break;
-        }
-      }
-      if (!suppressed) keep.add(det);
-    }
-    return keep;
-  }
-
-  double _iou(List<double> a, List<double> b) {
-    final double ax1 = a[0] - a[2] / 2, ay1 = a[1] - a[3] / 2;
-    final double ax2 = a[0] + a[2] / 2, ay2 = a[1] + a[3] / 2;
-    final double bx1 = b[0] - b[2] / 2, by1 = b[1] - b[3] / 2;
-    final double bx2 = b[0] + b[2] / 2, by2 = b[1] + b[3] / 2;
-
-    final double ix1 = ax1 > bx1 ? ax1 : bx1;
-    final double iy1 = ay1 > by1 ? ay1 : by1;
-    final double ix2 = ax2 < bx2 ? ax2 : bx2;
-    final double iy2 = ay2 < by2 ? ay2 : by2;
-
-    final double iw = (ix2 - ix1) > 0 ? (ix2 - ix1) : 0;
-    final double ih = (iy2 - iy1) > 0 ? (iy2 - iy1) : 0;
-    final double inter = iw * ih;
-
-    final double aArea = a[2] * a[3];
-    final double bArea = b[2] * b[3];
-    final double union = aArea + bArea - inter;
-
-    return union > 0 ? inter / union : 0;
-  }
-
-  void dispose() {
-    _interpreter?.close();
-  }
-}
-
-// ── Detection result ────────────────────────────────────────────────
-class Detection {
-  final int classId;
-  final double confidence;
-  final List<double> bbox;
-  final String label;
-  final String arabicLabel;
-
-  Detection({
-    required this.classId,
-    required this.confidence,
-    required this.bbox,
-    required this.label,
-    required this.arabicLabel,
-  });
 }

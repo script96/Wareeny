@@ -1,5 +1,5 @@
 name: warene
-description: "A new Flutter project."
+description: "AI assistive app for visually impaired users in Egypt."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -15,8 +15,7 @@ dependencies:
   flutter_tts: ^4.0.2
   permission_handler: ^11.3.1
   wakelock_plus: ^1.2.8
-  tflite_flutter: ^0.11.0
-  image: ^4.0.17
+  flutter_vision: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -25,6 +24,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+
   assets:
-    - assets/models/
+    - assets/models/yolov8n.tflite
+    - assets/models/labels.txt
