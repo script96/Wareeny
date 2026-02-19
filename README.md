@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # وريني (Warene) — AI Assistive App for Visually Impaired Users
+=======
+# Warene (واريني) 👁️
+>>>>>>> 39ce32d4e57e5aef0878154c7b2b04474b3399c5
 
 **Warene** is a real-time AI-powered mobile application designed to assist visually impaired users in Egypt. It uses on-device object detection with **YOLOv8** to identify objects through the phone's camera and announces them in **Egyptian Arabic** with spatial direction feedback — telling the user *what* is around them, *where* it is, and *how far* away it is.
 
