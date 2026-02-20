@@ -264,7 +264,11 @@ class YoloDetector {
       }
 
       // Convert detections — map from cropped coords back to original.
-      final detections = results.map((result) {
+      // Also filter out tiny boxes (< 1% of image area) that are usually noise.
+      final double minBoxArea = origW * origH * 0.01;
+
+      final detections = <Detection>[];
+      for (final result in results) {
         final String tag = result['tag'] as String;
         final List<dynamic> box = result['box'] as List<dynamic>;
         final double confidence = (box[4] as num).toDouble();
@@ -276,13 +280,17 @@ class YoloDetector {
         final double x2 = (box[2] as num).toDouble() + cropX;
         final double y2 = (box[3] as num).toDouble() + cropY;
 
-        return Detection(
+        // Skip tiny boxes — likely noise or background patches.
+        final double boxArea = (x2 - x1).abs() * (y2 - y1).abs();
+        if (boxArea < minBoxArea) continue;
+
+        detections.add(Detection(
           label: tag,
           arabicLabel: arabicNames[tag] ?? tag,
           confidence: confidence,
           bbox: [x1, y1, x2, y2],
-        );
-      }).toList();
+        ));
+      }
 
       detections.sort((a, b) => b.confidence.compareTo(a.confidence));
 

@@ -9,11 +9,13 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'detector.dart';
+import 'gemini_service.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -114,9 +116,11 @@ class _CameraScreenState extends State<CameraScreen>
   CameraController? _controller;
   final FlutterTts _tts = FlutterTts();
   final YoloDetector _detector = YoloDetector();
+  final GeminiService _gemini = GeminiService();
 
   bool _isCameraReady = false;
   bool _isDetecting = false;
+  bool _isDescribing = false;
   String _statusText = 'Initializing...';
   String _lastSpoken = '';
   DateTime _lastSpeakTime = DateTime.now();
@@ -155,6 +159,7 @@ class _CameraScreenState extends State<CameraScreen>
   Future<void> _initAll() async {
     await _initCamera();
     await _initDetector();
+    await _gemini.init();
     _startDetectionTimer();
   }
 
@@ -274,7 +279,7 @@ class _CameraScreenState extends State<CameraScreen>
 
   /// Run one detection cycle using takePicture() snapshot.
   Future<void> _runDetection() async {
-    if (_isDetecting || !_isCameraReady || _controller == null) return;
+    if (_isDetecting || _isDescribing || !_isCameraReady || _controller == null) return;
     _isDetecting = true;
 
     XFile? capturedFile;
@@ -338,6 +343,54 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  // ── Gemini Scene Description ──
+  Future<void> _describeScene() async {
+    if (_isDescribing || !_isCameraReady || _controller == null) return;
+
+    _isDescribing = true;
+    _stopDetection(); // Pause YOLO to prevent TTS collision
+
+    // Haptic feedback + immediate audio confirmation
+    HapticFeedback.mediumImpact();
+    if (mounted) {
+      setState(() => _statusText = 'جاري الوصف...');
+    }
+    await _tts.speak('جاري الوصف');
+
+    XFile? capturedFile;
+    try {
+      capturedFile = await _controller!.takePicture();
+      final imageBytes = await File(capturedFile.path).readAsBytes();
+
+      // Clean up temp file
+      try {
+        await File(capturedFile.path).delete();
+      } catch (_) {}
+
+      final description = await _gemini.describeScene(imageBytes);
+
+      if (mounted) {
+        setState(() => _statusText = description);
+      }
+      await _tts.speak(description);
+    } catch (e) {
+      print('⚠️ Scene description error: $e');
+      final errorMsg = 'حصل خطأ في الوصف. حاول تاني.';
+      if (mounted) {
+        setState(() => _statusText = errorMsg);
+      }
+      await _tts.speak(errorMsg);
+      if (capturedFile != null) {
+        try {
+          await File(capturedFile.path).delete();
+        } catch (_) {}
+      }
+    } finally {
+      _isDescribing = false;
+      _startDetectionTimer(); // Resume YOLO
+    }
+  }
+
   // ── Cleanup ──
   @override
   void dispose() {
@@ -347,6 +400,7 @@ class _CameraScreenState extends State<CameraScreen>
     _controller?.dispose();
     _tts.stop();
     _detector.dispose();
+    _gemini.dispose();
     super.dispose();
   }
 
@@ -458,6 +512,68 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
+          // "Describe Scene" button — large, accessible, long-press activated
+          Positioned(
+            bottom: 110,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GestureDetector(
+                onTap: _isDescribing ? null : _describeScene,
+                child: Container(
+                  width: 200,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: _isDescribing
+                        ? Colors.orange.withAlpha(180)
+                        : Colors.blue.withAlpha(200),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(100),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _isDescribing ? 'جاري الوصف...' : 'وصف المشهد',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Gemini status indicator
+          if (_gemini.isReady)
+            Positioned(
+              top: 48,
+              left: 16,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withAlpha(180),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Gemini ✓',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
           // Status bar
           Positioned(
             bottom: 40,
@@ -478,6 +594,9 @@ class _CameraScreenState extends State<CameraScreen>
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
