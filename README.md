@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-# وريني (Warene) — AI Assistive App for Visually Impaired Users
-=======
-# Warene (واريني) 👁️
->>>>>>> 39ce32d4e57e5aef0878154c7b2b04474b3399c5
+# Warene (واريني) 👁️ — AI Assistive App for Visually Impaired Users
 
-**Warene** is a real-time AI-powered mobile application designed to assist visually impaired users in Egypt. It uses on-device object detection with **YOLOv8** to identify objects through the phone's camera and announces them in **Egyptian Arabic** with spatial direction feedback — telling the user *what* is around them, *where* it is, and *how far* away it is.
+**Warene** is a real-time AI-powered mobile application designed to assist visually impaired users in Egypt. It uses on-device object detection with **YOLOv8** to identify objects through the phone's camera and announces them in **Egyptian Arabic** with spatial direction feedback — telling the user *what* is around them, *where* it is, and *how far* away it is. It also features a **Scene Description** capability powered by Groq's LLaMA vision models.
 
 ---
 
@@ -15,6 +11,12 @@
 - Uses **YOLOv8n** (nano) model for fast on-device inference via TensorFlow Lite
 - Runs detection every **1.5 seconds** using camera snapshots
 - All processing happens **locally on the device** — no internet required
+
+### 🖼️ Scene Description (Groq LLaMA)
+- Summarizes the current scene in natural Arabic sentences optimized for blind users
+- Uses **Groq API** with the `meta-llama/llama-4-scout-17b-16e-instruct` model for blazing fast vision inference
+- Adjusts description verbosity (brief, normal, detailed)
+- Intelligent prompt engineering to emphasize safety hazards and accurate direction
 
 ### 🗣️ Arabic Text-to-Speech (TTS)
 - Announces detected objects in **Egyptian Arabic** with natural pronunciation
@@ -54,7 +56,8 @@
 warene/
 ├── lib/
 │   ├── main.dart          # App UI, camera, TTS, spatial feedback, bounding boxes
-│   └── detector.dart      # YoloDetector wrapper, center-crop preprocessing
+│   ├── detector.dart      # YoloDetector wrapper, center-crop preprocessing
+│   └── gemini_service.dart# Scene description service (using Groq API)
 ├── assets/
 │   └── models/
 │       ├── yolov8n.tflite  # YOLOv8 nano TFLite model (6.3 MB)
@@ -68,32 +71,26 @@ warene/
 
 ```
 ┌─────────────┐    ┌──────────────┐    ┌────────────────┐    ┌──────────────┐
-│ Camera Feed  │───▶│ takePicture()│───▶│ Center Crop    │───▶│ flutter_vision│
-│ (1280x720)   │    │ JPEG snapshot│    │ 720x720 square │    │ yoloOnImage() │
+│ Camera Feed │───▶│ takePicture()│───▶│ Center Crop    │───▶│ flutter_vision│
+│ (1280x720)  │    │ JPEG snapshot│    │ 720x720 square │    │ yoloOnImage() │
 └─────────────┘    └──────────────┘    └────────────────┘    └──────┬───────┘
-                                                                     │
+                                                                    │
 ┌─────────────┐    ┌──────────────┐    ┌────────────────┐           │
-│ Arabic TTS   │◀──│ Spatial Info  │◀──│ Coordinate     │◀──────────┘
-│ Announcement │    │ Direction +  │    │ Mapping +      │    (detections in
-│              │    │ Distance     │    │ Crop Offset    │     cropped coords)
+│ Arabic TTS  │◀──│ Spatial Info  │◀──│ Coordinate     │◀──────────┘
+│ Announcement│    │ Direction +  │    │ Mapping +      │    (detections in
+│             │    │ Distance     │    │ Crop Offset    │     cropped coords)
 └─────────────┘    └──────────────┘    └────────────────┘
 ```
 
 ### Data Flow (Step by Step)
 
-1. **Camera Capture**: Every 1.5 seconds, `takePicture()` captures a JPEG snapshot from the camera (720×1280 portrait)
-2. **Center Crop**: The portrait image is center-cropped to a 720×720 square using `dart:ui` canvas operations. This avoids the model squishing the image from rectangle to square, which would distort objects and hurt detection accuracy
-3. **Native Inference**: The cropped JPEG is passed to `flutter_vision`'s `yoloOnImage()`, which:
-   - Decodes the JPEG to a Bitmap (native Java/C++)
-   - Resizes to 640×640 (the model's input size)
-   - Normalizes pixel values to [0, 1] (divides by 255)
-   - Runs TFLite inference through the YOLOv8n model
-   - Applies Non-Maximum Suppression (NMS) to filter overlapping boxes
-   - Returns detected objects with bounding box coordinates
-4. **Coordinate Mapping**: Bounding box coordinates are mapped from cropped-image space back to original-image space (adding the crop offset)
-5. **Spatial Analysis**: Each detection's bounding box center determines direction (left/center/right), and its area determines estimated distance (close/far)
-6. **Arabic TTS**: A natural Arabic sentence is constructed for the top 3 detections and spoken via `flutter_tts`
-7. **Visual Overlay**: Bounding boxes are drawn on the camera preview with color-coded rectangles and Arabic labels
+1. **Camera Capture**: Every 1.5 seconds, `takePicture()` captures a JPEG snapshot from the camera (720×1280 portrait).
+2. **Center Crop**: The portrait image is center-cropped to a 720×720 square using `dart:ui` canvas operations. This avoids the model squishing the image.
+3. **Native Inference**: The cropped JPEG is passed to `flutter_vision`'s `yoloOnImage()`, which runs TFLite inference through the YOLOv8n model and returns bounding box coordinates.
+4. **Coordinate Mapping**: Bounding box coordinates are mapped from cropped-image space back to original-image space.
+5. **Spatial Analysis**: Each detection's bounding box center determines direction, and its area determines estimated distance.
+6. **Arabic TTS**: A natural Arabic sentence is constructed for the top 3 detections and spoken via `flutter_tts`.
+7. **Scene Description (On-Demand)**: When the user activates the scene description button, YOLO is paused, a snapshot is captured, and sent to the **Groq LLaMA Vision API** which returns a comprehensive Arabic description of the scene spoken via TTS.
 
 ---
 
@@ -104,50 +101,25 @@ warene/
 | **Framework** | Flutter (Dart) | Cross-platform UI and app logic |
 | **Object Detection** | YOLOv8n (TFLite) | Real-time object detection model |
 | **Inference Engine** | flutter_vision 2.0.0 | Native C++/Java TFLite inference wrapper |
+| **Scene Description** | Groq LLaMA Vision API | Fast inference for rich scene context (`meta-llama/llama-4-scout-17b-16e-instruct`) |
 | **Camera** | camera 0.11.0 | Camera preview and image capture |
 | **Text-to-Speech** | flutter_tts 4.0.2 | Arabic speech synthesis |
 | **Permissions** | permission_handler 11.3.1 | Camera and microphone permissions |
+| **Networking** | http 1.2.2 | API requests for scene generation |
 | **Screen Wake** | wakelock_plus 1.2.8 | Keeps screen on during use |
-| **Model Format** | TensorFlow Lite (.tflite) | Optimized on-device ML inference |
-
-### Model Details
-
-| Property | Value |
-|----------|-------|
-| Architecture | YOLOv8 Nano |
-| Input Shape | `[1, 640, 640, 3]` (NHWC, float32) |
-| Output Shape | `[1, 84, 8400]` (84 = 4 box coords + 80 class scores) |
-| Classes | 80 COCO classes |
-| Model Size | ~6.3 MB |
-| Quantization | None (float32) |
-| Inference Threads | 4 |
 
 ---
 
 ## 📂 Key Files
 
 ### `lib/detector.dart` — YoloDetector
+The core detection engine that wraps `flutter_vision`. Handles model lifecycle (load/unload), runs inference (`detectFromFile()`), and maps 80 COCO class names translated to Egyptian Arabic.
 
-The core detection engine that wraps `flutter_vision`:
-
-- **`YoloDetector`** class: Manages model lifecycle (load/unload), runs inference
-- **`Detection`** data class: Holds label, Arabic translation, confidence, and bounding box `[x1, y1, x2, y2]`
-- **`DetectionResult`** data class: Groups detections with source image dimensions for coordinate mapping
-- **`_centerCropToSquare()`**: Uses `dart:ui` canvas to center-crop portrait images to square before inference — prevents aspect-ratio distortion that significantly reduces detection accuracy
-- **`detectFromFile()`**: Full pipeline — load JPEG → get dimensions → crop → run inference → map coordinates back → return results
-- **Arabic translation map**: All 80 COCO class names translated to Egyptian Arabic
+### `lib/gemini_service.dart` — GeminiService (Groq Backend)
+Handles the scene description capability. Formats images to base64 and sends them to the Groq API for rapid processing using a LLaMA vision model, handling timeouts, and connection errors to guarantee speech output.
 
 ### `lib/main.dart` — App UI and Logic
-
-The main application with 4 key components:
-
-1. **`PermissionGate`**: Handles camera/microphone permission requests before showing the camera
-2. **`CameraScreen`**: The main screen with camera preview, detection overlay, and status display
-3. **Spatial Helpers**:
-   - `_getDirection()` — determines left/center/right from bbox center X position (splits image into thirds)
-   - `_getDistance()` — estimates distance from bbox area ratio (>15% = very close, >5% = close, else far)
-   - `_buildSpatialDescription()` — builds Arabic sentence like "شخص على اليمين، قريب"
-4. **`BoundingBoxPainter`**: Custom `CustomPainter` that draws color-coded bounding boxes with Arabic labels on the camera preview. Handles coordinate transformation from source image space → display space using BoxFit.cover scaling math
+The main application containing the Camera Screen, bounding box painter mapping coordinates to the display screen, timer-based local object detection (running every 1.5s), and the TTS announcements.
 
 ---
 
@@ -157,6 +129,7 @@ The main application with 4 key components:
 
 - **Flutter SDK** 3.11.0 or later
 - **Android SDK** with NDK installed (required by flutter_vision for native C++ compilation)
+- **Java Development Kit** 11+
 - An **Android device** with a camera (API 21+)
 - **ADB** configured for device deployment
 
@@ -176,29 +149,15 @@ flutter pub get
 flutter run
 ```
 
-### Build for Release
-
-```bash
-flutter build apk --release
-```
-
-The APK will be at `build/app/outputs/flutter-apk/app-release.apk`.
-
 ---
 
 ## ⚠️ Known Considerations
 
 ### YUV Stride Bug Workaround
-flutter_vision's `yoloOnFrame()` has a bug where the Y plane stride padding on some Android devices (e.g., Qualcomm chipsets) corrupts the NV21→Bitmap conversion, producing a distorted image that the model cannot detect objects in. **Warene uses `takePicture()` JPEG snapshots instead**, which bypasses this bug entirely. The tradeoff is slightly higher latency per detection (camera capture + JPEG encode/decode), but detection accuracy is dramatically better.
+flutter_vision's `yoloOnFrame()` has a bug where the Y plane stride padding on some Android devices corrupts the NV21→Bitmap conversion. **Warene uses `takePicture()` JPEG snapshots instead**, bypassing this bug.
 
 ### Center Crop for Accuracy
-The YOLOv8 model expects square 640×640 input. Most phone cameras produce portrait images (e.g., 720×1280). Without preprocessing, flutter_vision squishes the rectangle to a square, distorting all objects. Warene center-crops to square first, so the model sees undistorted objects and only needs a mild downscale (720→640).
-
-### Detection Interval
-Detection runs every 1.5 seconds rather than real-time frame-by-frame. This is intentional for:
-- Stable performance on mid-range devices
-- Clean TTS announcements (no overlapping speech)
-- Reasonable battery usage
+The YOLOv8 model expects square 640×640 input. Warene center-crops to square first, so the model sees undistorted objects and only needs a mild downscale.
 
 ---
 
@@ -206,9 +165,9 @@ Detection runs every 1.5 seconds rather than real-time frame-by-frame. This is i
 
 Planned features for future development:
 
+- [x] **Scene Description** — summarize all detected objects into one natural Arabic sentence (Implemented via Groq)
 - [ ] **Obstacle Warning with Haptic Vibration** — vibrate when large objects are very close
 - [ ] **Text Reading (OCR)** — read signs, labels, and prices using ML Kit
-- [ ] **Scene Description** — summarize all detected objects into one natural Arabic sentence
 - [ ] **Currency Recognition** — identify Egyptian pound banknotes
 - [ ] **Voice Commands** — activate features using voice input
 - [ ] **Color Detection** — announce the color of objects
@@ -224,6 +183,7 @@ This project is for educational and humanitarian purposes.
 ## 🙏 Acknowledgments
 
 - [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) — State-of-the-art object detection model
+- [Groq](https://groq.com/) — Fast AI inference engine
 - [flutter_vision](https://pub.dev/packages/flutter_vision) — Native TFLite inference for Flutter
 - [COCO Dataset](https://cocodataset.org/) — 80-class object detection benchmark
 - [Flutter](https://flutter.dev/) — Cross-platform mobile framework
