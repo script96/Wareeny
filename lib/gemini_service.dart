@@ -3,8 +3,9 @@
 // Sends a camera snapshot to Gemini Vision API and returns
 // a natural Arabic description optimized for blind users.
 
+import 'dart:convert';
 import 'dart:typed_data';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 
 /// Description verbosity level.
 enum DescriptionStyle {
@@ -14,61 +15,16 @@ enum DescriptionStyle {
 }
 
 class GeminiService {
-  GenerativeModel? _model;
   bool _isReady = false;
 
   bool get isReady => _isReady;
 
   // API key — keep this private, do not commit to public repos
-  static const String _apiKey = 'AIzaSyA9UFye6Y4mF0oRJSyFRavpSdk4ezM5nvk';
-
-  // Fallback models to try if the primary one fails with 404
-  final List<String> _modelsToTry = [
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash-8b',
-    'gemini-2.0-flash-exp',
-  ];
-  int _currentModelIndex = 0;
+  static const String _apiKey = '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';
 
   /// Initialize the Gemini Vision model.
   Future<void> init() async {
-    _currentModelIndex = 0;
-    await _initModel();
-  }
-
-  Future<void> _initModel() async {
-    if (_currentModelIndex >= _modelsToTry.length) {
-      print('❌ Gemini: All models failed.');
-      return;
-    }
-
-    final modelName = _modelsToTry[_currentModelIndex];
-    try {
-      _model = GenerativeModel(
-        model: modelName,
-        apiKey: _apiKey,
-        generationConfig: GenerationConfig(
-          maxOutputTokens: 200,
-          temperature: 0.3,
-        ),
-      );
-      _isReady = true;
-      print('✅ Gemini Vision ready with model: $modelName');
-    } catch (e) {
-      print('❌ Gemini init error for $modelName: $e');
-      _isReady = false;
-    }
-  }
-
-  /// Try the next model in the list if current one gives 404.
-  Future<bool> tryNextModel() async {
-    _currentModelIndex++;
-    if (_currentModelIndex < _modelsToTry.length) {
-      await _initModel();
-      return true;
-    }
-    return false;
+    _isReady = true; // Groq needs no SDK initialization
   }
 
   /// Build the system prompt with style-specific length instructions.
@@ -121,64 +77,58 @@ class GeminiService {
     Uint8List imageBytes, {
     DescriptionStyle style = DescriptionStyle.normal,
   }) async {
-    if (!_isReady || _model == null) {
+    if (!_isReady) {
       return 'خدمة الوصف مش جاهزة. تأكد من مفتاح الـ API.';
     }
 
     try {
+      final base64Image = base64Encode(imageBytes);
       final prompt = _buildPrompt(style);
-      final content = Content.multi([
-        TextPart(prompt),
-        DataPart('image/jpeg', imageBytes),
-      ]);
 
-      final response = await _model!
-          .generateContent([content])
-          .timeout(const Duration(seconds: 15), onTimeout: () {
+      final response = await http.post(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $_apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+          'messages': [
+            {
+              'role': 'user',
+              'content': [
+                {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}},
+                {'type': 'text', 'text': prompt}
+              ]
+            }
+          ],
+          'max_tokens': 300,
+        }),
+      ).timeout(const Duration(seconds: 15), onTimeout: () {
         throw Exception('timeout');
       });
 
-      final text = response.text;
-      if (text == null || text.trim().isEmpty) {
-        return 'مقدرتش أوصف المشهد. حاول تاني.';
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final text = data['choices'][0]['message']['content'] as String?;
+        if (text == null || text.trim().isEmpty) return 'مقدرتش أوصف المشهد. حاول تاني.';
+        return text.trim();
+      } else if (response.statusCode == 429) {
+        return 'الخدمة مشغولة دلوقتي. استنى دقيقة وحاول تاني.';
+      } else if (response.statusCode == 401 || response.statusCode == 400) {
+        return 'خطأ في المفتاح، تحقق من الإعدادات.';
+      } else {
+        return 'خطأ من الخدمة: ${response.statusCode}';
       }
-
-      return text.trim();
     } on Exception catch (e) {
       final msg = e.toString().toLowerCase();
-      print('❌ Gemini error details: $e');
-
-      // If model not found (404), try next model fallback
-      if (msg.contains('notfound') || msg.contains('404')) {
-        print('🔄 Model not found, trying fallback...');
-        final switched = await tryNextModel();
-        if (switched) {
-          return describeScene(imageBytes, style: style);
-        }
-      }
-
-      if (msg.contains('timeout')) {
-        return 'الوصف أخذ وقت طويل. حاول تاني.';
-      } else if (msg.contains('socket') ||
-          msg.contains('network') ||
-          msg.contains('connection')) {
-        return 'مفيش اتصال بالإنترنت. حاول تاني.';
-      } else if (msg.contains('quota') ||
-          msg.contains('rate') ||
-          msg.contains('resource') ||
-          msg.contains('429')) {
-        return 'الخدمة مشغولة دلوقتي (Rate Limit). استنى دقيقة وحاول تاني.';
-      } else {
-        return 'خطأ من جوجل: ${e.toString().replaceAll('Exception:', '').trim()}';
-      }
-    } catch (e) {
-      print('❌ Gemini unexpected error: $e');
+      if (msg.contains('timeout')) return 'الوصف أخذ وقت طويل. حاول تاني.';
+      if (msg.contains('socket') || msg.contains('network') || msg.contains('connection')) return 'مفيش اتصال بالإنترنت.';
       return 'حصل خطأ غير متوقع. حاول تاني.';
     }
   }
 
   void dispose() {
-    _model = null;
     _isReady = false;
   }
 }
