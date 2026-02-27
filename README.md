@@ -23,6 +23,16 @@
 - Full translation dictionary for all 80 COCO classes (e.g., "person" → "شخص", "car" → "سيارة")
 - Smart announcement system: avoids repeating the same object, waits 3 seconds between identical announcements
 
+### 💵 Egyptian Currency Recognition
+- Detects Egyptian Pound banknotes (10, 20, 50, 100, 200 EGP) using a custom YOLOv8 model.
+- Fast, reliable bounding box detection with tuned confidence thresholds.
+- Specialized audio feedback in Arabic for recognized denominations.
+
+### 📖 Text Reading (OCR)
+- On-device Optical Character Recognition (OCR) powered by Tesseract.
+- Allows visually impaired users to read text from signs, products, or labels.
+- Integration with TTS for seamless reading aloud.
+
 ### 🧭 Spatial Direction Feedback
 - Tells the user **WHERE** objects are relative to them:
   - **على اليسار** — on the left
@@ -57,11 +67,16 @@ warene/
 ├── lib/
 │   ├── main.dart          # App UI, camera, TTS, spatial feedback, bounding boxes
 │   ├── detector.dart      # YoloDetector wrapper, center-crop preprocessing
+│   ├── ocr_service.dart   # Text Reading component (Tesseract OCR)
 │   └── gemini_service.dart# Scene description service (using Groq API)
 ├── assets/
-│   └── models/
-│       ├── yolov8n.tflite  # YOLOv8 nano TFLite model (6.3 MB)
-│       └── labels.txt      # 80 COCO class labels
+│   ├── models/
+│   │   ├── yolov8n.tflite           # YOLOv8 nano TFLite model (6.3 MB)
+│   │   ├── labels.txt               # 80 COCO class labels
+│   │   ├── currency_yolov8n.tflite  # Egyptian Currency YOLOv8 model
+│   │   └── currency_labels.txt      # Currency labels (10, 20, 50, 100, 200 EGP)
+│   ├── tessdata/                    # Tesseract OCR language data models
+│   └── tessdata_config.json         # Tesseract configuration file
 ├── android/                # Android platform configuration
 ├── pubspec.yaml            # Flutter dependencies
 └── README.md               # This file
@@ -113,7 +128,10 @@ warene/
 ## 📂 Key Files
 
 ### `lib/detector.dart` — YoloDetector
-The core detection engine that wraps `flutter_vision`. Handles model lifecycle (load/unload), runs inference (`detectFromFile()`), and maps 80 COCO class names translated to Egyptian Arabic.
+The core detection engine that wraps `flutter_vision`. Handles model lifecycle (load/unload), runs inference (`detectFromFile()`), and maps 80 COCO class names translated to Egyptian Arabic. Also manages the secondary YOLOv8 model for **Egyptian Currency Recognition**.
+
+### `lib/ocr_service.dart` — OCR Service
+Handles on-device Optical Character Recognition (OCR) using Tesseract, allowing the app to extract text from images and pass it to the TTS engine.
 
 ### `lib/gemini_service.dart` — GeminiService (Groq Backend)
 Handles the scene description capability. Formats images to base64 and sends them to the Groq API for rapid processing using a LLaMA vision model, handling timeouts, and connection errors to guarantee speech output.
@@ -166,9 +184,9 @@ The YOLOv8 model expects square 640×640 input. Warene center-crops to square fi
 Planned features for future development:
 
 - [x] **Scene Description** — summarize all detected objects into one natural Arabic sentence (Implemented via Groq)
+- [x] **Text Reading (OCR)** — read signs, labels, and prices using Tesseract OCR
+- [x] **Currency Recognition** — identify Egyptian pound banknotes
 - [ ] **Obstacle Warning with Haptic Vibration** — vibrate when large objects are very close
-- [ ] **Text Reading (OCR)** — read signs, labels, and prices using ML Kit
-- [ ] **Currency Recognition** — identify Egyptian pound banknotes
 - [ ] **Voice Commands** — activate features using voice input
 - [ ] **Color Detection** — announce the color of objects
 

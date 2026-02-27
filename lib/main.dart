@@ -16,6 +16,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'detector.dart';
 import 'gemini_service.dart';
+import 'ocr_service.dart';
 
 List<CameraDescription> cameras = [];
 
@@ -117,10 +118,13 @@ class _CameraScreenState extends State<CameraScreen>
   final FlutterTts _tts = FlutterTts();
   final YoloDetector _detector = YoloDetector();
   final GeminiService _gemini = GeminiService();
+  final OCRService _ocrService = OCRService();
 
   bool _isCameraReady = false;
   bool _isDetecting = false;
   bool _isDescribing = false;
+  bool _isOCRProcessing = false;
+  OCRLanguage _ocrLanguage = OCRLanguage.english;
   String _statusText = 'Initializing...';
   String _lastSpoken = '';
   DateTime _lastSpeakTime = DateTime.now();
@@ -131,6 +135,7 @@ class _CameraScreenState extends State<CameraScreen>
   List<Detection> _detections = [];
   int _sourceImageWidth = 1;
   int _sourceImageHeight = 1;
+  int _emptyFrameCount = 0; // Track consecutive empty frames for persistence
 
   @override
   void initState() {
@@ -158,7 +163,7 @@ class _CameraScreenState extends State<CameraScreen>
 
   Future<void> _initAll() async {
     await _initCamera();
-    await _initDetector();
+    await _initDetector(modelType: _detector.currentModel);
     await _gemini.init();
     _startDetectionTimer();
   }
@@ -168,7 +173,7 @@ class _CameraScreenState extends State<CameraScreen>
     await _tts.setLanguage('ar-EG');
     await _tts.setSpeechRate(0.5);
     await _tts.setVolume(1.0);
-    await _tts.speak('مرحباً، وريني جاهز');
+    await _tts.speak('مَرْحَبًا، وَرِّينِي جَاهِز');
   }
 
   // ── Camera init — use HIGH resolution for better detection ──
@@ -200,18 +205,45 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   // ── Model init ──
-  Future<void> _initDetector() async {
-    if (_detector.isReady) return;
+  Future<void> _initDetector({DetectionModel modelType = DetectionModel.general}) async {
     if (mounted) setState(() => _statusText = 'Loading AI...');
     try {
-      await _detector.loadModel();
+      await _detector.loadModel(modelType);
       if (mounted) {
         setState(() => _statusText =
             _detector.isReady ? 'AI Ready ✓' : 'AI Failed');
       }
+      print('🔵 _initDetector done — isReady=${_detector.isReady}, model=${_detector.currentModel}');
     } catch (e) {
-      if (mounted) setState(() => _statusText = 'AI Error');
+      print('❌ _initDetector error: $e');
+      if (mounted) setState(() => _statusText = 'AI Error: $e');
     }
+  }
+
+  // ── Mode Toggle ──
+  Future<void> _toggleDetectionMode() async {
+    if (!_isCameraReady) return;
+    _stopDetection();
+
+    // Clear old bounding boxes immediately so they don't persist
+    if (mounted) {
+      setState(() {
+        _detections = [];
+      });
+    }
+
+    final newMode = _detector.currentModel == DetectionModel.general
+        ? DetectionModel.currency
+        : DetectionModel.general;
+    
+    // Announce mode change
+    if (mounted) {
+      setState(() => _statusText = newMode == DetectionModel.general ? 'وضع الأشياء' : 'وضع الفلوس');
+    }
+    await _tts.speak(newMode == DetectionModel.general ? 'وَضْع الْأَشْيَاء' : 'وَضْع الْفُلُوس');
+    
+    await _initDetector(modelType: newMode);
+    _startDetectionTimer();
   }
 
   // ── Timer-based detection ──
@@ -243,11 +275,11 @@ class _CameraScreenState extends State<CameraScreen>
     final third = imageWidth / 3;
 
     if (centerX < third) {
-      return 'على اليسار'; // on the left
+      return 'عَلَى الْيَسَار'; // on the left
     } else if (centerX < third * 2) {
-      return 'في الوسط'; // in the center
+      return 'فِي الْوَسَط'; // in the center
     } else {
-      return 'على اليمين'; // on the right
+      return 'عَلَى الْيَمِين'; // on the right
     }
   }
 
@@ -261,11 +293,11 @@ class _CameraScreenState extends State<CameraScreen>
     final ratio = boxArea / imageArea;
 
     if (ratio > 0.15) {
-      return 'قريب جداً'; // very close
+      return 'قَرِيب جِدًّا'; // very close
     } else if (ratio > 0.05) {
-      return 'قريب'; // close
+      return 'قَرِيب'; // close
     } else {
-      return 'بعيد'; // far
+      return 'بَعِيد'; // far
     }
   }
 
@@ -277,9 +309,106 @@ class _CameraScreenState extends State<CameraScreen>
     return '${d.arabicLabel} $direction، $distance';
   }
 
+  // ── OCR Text Reading ──
+  Future<void> _triggerOCR() async {
+    if (_isOCRProcessing || _isDescribing || !_isCameraReady || _controller == null) return;
+
+    _isOCRProcessing = true;
+    _stopDetection(); // Pause YOLO to prevent TTS collision
+
+    // Clear bounding boxes immediately
+    if (mounted) {
+      setState(() {
+        _detections = [];
+        _statusText = 'جاري القراءة...';
+      });
+    }
+
+    // Haptic feedback + immediate audio confirmation
+    HapticFeedback.mediumImpact();
+    await _tts.speak('جَارِي الْقِرَاءَة');
+
+    XFile? capturedFile;
+    const maxRetries = 2;
+    int attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        capturedFile = await _controller!.takePicture();
+        final text = await _ocrService.extractText(capturedFile, language: _ocrLanguage);
+
+        // Clean up temp file
+        try {
+          await File(capturedFile.path).delete();
+        } catch (_) {}
+
+        if (mounted) {
+          setState(() => _statusText = text);
+        }
+
+        // Switch TTS language to match OCR mode
+        if (_ocrLanguage == OCRLanguage.english) {
+          await _tts.setLanguage('en-US');
+        }
+
+        // Speak and WAIT for TTS to finish before resuming YOLO
+        await _speakAndWait(text);
+
+        // Reset TTS back to Arabic for YOLO/other features
+        if (_ocrLanguage == OCRLanguage.english) {
+          await _tts.setLanguage('ar-EG');
+        }
+        break; // Success — exit retry loop
+      } catch (e) {
+        print('⚠️ OCR error (attempt ${attempt + 1}): $e');
+        attempt++;
+        if (capturedFile != null) {
+          try {
+            await File(capturedFile.path).delete();
+          } catch (_) {}
+        }
+        if (attempt == maxRetries) {
+          final errorMsg = 'حَصَل خَطَأ فِي الْقِرَاءَة. حَاوِل تَانِي.';
+          if (mounted) {
+            setState(() => _statusText = errorMsg);
+          }
+          await _speakAndWait(errorMsg);
+        }
+      }
+    }
+
+    // Wait a beat so the user can process what they heard
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    _isOCRProcessing = false;
+    if (mounted) setState(() {});
+    _startDetectionTimer(); // Resume YOLO only after TTS done
+  }
+
+  /// Speak text and wait for TTS to finish (returns a Future that completes
+  /// when the utterance is done).
+  Future<void> _speakAndWait(String text) async {
+    final completer = Completer<void>();
+    _tts.setCompletionHandler(() {
+      if (!completer.isCompleted) completer.complete();
+    });
+    _tts.setCancelHandler(() {
+      if (!completer.isCompleted) completer.complete();
+    });
+    _tts.setErrorHandler((msg) {
+      if (!completer.isCompleted) completer.complete();
+    });
+    await _tts.speak(text);
+    // Wait for TTS to actually finish speaking
+    await completer.future.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {},
+    );
+  }
+
   /// Run one detection cycle using takePicture() snapshot.
   Future<void> _runDetection() async {
-    if (_isDetecting || _isDescribing || !_isCameraReady || _controller == null) return;
+    if (_isDetecting || _isDescribing || _isOCRProcessing || !_isCameraReady || _controller == null) return;
     _isDetecting = true;
 
     XFile? capturedFile;
@@ -293,11 +422,24 @@ class _CameraScreenState extends State<CameraScreen>
       } catch (_) {}
 
       if (result != null && mounted) {
-        setState(() {
-          _detections = result.detections;
-          _sourceImageWidth = result.imageWidth;
-          _sourceImageHeight = result.imageHeight;
-        });
+        if (result.detections.isNotEmpty) {
+          // Got detections — reset empty counter and update UI
+          _emptyFrameCount = 0;
+          setState(() {
+            _detections = result.detections;
+            _sourceImageWidth = result.imageWidth;
+            _sourceImageHeight = result.imageHeight;
+          });
+        } else {
+          // No detections — only clear after 3 consecutive empty frames
+          // This prevents flickering when the model misses a frame
+          _emptyFrameCount++;
+          if (_emptyFrameCount >= 3) {
+            setState(() {
+              _detections = [];
+            });
+          }
+        }
 
         if (result.detections.isNotEmpty) {
           final now = DateTime.now();
@@ -350,12 +492,17 @@ class _CameraScreenState extends State<CameraScreen>
     _isDescribing = true;
     _stopDetection(); // Pause YOLO to prevent TTS collision
 
+    // Clear bounding boxes immediately
+    if (mounted) {
+      setState(() {
+        _detections = [];
+        _statusText = 'جاري الوصف...';
+      });
+    }
+
     // Haptic feedback + immediate audio confirmation
     HapticFeedback.mediumImpact();
-    if (mounted) {
-      setState(() => _statusText = 'جاري الوصف...');
-    }
-    await _tts.speak('جاري الوصف');
+    await _tts.speak('جَارِي الْوَصْف');
 
     XFile? capturedFile;
     try {
@@ -372,14 +519,19 @@ class _CameraScreenState extends State<CameraScreen>
       if (mounted) {
         setState(() => _statusText = description);
       }
-      await _tts.speak(description);
+      
+      // Speak and WAIT for TTS to finish before resuming YOLO
+      await _speakAndWait(description);
+      
+      // Wait a beat so the user can process what they heard
+      await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
       print('⚠️ Scene description error: $e');
-      final errorMsg = 'حصل خطأ في الوصف. حاول تاني.';
+      final errorMsg = 'حَصَل خَطَأ فِى الْوَصْف. حَاوِل تَانِي.';
       if (mounted) {
         setState(() => _statusText = errorMsg);
       }
-      await _tts.speak(errorMsg);
+      await _speakAndWait(errorMsg);
       if (capturedFile != null) {
         try {
           await File(capturedFile.path).delete();
@@ -387,7 +539,8 @@ class _CameraScreenState extends State<CameraScreen>
       }
     } finally {
       _isDescribing = false;
-      _startDetectionTimer(); // Resume YOLO
+      if (mounted) setState(() {});
+      _startDetectionTimer(); // Resume YOLO only after TTS done
     }
   }
 
@@ -401,6 +554,7 @@ class _CameraScreenState extends State<CameraScreen>
     _tts.stop();
     _detector.dispose();
     _gemini.dispose();
+    _ocrService.dispose();
     super.dispose();
   }
 
@@ -512,44 +666,167 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-          // "Describe Scene" button — large, accessible, long-press activated
+          // ── Action buttons row ──
           Positioned(
-            bottom: 110,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: _isDescribing ? null : _describeScene,
-                child: Container(
-                  width: 200,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: _isDescribing
-                        ? Colors.orange.withAlpha(180)
-                        : Colors.blue.withAlpha(200),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(100),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
+            bottom: 100,
+            left: 20,
+            right: 20,
+            child: Row(
+              children: [
+                // "Read Text" OCR button — left (tap = read, long press = switch language)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: (_isOCRProcessing || _isDescribing) ? null : _triggerOCR,
+                    onLongPress: (_isOCRProcessing || _isDescribing) ? null : () {
+                      setState(() {
+                        _ocrLanguage = _ocrLanguage == OCRLanguage.english
+                            ? OCRLanguage.arabic
+                            : OCRLanguage.english;
+                      });
+                      HapticFeedback.mediumImpact();
+                      _tts.speak(_ocrLanguage == OCRLanguage.arabic
+                          ? 'وَضْع عَرَبِي'
+                          : 'وَضْع إِنْجِلِيزِي');
+                    },
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: _isOCRProcessing
+                            ? Colors.grey.withAlpha(180)
+                            : Colors.green.withAlpha(200),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(100),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_isOCRProcessing)
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              else
+                                const Icon(Icons.text_fields, color: Colors.white, size: 20),
+                              const SizedBox(width: 6),
+                              Text(
+                                _isOCRProcessing
+                                    ? 'جاري...'
+                                    : (_ocrLanguage == OCRLanguage.arabic ? 'اقرأ عربي' : 'Read EN'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Small hint: long press to switch
+                          if (!_isOCRProcessing)
+                            Text(
+                              'اضغط مطولاً للتبديل',
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(160),
+                                fontSize: 9,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Center(
-                    child: Text(
-                      _isDescribing ? 'جاري الوصف...' : 'وصف المشهد',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                ),
+
+                const SizedBox(width: 12),
+
+                // "Describe Scene" button — right
+                Expanded(
+                  child: GestureDetector(
+                    onTap: (_isDescribing || _isOCRProcessing) ? null : _describeScene,
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: _isDescribing
+                            ? Colors.orange.withAlpha(180)
+                            : Colors.blue.withAlpha(200),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(100),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_isDescribing)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          else
+                            const Icon(Icons.image_search, color: Colors.white, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            _isDescribing ? 'جاري الوصف...' : 'وصف المشهد',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // OCR / Describe loading overlay
+          if (_isOCRProcessing || _isDescribing)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.black.withAlpha(100),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          _isOCRProcessing ? 'جاري القراءة...' : 'جاري الوصف...',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
-          ),
 
           // Gemini status indicator
           if (_gemini.isReady)
@@ -573,6 +850,18 @@ class _CameraScreenState extends State<CameraScreen>
                 ),
               ),
             ),
+
+          // Mode switch button
+          Positioned(
+            top: 100,
+            right: 16,
+            child: FloatingActionButton.extended(
+              onPressed: _toggleDetectionMode,
+              label: Text(_detector.currentModel == DetectionModel.general ? 'عادي' : 'فلوس'),
+              icon: Icon(_detector.currentModel == DetectionModel.general ? Icons.visibility : Icons.attach_money),
+              backgroundColor: Colors.blueGrey.withAlpha(200),
+            ),
+          ),
 
           // Status bar
           Positioned(
