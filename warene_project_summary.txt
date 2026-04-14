@@ -1,0 +1,1542 @@
+WARENE (واريني) - PROJECT SUMMARY & HANDOVER DOCUMENT
+=======================================================
+
+1. PROJECT NAME AND DESCRIPTION
+--------------------------------
+Name: Warene (واريني)
+Role: AI Assistive Application for Visually Impaired Users in Egypt.
+Goal: Provides real-time object detection, Egyptian currency recognition, scene description, and OCR (text reading) in Egyptian Arabic to assist blind users in navigating their environment safely.
+
+2. TECH STACK
+--------------
+- Framework: Flutter (Dart)
+- Vision Models: YOLOv8n (TFLite), Meta Llama 4 Scout (Groq API)
+- OCR Engines: Google ML Kit (English), Tesseract OCR (Arabic)
+- Speech: flutter_tts (ar-EG)
+- Local Processing: flutter_vision (Native TFLite wrapper)
+- Training Environment: Python, Ultralytics YOLOv8
+
+3. SYSTEM ARCHITECTURE
+-----------------------
+- Local Detection: YOLOv8n running locally on the device via TFLite snapshots (every 1.5s).
+- Cloud Intelligence: On-demand scene description via Groq API (LLaMA Vision).
+- Spatial Engine: Maps 2D coordinates to directional audio (Left, Center, Right) and distance estimation based on bounding box size.
+- Preprocessing: Custom center-cropping to square before YOLO inference to preserve aspect ratio.
+
+4. FEATURES & MODULES
+----------------------
+- 🔍 Real-Time Object Detection (80 COCO classes)
+- 💵 Egyptian Currency Recognition (10, 20, 50, 100, 200 EGP)
+- 🖼️ Natural Scene Description (Arabic)
+- 📖 Hybrid OCR (Arabic & English text reading)
+- 🧭 Spatial Awareness (3D-like audio feedback)
+- 📷 High-Res Capture (takePicture snapshot mode)
+
+5. FILE & FOLDER STRUCTURE
+---------------------------
+warene/
+├── lib/
+│   ├── main.dart             # UI, Camera Logic, TTS, Spatial Feedback, Bounding Box Painter
+│   ├── detector.dart         # YOLOv8 Manager (General + Currency models)
+│   ├── gemini_service.dart   # Groq/Llama Vision API Integration
+│   └── ocr_service.dart      # Tesseract & ML Kit OCR Integration
+├── assets/
+│   ├── models/
+│   │   ├── yolov8n.tflite           # 80-Class COCO Model
+│   │   ├── labels.txt               # COCO Labels
+│   │   ├── currency_yolov8n.tflite  # Custom Trained Currency Model
+│   │   └── currency_labels.txt      # Currency Labels
+│   ├── tessdata/                    # Tesseract Language Models (ara.traineddata)
+│   └── tessdata_config.json         # Tesseract Config
+└── train_currency.py                # External Python Training Script
+
+6. APIs & EXTERNAL SERVICES
+----------------------------
+- Groq Cloud API: For Meta Llama 4 Scout Vision model.
+- Google ML Kit: For high-speed English/numeric text extraction.
+
+7. COMPLETED & IN-PROGRESS
+---------------------------
+Completed:
+- Core Real-time Detection
+- Currency Detection Mode
+- Scene Description
+- Arabic/English OCR
+- Spatial Logic & TTS
+- Bounding Box UI
+
+Not Done/Roadmap:
+- Obstacle Warning with Haptic Vibration
+- Voice Command activation
+- Color Detection
+
+8. IMPORTANT DECISIONS & NOTES
+-------------------------------
+- Bypassed YUV stride bug in flutter_vision by switching to high-res takePicture snapshots.
+- Implemented manual center-cropping to square in Dart to improve model accuracy by preventing distortion.
+- Used LTR paragraph direction for Arabic labels to fix alignment issues in the CustomPainter.
+
+9. SETUP & INSTALLATION
+------------------------
+1. Install Flutter 3.11.0+.
+2. Run 'flutter pub get'.
+3. Ensure Android NDK is installed for native C++ compilation.
+4. Place API keys in gemini_service.dart.
+5. Deploy to an Android device (Physical device required for camera/performance).
+
+=======================================================
+SOURCE CODE - FILE BY FILE
+=======================================================
+
+FILE: lib/main.dart
+-------------------
+import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'detector.dart';
+import 'gemini_service.dart';
+import 'ocr_service.dart';
+
+List<CameraDescription> cameras = [];
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  cameras = await availableCameras();
+  runApp(const WareneApp());
+}
+
+class WareneApp extends StatelessWidget {
+  const WareneApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Warene',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
+      ),
+      home: const PermissionGate(),
+    );
+  }
+}
+
+class PermissionGate extends StatefulWidget {
+  const PermissionGate({super.key});
+
+  @override
+  State<PermissionGate> createState() => _PermissionGateState();
+}
+
+class _PermissionGateState extends State<PermissionGate> {
+  bool _checking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    await [Permission.camera, Permission.microphone].request();
+    final cameraOk = await Permission.camera.isGranted;
+    final micOk = await Permission.microphone.isGranted;
+
+    if (mounted) {
+      if (cameraOk && micOk) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const CameraScreen()),
+        );
+      } else {
+        setState(() => _checking = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: _checking
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.camera_alt, color: Colors.white, size: 64),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Warene needs camera and\nmicrophone permissions.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 18),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _requestPermissions,
+                    child: const Text('Grant Permissions'),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _CameraScreenState extends State<CameraScreen>
+    with WidgetsBindingObserver {
+  CameraController? _controller;
+  final FlutterTts _tts = FlutterTts();
+  final YoloDetector _detector = YoloDetector();
+  final GeminiService _gemini = GeminiService();
+  final OCRService _ocrService = OCRService();
+
+  bool _isCameraReady = false;
+  bool _isDetecting = false;
+  bool _isDescribing = false;
+  bool _isOCRProcessing = false;
+  OCRLanguage _ocrLanguage = OCRLanguage.english;
+  String _statusText = 'Initializing...';
+  String _lastSpoken = '';
+  DateTime _lastSpeakTime = DateTime.now();
+
+  Timer? _detectionTimer;
+
+  List<Detection> _detections = [];
+  int _sourceImageWidth = 1;
+  int _sourceImageHeight = 1;
+  int _emptyFrameCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WakelockPlus.enable();
+    _initTts();
+    _initAll();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    if (state == AppLifecycleState.paused) {
+      _stopDetection();
+      _controller?.dispose();
+      _controller = null;
+      _isCameraReady = false;
+    } else if (state == AppLifecycleState.resumed) {
+      _initAll();
+    }
+  }
+
+  Future<void> _initAll() async {
+    await _initCamera();
+    await _initDetector(modelType: _detector.currentModel);
+    await _gemini.init();
+    _startDetectionTimer();
+  }
+
+  Future<void> _initTts() async {
+    await _tts.setLanguage('ar-EG');
+    await _tts.setSpeechRate(0.5);
+    await _tts.setVolume(1.0);
+    await _tts.speak('مَرْحَبًا، وَرِّينِي جَاهِز');
+  }
+
+  Future<void> _initCamera() async {
+    if (cameras.isEmpty) {
+      if (mounted) setState(() => _statusText = 'No camera found');
+      return;
+    }
+
+    _controller = CameraController(
+      cameras[0],
+      ResolutionPreset.high,
+      enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
+
+    try {
+      await _controller!.initialize();
+      if (mounted) {
+        setState(() {
+          _isCameraReady = true;
+          _statusText = 'Camera ready';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _statusText = 'Camera error: $e');
+    }
+  }
+
+  Future<void> _initDetector({DetectionModel modelType = DetectionModel.general}) async {
+    if (mounted) setState(() => _statusText = 'Loading AI...');
+    try {
+      await _detector.loadModel(modelType);
+      if (mounted) {
+        setState(() => _statusText =
+            _detector.isReady ? 'AI Ready ✓' : 'AI Failed');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _statusText = 'AI Error: $e');
+    }
+  }
+
+  Future<void> _toggleDetectionMode() async {
+    if (!_isCameraReady) return;
+    _stopDetection();
+
+    if (mounted) {
+      setState(() {
+        _detections = [];
+      });
+    }
+
+    final newMode = _detector.currentModel == DetectionModel.general
+        ? DetectionModel.currency
+        : DetectionModel.general;
+    
+    if (mounted) {
+      setState(() => _statusText = newMode == DetectionModel.general ? 'وضع الأشياء' : 'وضع الفلوس');
+    }
+    await _tts.speak(newMode == DetectionModel.general ? 'وَضْع الْأَشْيَاء' : 'وَضْع الْفُلُوس');
+    
+    await _initDetector(modelType: newMode);
+    _startDetectionTimer();
+  }
+
+  void _startDetectionTimer() {
+    if (!_detector.isReady) return;
+
+    _detectionTimer?.cancel();
+    _detectionTimer =
+        Timer.periodic(const Duration(milliseconds: 1500), (_) {
+      _runDetection();
+    });
+  }
+
+  void _stopDetection() {
+    _detectionTimer?.cancel();
+    _detectionTimer = null;
+  }
+
+  String _getDirection(Detection d, int imageWidth) {
+    final centerX = (d.bbox[0] + d.bbox[2]) / 2;
+    final third = imageWidth / 3;
+
+    if (centerX < third) {
+      return 'عَلَى الْيَسَار';
+    } else if (centerX < third * 2) {
+      return 'فِي الْوَسَط';
+    } else {
+      return 'عَلَى الْيَمِين';
+    }
+  }
+
+  String _getDistance(Detection d, int imageWidth, int imageHeight) {
+    final boxW = (d.bbox[2] - d.bbox[0]).abs();
+    final boxH = (d.bbox[3] - d.bbox[1]).abs();
+    final boxArea = boxW * boxH;
+    final imageArea = imageWidth.toDouble() * imageHeight.toDouble();
+    final ratio = boxArea / imageArea;
+
+    if (ratio > 0.15) {
+      return 'قَرِيب جِدًّا';
+    } else if (ratio > 0.05) {
+      return 'قَرِيب';
+    } else {
+      return 'بَعِيد';
+    }
+  }
+
+  String _buildSpatialDescription(Detection d, int imgW, int imgH) {
+    final direction = _getDirection(d, imgW);
+    final distance = _getDistance(d, imgW, imgH);
+    return '${d.arabicLabel} $direction، $distance';
+  }
+
+  Future<void> _triggerOCR() async {
+    if (_isOCRProcessing || _isDescribing || !_isCameraReady || _controller == null) return;
+
+    _isOCRProcessing = true;
+    _stopDetection();
+
+    if (mounted) {
+      setState(() {
+        _detections = [];
+        _statusText = 'جاري القراءة...';
+      });
+    }
+
+    HapticFeedback.mediumImpact();
+    await _tts.speak('جَارِي الْقِرَاءَة');
+
+    XFile? capturedFile;
+    const maxRetries = 2;
+    int attempt = 0;
+
+    while (attempt < maxRetries) {
+      try {
+        capturedFile = await _controller!.takePicture();
+        final text = await _ocrService.extractText(capturedFile, language: _ocrLanguage);
+
+        try {
+          await File(capturedFile.path).delete();
+        } catch (_) {}
+
+        if (mounted) {
+          setState(() => _statusText = text);
+        }
+
+        if (_ocrLanguage == OCRLanguage.english) {
+          await _tts.setLanguage('en-US');
+        }
+
+        await _speakAndWait(text);
+
+        if (_ocrLanguage == OCRLanguage.english) {
+          await _tts.setLanguage('ar-EG');
+        }
+        break;
+      } catch (e) {
+        attempt++;
+        if (capturedFile != null) {
+          try {
+            await File(capturedFile.path).delete();
+          } catch (_) {}
+        }
+        if (attempt == maxRetries) {
+          final errorMsg = 'حَصَل خَطَأ فِي الْقِرَاءَة. حَاوِل تَانِي.';
+          if (mounted) {
+            setState(() => _statusText = errorMsg);
+          }
+          await _speakAndWait(errorMsg);
+        }
+      }
+    }
+
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    _isOCRProcessing = false;
+    if (mounted) setState(() {});
+    _startDetectionTimer();
+  }
+
+  Future<void> _speakAndWait(String text) async {
+    final completer = Completer<void>();
+    _tts.setCompletionHandler(() {
+      if (!completer.isCompleted) completer.complete();
+    });
+    _tts.setCancelHandler(() {
+      if (!completer.isCompleted) completer.complete();
+    });
+    _tts.setErrorHandler((msg) {
+      if (!completer.isCompleted) completer.complete();
+    });
+    await _tts.speak(text);
+    await completer.future.timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {},
+    );
+  }
+
+  Future<void> _runDetection() async {
+    if (_isDetecting || _isDescribing || _isOCRProcessing || !_isCameraReady || _controller == null) return;
+    _isDetecting = true;
+
+    XFile? capturedFile;
+    try {
+      capturedFile = await _controller!.takePicture();
+      final result = await _detector.detectFromFile(capturedFile.path);
+
+      try {
+        await File(capturedFile.path).delete();
+      } catch (_) {}
+
+      if (result != null && mounted) {
+        if (result.detections.isNotEmpty) {
+          _emptyFrameCount = 0;
+          setState(() {
+            _detections = result.detections;
+            _sourceImageWidth = result.imageWidth;
+            _sourceImageHeight = result.imageHeight;
+          });
+        } else {
+          _emptyFrameCount++;
+          if (_emptyFrameCount >= 3) {
+            setState(() {
+              _detections = [];
+            });
+          }
+        }
+
+        if (result.detections.isNotEmpty) {
+          final now = DateTime.now();
+          final timePassed = now.difference(_lastSpeakTime).inSeconds >= 3;
+
+          final best = result.detections.first;
+          final spatialDesc = _buildSpatialDescription(
+              best, result.imageWidth, result.imageHeight);
+
+          final differentObject = spatialDesc != _lastSpoken;
+
+          if (differentObject || timePassed) {
+            _lastSpoken = spatialDesc;
+            _lastSpeakTime = now;
+
+            if (mounted) {
+              setState(() => _statusText =
+                  '${best.arabicLabel} ${_getDirection(best, result.imageWidth)} '
+                  '(${(best.confidence * 100).toStringAsFixed(0)}%)');
+            }
+
+            final topDetections = result.detections.take(3);
+            final phrases = topDetections.map((d) =>
+                _buildSpatialDescription(
+                    d, result.imageWidth, result.imageHeight));
+            final ttsText = phrases.join('، ');
+            await _tts.speak(ttsText);
+          }
+        }
+      }
+    } catch (e) {
+      if (capturedFile != null) {
+        try {
+          await File(capturedFile.path).delete();
+        } catch (_) {}
+      }
+    } finally {
+      _isDetecting = false;
+    }
+  }
+
+  Future<void> _describeScene() async {
+    if (_isDescribing || !_isCameraReady || _controller == null) return;
+
+    _isDescribing = true;
+    _stopDetection();
+
+    if (mounted) {
+      setState(() {
+        _detections = [];
+        _statusText = 'جاري الوصف...';
+      });
+    }
+
+    HapticFeedback.mediumImpact();
+    await _tts.speak('جَارِي الْوَصْف');
+
+    XFile? capturedFile;
+    try {
+      capturedFile = await _controller!.takePicture();
+      final imageBytes = await File(capturedFile.path).readAsBytes();
+
+      try {
+        await File(capturedFile.path).delete();
+      } catch (_) {}
+
+      final description = await _gemini.describeScene(imageBytes);
+
+      if (mounted) {
+        setState(() => _statusText = description);
+      }
+      
+      await _speakAndWait(description);
+      await Future.delayed(const Duration(milliseconds: 500));
+    } catch (e) {
+      final errorMsg = 'حَصَل خَطَأ فِى الْوَصْف. حَاوِل تَانِي.';
+      if (mounted) {
+        setState(() => _statusText = errorMsg);
+      }
+      await _speakAndWait(errorMsg);
+      if (capturedFile != null) {
+        try {
+          await File(capturedFile.path).delete();
+        } catch (_) {}
+      }
+    } finally {
+      _isDescribing = false;
+      if (mounted) setState(() {});
+      _startDetectionTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    WakelockPlus.disable();
+    _stopDetection();
+    _controller?.dispose();
+    _tts.stop();
+    _detector.dispose();
+    _gemini.dispose();
+    _ocrService.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          if (_isCameraReady && _controller != null)
+            SizedBox.expand(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final previewSize = _controller!.value.previewSize!;
+                  final previewW = previewSize.height;
+                  final previewH = previewSize.width;
+
+                  final screenW = constraints.maxWidth;
+                  final screenH = constraints.maxHeight;
+
+                  final scale = math.max(screenW / previewW, screenH / previewH);
+                  final displayW = previewW * scale;
+                  final displayH = previewH * scale;
+                  final offsetX = (screenW - displayW) / 2;
+                  final offsetY = (screenH - displayH) / 2;
+
+                  return Stack(
+                    children: [
+                      SizedBox.expand(
+                        child: FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: previewW,
+                            height: previewH,
+                            child: CameraPreview(_controller!),
+                          ),
+                        ),
+                      ),
+                      if (_detections.isNotEmpty)
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: BoundingBoxPainter(
+                              detections: _detections,
+                              sourceWidth: _sourceImageWidth,
+                              sourceHeight: _sourceImageHeight,
+                              displayWidth: displayW,
+                              displayHeight: displayH,
+                              offsetX: offsetX,
+                              offsetY: offsetY,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            )
+          else
+            const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+
+          Positioned(
+            top: 48,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                'وريني',
+                style: TextStyle(
+                  color: Colors.white.withAlpha((0.8 * 255).round()),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 4,
+                ),
+              ),
+            ),
+          ),
+
+          if (_detections.isNotEmpty)
+            Positioned(
+              top: 48,
+              right: 16,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.green.withAlpha(180),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${_detections.length} detected',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+          Positioned(
+            bottom: 100,
+            left: 20,
+            right: 20,
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: (_isOCRProcessing || _isDescribing) ? null : _triggerOCR,
+                    onLongPress: (_isOCRProcessing || _isDescribing) ? null : () {
+                      setState(() {
+                        _ocrLanguage = _ocrLanguage == OCRLanguage.english
+                            ? OCRLanguage.arabic
+                            : OCRLanguage.english;
+                      });
+                      HapticFeedback.mediumImpact();
+                      _tts.speak(_ocrLanguage == OCRLanguage.arabic
+                          ? 'وَضْع عَرَبِي'
+                          : 'وَضْع إِنْجِلِيزِي');
+                    },
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: _isOCRProcessing
+                            ? Colors.grey.withAlpha(180)
+                            : Colors.green.withAlpha(200),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(100),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (_isOCRProcessing)
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              else
+                                const Icon(Icons.text_fields, color: Colors.white, size: 20),
+                              const SizedBox(width: 6),
+                              Text(
+                                _isOCRProcessing
+                                    ? 'جاري...'
+                                    : (_ocrLanguage == OCRLanguage.arabic ? 'اقرأ عربي' : 'Read EN'),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!_isOCRProcessing)
+                            Text(
+                              'اضغط مطولاً للتبديل',
+                              style: TextStyle(
+                                color: Colors.white.withAlpha(160),
+                                fontSize: 9,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: GestureDetector(
+                    onTap: (_isDescribing || _isOCRProcessing) ? null : _describeScene,
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: _isDescribing
+                            ? Colors.orange.withAlpha(180)
+                            : Colors.blue.withAlpha(200),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(100),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_isDescribing)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                               ),
+                            )
+                          else
+                            const Icon(Icons.image_search, color: Colors.white, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            _isDescribing ? 'جاري الوصف...' : 'وصف المشهد',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (_isOCRProcessing || _isDescribing)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  color: Colors.black.withAlpha(100),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.white),
+                        const SizedBox(height: 16),
+                        Text(
+                          _isOCRProcessing ? 'جاري القراءة...' : 'جاري الوصف...',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          if (_gemini.isReady)
+            Positioned(
+              top: 48,
+              left: 16,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withAlpha(180),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Gemini ✓',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+          Positioned(
+            top: 100,
+            right: 16,
+            child: FloatingActionButton.extended(
+              onPressed: _toggleDetectionMode,
+              label: Text(_detector.currentModel == DetectionModel.general ? 'عادي' : 'فلوس'),
+              icon: Icon(_detector.currentModel == DetectionModel.general ? Icons.visibility : Icons.attach_money),
+              backgroundColor: Colors.blueGrey.withAlpha(200),
+            ),
+          ),
+
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  _statusText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class BoundingBoxPainter extends CustomPainter {
+  final List<Detection> detections;
+  final int sourceWidth;
+  final int sourceHeight;
+  final double displayWidth;
+  final double displayHeight;
+  final double offsetX;
+  final double offsetY;
+
+  static const List<Color> _boxColors = [
+    Color(0xFF00FF00),
+    Color(0xFF00BFFF),
+    Color(0xFFFF6347),
+    Color(0xFFFFD700),
+    Color(0xFFFF69B4),
+    Color(0xFF7B68EE),
+    Color(0xFFFF8C00),
+    Color(0xFF00CED1),
+  ];
+
+  BoundingBoxPainter({
+    required this.detections,
+    required this.sourceWidth,
+    required this.sourceHeight,
+    required this.displayWidth,
+    required this.displayHeight,
+    required this.offsetX,
+    required this.offsetY,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scaleX = displayWidth / sourceWidth;
+    final scaleY = displayHeight / sourceHeight;
+
+    for (int i = 0; i < detections.length; i++) {
+      final d = detections[i];
+      final color = _boxColors[i % _boxColors.length];
+
+      final left = d.bbox[0] * scaleX + offsetX;
+      final top = d.bbox[1] * scaleY + offsetY;
+      final right = d.bbox[2] * scaleX + offsetX;
+      final bottom = d.bbox[3] * scaleY + offsetY;
+
+      final rect = Rect.fromLTRB(left, top, right, bottom);
+
+      final boxPaint = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5;
+      canvas.drawRect(rect, boxPaint);
+
+      final fillPaint = Paint()
+        ..color = color.withAlpha(30)
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(rect, fillPaint);
+
+      final label =
+          '${d.arabicLabel} ${(d.confidence * 100).toStringAsFixed(0)}%';
+
+      final textStyle = ui.TextStyle(
+        color: Colors.white,
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+      );
+
+      final paragraphBuilder = ui.ParagraphBuilder(
+        ui.ParagraphStyle(
+          textDirection: ui.TextDirection.ltr,
+          fontSize: 13,
+          maxLines: 1,
+        ),
+      )
+        ..pushStyle(textStyle)
+        ..addText(label);
+
+      final paragraph = paragraphBuilder.build();
+      paragraph.layout(ui.ParagraphConstraints(width: (right - left).clamp(80, 300)));
+
+      final textWidth = paragraph.longestLine + 10;
+      final textHeight = paragraph.height + 6;
+
+      final labelTop = (top - textHeight - 2).clamp(0.0, size.height - textHeight);
+
+      final labelBg = Rect.fromLTWH(left, labelTop, textWidth, textHeight);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(labelBg, const Radius.circular(4)),
+        Paint()..color = color.withAlpha(200),
+      );
+
+      canvas.drawParagraph(paragraph, Offset(left + 5, labelTop + 3));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant BoundingBoxPainter oldDelegate) {
+    return detections != oldDelegate.detections;
+  }
+}
+
+FILE: lib/detector.dart
+-----------------------
+import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter_vision/flutter_vision.dart';
+
+class Detection {
+  final String label;
+  final String arabicLabel;
+  final double confidence;
+  final List<double> bbox;
+
+  Detection({
+    required this.label,
+    required this.arabicLabel,
+    required this.confidence,
+    required this.bbox,
+  });
+}
+
+class DetectionResult {
+  final List<Detection> detections;
+  final int imageWidth;
+  final int imageHeight;
+
+  DetectionResult({
+    required this.detections,
+    required this.imageWidth,
+    required this.imageHeight,
+  });
+}
+
+enum DetectionModel {
+  general,
+  currency,
+}
+
+class YoloDetector {
+  final FlutterVision _vision = FlutterVision();
+  bool _isReady = false;
+
+  bool get isReady => _isReady;
+
+  static const Map<String, String> arabicNames = {
+    'person': 'شَخْص',
+    'bicycle': 'دَرَّاجَة',
+    'car': 'سَيَّارَة',
+    'motorcycle': 'دَرَّاجَة نَارِيَّة',
+    'airplane': 'طَائِرَة',
+    'bus': 'أُتُوبِيس',
+    'train': 'قِطَار',
+    'truck': 'شَاحِنَة',
+    'boat': 'قَارِب',
+    'traffic light': 'إِشَارَة مُرُور',
+    'fire hydrant': 'صُنْبُور حَرِيق',
+    'stop sign': 'لَافِتَة قِف',
+    'parking meter': 'عَدَّاد مَوَاقِف',
+    'bench': 'مَقْعَد',
+    'bird': 'طَائِر',
+    'cat': 'قِطَّة',
+    'dog': 'كَلْب',
+    'horse': 'حِصَان',
+    'sheep': 'خَرُوف',
+    'cow': 'بَقَرَة',
+    'elephant': 'فِيل',
+    'bear': 'دُبّ',
+    'zebra': 'حِمَار وَحْشِيّ',
+    'giraffe': 'زَرَافَة',
+    'backpack': 'حَقِيبَة ظَهْر',
+    'umbrella': 'شَمْسِيَّة',
+    'handbag': 'حَقِيبَة يَد',
+    'tie': 'رَبْطَة عُنُق',
+    'suitcase': 'حَقِيبَة سَفَر',
+    'frisbee': 'فَرِيسْبِي',
+    'skis': 'تَزَلُّج',
+    'snowboard': 'لَوْح تَزَلُّج',
+    'sports ball': 'كُرَة',
+    'kite': 'طَائِرَة وَرَقِيَّة',
+    'baseball bat': 'مِضْرَب بِيسْبُول',
+    'baseball glove': 'قُفَّاز بِيسْبُول',
+    'skateboard': 'سْكِيتْبُورْد',
+    'surfboard': 'لَوْح تَزَلُّج مَائِيّ',
+    'tennis racket': 'مِضْرَب تِنِس',
+    'bottle': 'زُجَاجَة',
+    'wine glass': 'كَأْس',
+    'cup': 'كُوب',
+    'fork': 'شَوْكَة',
+    'knife': 'سِكِّينَة',
+    'spoon': 'مِلْعَقَة',
+    'bowl': 'وِعَاء عَمِيق',
+    'banana': 'مَوْزَة',
+    'apple': 'تُفَّاحَة',
+    'sandwich': 'سَانْدَوِتْش',
+    'orange': 'بُرْتُقَالَة',
+    'broccoli': 'بُرُوكْلِي',
+    'carrot': 'جَزَرَة',
+    'hot dog': 'هُوت دُوج',
+    'pizza': 'بِيتْزَا',
+    'donut': 'دُونَات',
+    'cake': 'كَيْكَة',
+    'chair': 'كُرْسِيّ',
+    'couch': 'أَرِيكَة',
+    'potted plant': 'نَبَات',
+    'bed': 'سَرِير',
+    'dining table': 'طَاوِلَة طَعَام',
+    'toilet': 'مِرْحَاض',
+    'tv': 'تِلِفِزْيُون',
+    'laptop': 'لَابْتُوب',
+    'mouse': 'فَأْرَة',
+    'remote': 'جَهَاز تَحَكُّم',
+    'keyboard': 'لَوْحَة مَفَاتِيح',
+    'cell phone': 'هَاتِف',
+    'microwave': 'مِيكْرُووِيف',
+    'oven': 'فُرْن',
+    'toaster': 'مَحْمَصَة',
+    'sink': 'حَوْض',
+    'refrigerator': 'ثَلَّاجَة',
+    'book': 'كِتَاب',
+    'clock': 'سَاعَة',
+    'vase': 'مُزْهِرِيَّة',
+    'scissors': 'مِقَصّ',
+    'teddy bear': 'دُبْدُوب',
+    'hair drier': 'سِشْوَار',
+    'toothbrush': 'فُرْشَاة أَسْنَان',
+  };
+
+  static const Map<String, String> currencyArabicNames = {
+    '0': 'عَشَرَة جُنَيْهَات',
+    '1': 'خَمْسَة جُنَيْهَات',
+    '10': 'خَمْسُونَ جُنَيْهًا',
+    '11': 'عِشْرُونَ جُنَيْهًا',
+    '12': 'خَمْسَة جُنَيْهَات',
+    '13': 'مِائَة جُنَيْه',
+    '2': 'مِائَة جُنَيْه',
+    '3': 'عِشْرُونَ جُنَيْهًا',
+    '4': 'مِائَتَا جُنَيْه',
+    '5': 'مِائَتَا جُنَيْه',
+    '6': 'خَمْسُونَ جُنَيْهًا',
+    '7': 'عِشْرُونَ جُنَيْهًا',
+    '8': 'خَمْسَة جُنَيْهَات',
+    '9': 'مِائَة جُنَيْه',
+  };
+
+  DetectionModel _currentModel = DetectionModel.general;
+  DetectionModel get currentModel => _currentModel;
+
+  Future<void> loadModel(DetectionModel modelType) async {
+    _isReady = false;
+    try {
+      await _vision.closeYoloModel();
+    } catch (_) {}
+
+    _currentModel = modelType;
+
+    try {
+      if (modelType == DetectionModel.general) {
+        await _vision.loadYoloModel(
+          labels: 'assets/models/labels.txt',
+          modelPath: 'assets/models/yolov8n.tflite',
+          modelVersion: 'yolov8',
+          quantization: false,
+          numThreads: 4,
+          useGpu: false,
+        );
+      } else {
+        await _vision.loadYoloModel(
+          labels: 'assets/models/currency_labels.txt',
+          modelPath: 'assets/models/currency_yolov8n.tflite',
+          modelVersion: 'yolov8',
+          quantization: false,
+          numThreads: 4,
+          useGpu: false,
+        );
+      }
+      _isReady = true;
+    } catch (e) {
+      _isReady = false;
+    }
+  }
+
+  Future<Uint8List?> _centerCropToSquare(Uint8List imageBytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(imageBytes);
+      final frame = await codec.getNextFrame();
+      final srcImage = frame.image;
+      final w = srcImage.width;
+      final h = srcImage.height;
+
+      if ((w - h).abs() < 10) {
+        srcImage.dispose();
+        codec.dispose();
+        return null;
+      }
+
+      final side = math.min(w, h);
+      final cropX = (w - side) / 2;
+      final cropY = (h - side) / 2;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      canvas.drawImageRect(
+        srcImage,
+        ui.Rect.fromLTWH(cropX, cropY, side.toDouble(), side.toDouble()),
+        ui.Rect.fromLTWH(0, 0, side.toDouble(), side.toDouble()),
+        ui.Paint(),
+      );
+      final picture = recorder.endRecording();
+      final croppedImage = await picture.toImage(side, side);
+
+      final byteData =
+          await croppedImage.toByteData(format: ui.ImageByteFormat.png);
+
+      srcImage.dispose();
+      croppedImage.dispose();
+      picture.dispose();
+      codec.dispose();
+
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<DetectionResult?> detectFromFile(String imagePath) async {
+    if (!_isReady) return null;
+
+    try {
+      final Uint8List originalBytes = await File(imagePath).readAsBytes();
+
+      final origCodec = await ui.instantiateImageCodec(originalBytes);
+      final origFrame = await origCodec.getNextFrame();
+      final int origW = origFrame.image.width;
+      final int origH = origFrame.image.height;
+      origFrame.image.dispose();
+      origCodec.dispose();
+
+      final int side = math.min(origW, origH);
+      final double cropX;
+      final double cropY;
+
+      Uint8List inferenceBytes;
+      int inferenceW, inferenceH;
+
+      if (_currentModel == DetectionModel.currency) {
+        inferenceBytes = originalBytes;
+        inferenceW = origW;
+        inferenceH = origH;
+        cropX = 0;
+        cropY = 0;
+      } else {
+        cropX = (origW - side) / 2;
+        cropY = (origH - side) / 2;
+        final cropped = await _centerCropToSquare(originalBytes);
+        if (cropped != null) {
+          inferenceBytes = cropped;
+          inferenceW = side;
+          inferenceH = side;
+        } else {
+          inferenceBytes = originalBytes;
+          inferenceW = origW;
+          inferenceH = origH;
+        }
+      }
+
+      final confThresh = _currentModel == DetectionModel.currency ? 0.15 : 0.25;
+      final iouThresh = _currentModel == DetectionModel.currency ? 0.3 : 0.4;
+      final results = await _vision.yoloOnImage(
+        bytesList: inferenceBytes,
+        imageHeight: inferenceH,
+        imageWidth: inferenceW,
+        iouThreshold: iouThresh,
+        confThreshold: confThresh,
+        classThreshold: confThresh,
+      );
+
+      if (results.isEmpty) {
+        return DetectionResult(
+          detections: [],
+          imageWidth: origW,
+          imageHeight: origH,
+        );
+      }
+
+      final double minBoxArea = _currentModel == DetectionModel.currency
+          ? origW * origH * 0.002
+          : origW * origH * 0.01;
+
+      final detections = <Detection>[];
+      for (final result in results) {
+        final String tag = result['tag'] as String;
+        final List<dynamic> box = result['box'] as List<dynamic>;
+        final double confidence = (box[4] as num).toDouble();
+
+        final double x1 = (box[0] as num).toDouble() + cropX;
+        final double y1 = (box[1] as num).toDouble() + cropY;
+        final double x2 = (box[2] as num).toDouble() + cropX;
+        final double y2 = (box[3] as num).toDouble() + cropY;
+
+        final double boxArea = (x2 - x1).abs() * (y2 - y1).abs();
+        if (boxArea < minBoxArea) continue;
+
+        String arLabel = tag;
+        if (_currentModel == DetectionModel.general) {
+          arLabel = arabicNames[tag] ?? tag;
+        } else {
+          arLabel = currencyArabicNames[tag] ?? tag;
+        }
+
+        detections.add(Detection(
+          label: tag,
+          arabicLabel: arLabel,
+          confidence: confidence,
+          bbox: [x1, y1, x2, y2],
+        ));
+      }
+
+      detections.sort((a, b) => b.confidence.compareTo(a.confidence));
+
+      return DetectionResult(
+        detections: detections,
+        imageWidth: origW,
+        imageHeight: origH,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> dispose() async {
+    try {
+      await _vision.closeYoloModel();
+    } catch (_) {}
+  }
+}
+
+FILE: lib/gemini_service.dart
+----------------------------
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
+
+enum DescriptionStyle {
+  brief,
+  normal,
+  detailed,
+}
+
+class GeminiService {
+  bool _isReady = false;
+  bool get isReady => _isReady;
+  static const String _apiKey = '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';
+
+  Future<void> init() async {
+    _isReady = true;
+  }
+
+  String _buildPrompt(DescriptionStyle style) {
+    String lengthRule;
+    switch (style) {
+      case DescriptionStyle.brief:
+        lengthRule = 'جملة واحدة فقط — أقصى ٨ كلمات.';
+        break;
+      case DescriptionStyle.normal:
+        lengthRule = 'جملتين أو ٣ جمل كحد أقصى.';
+        break;
+      case DescriptionStyle.detailed:
+        lengthRule = '٤ أو ٥ جمل كحد أقصى.';
+        break;
+    }
+
+    return '''
+أنت مساعد بصري لشخص كفيف في مصر.
+المستخدم لا يرى — كل كلمة تقولها هي عينه.
+
+مهمتك:
+وصف ما في الصورة بالعربي الفصيح البسيط. $lengthRule
+
+القواعد:
+١. ابدأ دائماً بأهم شيء قدام المستخدم مباشرة
+٢. اذكر الاتجاهات: يمين، يسار، قدام، وراء
+٣. اذكر المسافة: قريب، بعيد، على بعد خطوات
+٤. نبّه على أي خطر فوراً: سلالم، سيارات متحركة، حفر، أبواب زجاجية، عقبات في الطريق
+٥. لا تقل "أرى" أو "في الصورة" — تكلم كأنك واقف جنب المستخدم
+٦. لا تخمن حاجة مش واضحة — اذكر بس اللي أنت متأكد منه
+٧. لا تصف ألوان إلا لو مهمة للسلامة (إشارة مرور مثلاً)
+٨. لا تذكر أي شخص بالاسم أو تحدد العمر أو الجنس إلا لو ضروري
+٩. لا تستخدم كلمات صعبة أو تقنية
+١٠. لا تذكر أي حاجة مش موجودة فعلاً — الوصف الغلط ممكن يعرّض المستخدم للخطر
+١١. لو الصورة مظلمة أو مش واضحة، قول "الصورة مش واضحة، حاول توجه الكاميرا تاني"
+١٢. لو فيه إشارة مرور، اذكر لونها — ده استثناء مهم لقاعدة الألوان
+
+تنسيق الإجابة:
+[الوصف الرئيسي]. [الاتجاهات]. [تحذير لو فيه خطر].
+''';
+  }
+
+  Future<String> describeScene(
+    Uint8List imageBytes, {
+    DescriptionStyle style = DescriptionStyle.normal,
+  }) async {
+    if (!_isReady) return 'خدمة الوصف مش جاهزة.';
+
+    try {
+      final base64Image = base64Encode(imageBytes);
+      final prompt = _buildPrompt(style);
+
+      final response = await http.post(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $_apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+          'messages': [
+            {
+              'role': 'user',
+              'content': [
+                {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}},
+                {'type': 'text', 'text': prompt}
+              ]
+            }
+          ],
+          'max_tokens': 300,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final text = data['choices'][0]['message']['content'] as String?;
+        if (text == null || text.trim().isEmpty) return 'مقدرتش أوصف المشهد.';
+        return text.trim();
+      } else {
+        return 'خطأ من الخدمة: ${response.statusCode}';
+      }
+    } catch (e) {
+      return 'حصل خطأ غير متوقع.';
+    }
+  }
+
+  void dispose() {
+    _isReady = false;
+  }
+}
+
+FILE: lib/ocr_service.dart
+-------------------------
+import 'package:camera/camera.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:tesseract_ocr/tesseract_ocr.dart';
+import 'package:tesseract_ocr/ocr_engine_config.dart';
+
+enum OCRLanguage { english, arabic }
+
+class OCRService {
+  final _latinRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
+  bool _isDisposed = false;
+
+  Future<String> extractText(XFile imageFile, {OCRLanguage language = OCRLanguage.english}) async {
+    if (_isDisposed) return 'حدث خطأ.';
+    final imagePath = imageFile.path;
+    String rawText = '';
+
+    if (language == OCRLanguage.english) {
+      try {
+        final inputImage = InputImage.fromFilePath(imagePath);
+        final RecognizedText result = await _latinRecognizer.processImage(inputImage);
+        rawText = result.text.trim();
+      } catch (e) {}
+    } else {
+      try {
+        rawText = await TesseractOcr.extractText(
+          imagePath,
+          config: const OCRConfig(language: 'ara', engine: OCREngine.tesseract),
+        );
+        rawText = rawText.trim();
+      } catch (e) {}
+    }
+
+    if (rawText.isEmpty) return 'لا يوجد نص.';
+    return _cleanText(rawText);
+  }
+
+  String _cleanText(String raw) {
+    String cleaned = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (cleaned.length > 500) cleaned = '${cleaned.substring(0, 500)}...';
+    return cleaned;
+  }
+
+  void dispose() {
+    if (_isDisposed) return;
+    _isDisposed = true;
+    _latinRecognizer.close();
+  }
+}
+
+FILE: train_currency.py
+-----------------------
+import os
+import shutil
+from ultralytics import YOLO
+
+DATASET_YAML = r"c:\warene_ai\currency_dataset\New-Egyptian-Currency--2\data.yaml"
+OUTPUT_DIR = r"c:\warene_ai\currency_training"
+FLUTTER_ASSETS = r"c:\Users\youss\Documents\warene\assets\models"
+
+def main():
+    model = YOLO("yolov8n.pt")
+    results = model.train(
+        data=DATASET_YAML,
+        epochs=50,
+        imgsz=640,
+        batch=16,
+        project=OUTPUT_DIR,
+        name="currency",
+        exist_ok=True,
+        patience=10,
+        verbose=True,
+    )
+    best_model_path = os.path.join(OUTPUT_DIR, "currency", "weights", "best.pt")
+    trained_model = YOLO(best_model_path)
+    exported = trained_model.export(format="tflite", imgsz=640, half=True)
+    tflite_dir = os.path.join(OUTPUT_DIR, "currency", "weights", "best_saved_model")
+    tflite_candidates = [f for f in os.listdir(tflite_dir) if f.endswith(".tflite")]
+    if tflite_candidates:
+        chosen = tflite_candidates[0]
+        src = os.path.join(tflite_dir, chosen)
+        dst = os.path.join(FLUTTER_ASSETS, "currency_yolov8n.tflite")
+        shutil.copy2(src, dst)
+
+if __name__ == "__main__":
+    main()
+
+=======================================================
+END OF SUMMARY
+=======================================================
