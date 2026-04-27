@@ -11,6 +11,8 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+hs_err_pid*
+replay_pid*
 
 # IntelliJ related
 *.iml
@@ -18,10 +20,8 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Visual Studio Code related
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -30,7 +30,9 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+.packages
+build/
+**/build/
 /coverage/
 
 # Symbolication related
@@ -43,8 +45,25 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
- 
- # Environmental variables
- .env
- .env.*
+/android/.gradle/
+/android/local.properties
+/android/**/GeneratedPluginRegistrant.java
 
+# iOS related
+/ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/ios/ServiceDefinitions.json
+/ios/Runner/GeneratedPluginRegistrant.h
+/ios/Runner/GeneratedPluginRegistrant.m
+/ios/Runner/GeneratedPluginRegistrant.swift
+
+# macOS related
+/macos/Flutter/ephemeral/
+/macos/Flutter/Generated.xcconfig
+/macos/Flutter/flutter_export_environment.sh
+
+# Environmental variables
+.env
+.env.*
