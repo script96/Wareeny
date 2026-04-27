@@ -67,3 +67,14 @@ app.*.map.json
 # Environmental variables
 .env
 .env.*
+
+# YOLO / ML Models & Artifacts
+*.pt
+*.onnx
+runs/
+*_saved_model/
+
+# Scratch & Temporary files
+my_diff.txt
+status.txt
+warene_project_summary.txt
