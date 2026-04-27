@@ -30,9 +30,10 @@ flutter:
   uses-material-design: true
 
   assets:
+    - .env
     - assets/models/yolov8n.tflite
     - assets/models/labels.txt
     - assets/models/currency_yolov8n.tflite
     - assets/models/currency_labels.txt
     - assets/tessdata_config.json
-    - assets/tessdata/
+    - assets/tessdata/
