@@ -10,7 +10,7 @@ from pathlib import Path
 from ultralytics import YOLO
 
 DATA_YAML   = Path("data/data.yaml")
-MODEL       = "yolov8s.pt"   # small > nano for currency detail recognition
+MODEL       = "yolov8m.pt"   # medium: better accuracy on fine currency details vs small
 EPOCHS      = 150
 IMG_SIZE    = 640
 BATCH       = 16             # reduce to 8 if VRAM < 6 GB

@@ -37,7 +37,7 @@ These large files must exist locally. They may not be tracked in git (check `.gi
 ```
 assets/models/yolov8n.tflite             (~43 MB)
 assets/models/labels.txt
-assets/models/currency_yolov8n.tflite    (~6 MB)
+assets/models/currency_yolov8n.tflite    (~12 MB)
 assets/models/currency_labels.txt
 assets/tessdata/ara.traineddata          (~1.4 MB)
 assets/tessdata/eng.traineddata          (~4.0 MB)
@@ -103,7 +103,7 @@ yolo export model=yolov8n.pt format=tflite int8=true
 ```
 
 ### Egyptian Currency Model
-`assets/models/currency_yolov8n.tflite` — Custom-trained on Egyptian pound banknotes.
+`assets/models/currency_yolov8n.tflite` — Custom-trained YOLOv8m on Egyptian pound banknotes.
 
 Training dataset is not in this repo. Contact the team for dataset access or retraining instructions. Class mapping is in `lib/detector.dart` under `_currencyArabicNames`.
 

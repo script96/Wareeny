@@ -105,7 +105,7 @@ Wraps `flutter_vision`. Manages two model instances (`DetectionModel.general`, `
 
 **Models:**
 - `yolov8n.tflite` — 43 MB, 80 COCO classes, confidence threshold 0.25
-- `currency_yolov8n.tflite` — 6 MB, 14 EGP denominations, confidence threshold 0.15 (lower to catch partial notes)
+- `currency_yolov8n.tflite` — ~12 MB, YOLOv8m, 14 EGP denominations, confidence threshold 0.15 (lower to catch partial notes)
 
 ### GeminiService (Groq Client)
 `lib/gemini_service.dart`

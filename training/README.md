@@ -99,10 +99,10 @@ python train.py
 
 Trains YOLOv8s for 150 epochs with currency-tuned augmentation. Watches for early stopping (patience=30). Best weights saved to `runs/currency/train/weights/best.pt`.
 
-Training time estimates (GPU):
-- RTX 3060 / 4060: ~30–60 min
-- RTX 3080 / 4080: ~15–30 min
-- CPU only: several hours
+Training time estimates (GPU, YOLOv8m):
+- RTX 3060 / 4060: ~60–90 min
+- RTX 3080 / 4080: ~30–50 min
+- CPU only: many hours (not recommended)
 
 Monitor progress: `runs/currency/train/results.png` updates live.
 
