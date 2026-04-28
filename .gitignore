@@ -1,3 +1,10 @@
+# Python
+venv/
+.venv/
+__pycache__/
+training/data/
+training/runs/
+
 # Miscellaneous
 *.class
 *.log
