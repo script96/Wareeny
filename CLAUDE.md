@@ -21,17 +21,21 @@ Runs on Android. iOS is a stub (not tested, not deployed).
 
 ## Implementation Status
 
-### Done and Working
+> **Current state: prototype/mockup.** The Flutter app will be completely overhauled once all features and models are finalized. Do not invest in polishing the current UI code.
+
+### Working (code + logic functional)
 - General object detection (80 COCO classes, YOLOv8n TFLite)
-- Egyptian currency detection (custom YOLOv8 model, 14 denomination classes)
 - Scene description via Groq LLaMA 4 Scout
-- Object Finder: fast mode (YOLO) + smart mode (Groq vision)
 - OCR: English (Google ML Kit) + Arabic (Tesseract 5)
 - Color detection (HSL-based, 5×5 center pixel sample)
 - Egyptian Arabic TTS with throttling (3s repeat cooldown)
-- All gesture controls and mode switching
 - Bounding box overlay with Arabic labels
 - App lifecycle management (pause/resume on background)
+
+### Implemented but Poor Quality — Needs Work
+- **Currency detection** — code exists, model is bad (wrong training data/approach). New YOLOv8m model currently being trained. Do not rely on current model output.
+- **Object Finder** — logic exists but rudimentary, barely functional. Complete overhaul planned after model work is done.
+- **Gesture controls** — stubs exist in code but not properly implemented. Full gesture system will be built during app overhaul.
 
 ### Not Yet Implemented
 - Brand detection (local Egyptian brands) — thesis requirement FR-IN-3, no model, no code
@@ -49,6 +53,7 @@ Runs on Android. iOS is a stub (not tested, not deployed).
 - `GeminiService` uses Groq, not Google Gemini (legacy name, should rename to `GroqVisionService`)
 - Zero tests written (test/ folder exists with boilerplate only)
 - No CI/CD
+- Entire Flutter UI is a prototype — full rebuild planned
 
 ---
 

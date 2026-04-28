@@ -17,38 +17,50 @@ Core app infrastructure.
 
 ---
 
-## Milestone 2: Core Detection Features (Complete)
+## Milestone 2: Core Detection Features (Partial — In Progress)
 
-All primary user-facing capabilities.
+> **Note:** Current Flutter app is a prototype. Full UI overhaul planned after models and features are finalized.
 
 - [x] Real-time object detection (YOLOv8n, 80 COCO classes, on-device)
 - [x] Full Arabic translation dictionary for all 80 COCO classes
 - [x] Spatial feedback — direction (left/center/right) + distance (close/far)
-- [x] Egyptian currency recognition (custom YOLOv8, 14 denomination classes)
 - [x] Scene description one-shot (Groq LLaMA 4 Vision)
 - [x] English OCR (Google ML Kit)
 - [x] Arabic OCR (Tesseract 5)
 - [x] Color detection (HSL-based, 12 Arabic color names)
-- [x] Object Finder — Fast mode (YOLO, 10 preset targets + full COCO)
-- [x] Object Finder — Smart mode (Groq vision, 7 preset targets + arbitrary)
-- [x] Mode switching UI (action menu bottom sheet + gesture controls)
-- [x] Bounding box overlay with Arabic labels and confidence scores
 - [x] TTS throttling (3-second repeat cooldown)
 - [x] Detection persistence (3-frame hysteresis before clearing)
+- [x] Bounding box overlay with Arabic labels and confidence scores
+- [ ] **Egyptian currency recognition** — model poor quality, retraining with YOLOv8m in progress
+- [ ] **Object Finder** — logic stubbed but rudimentary/barely functional, full overhaul needed
+- [ ] **Gesture controls** — stubs in code, not properly implemented
+- [ ] **Mode switching UI** — basic version exists, will be rebuilt in app overhaul
 
 ---
 
-## Milestone 3: Model Improvement (In Progress — Next)
+## Milestone 3: Model Improvement (In Progress — Current Focus)
 
 Better models, more Egyptian-specific coverage.
 
-- [ ] Retrain currency model — improve accuracy on worn, folded, and partially visible notes
+- [~] Retrain currency model — YOLOv8m training pipeline ready, training in progress
 - [ ] Expand currency coverage — add 5 EGP note, 1 EGP coin
 - [ ] Collect training dataset for Egyptian brand detection (product packaging, logos)
 - [ ] Train YOLOv8 brand detection model
 - [ ] Integrate brand detection model in app (new mode or embedded in general detection)
 - [ ] Add ATM, pharmacy sign, trash can, mosque to Object Finder smart registry
 - [ ] Add traffic light to Object Finder smart registry (temporary until dedicated model)
+
+---
+
+## Milestone 3.5: Flutter App Overhaul (Planned — After Models Done)
+
+Current app is a prototype. Full rebuild once all models and core features are finalized.
+
+- [ ] Complete UI redesign from scratch
+- [ ] Proper gesture control system (swipes, taps, long-press — fully implemented)
+- [ ] Polished Object Finder (reliable detection, good UX feedback)
+- [ ] Smooth mode transitions and state management
+- [ ] Accessibility audit (screen reader compatibility, touch target sizes)
 
 ---
 
