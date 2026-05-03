@@ -1,207 +1,108 @@
-# Warene (واريني) 👁️ — AI Assistive App for Visually Impaired Users
 
-**Warene** is a real-time AI-powered mobile application designed to assist visually impaired users in Egypt. It uses on-device object detection with **YOLOv8** to identify objects through the phone's camera and announces them in **Egyptian Arabic** with spatial direction feedback — telling the user *what* is around them, *where* it is, and *how far* away it is. It also features a **Scene Description** capability powered by Groq's LLaMA vision models.
+# Wareeny (واريني)
 
----
+An AI-powered mobile assistive system for blind and low-vision users in Egypt. Provides real-time object detection, scene description, text reading, and currency recognition — all announced in Egyptian Arabic via text-to-speech.
 
-## ✨ Features
-
-### 🔍 Real-Time Object Detection
-- Detects **80 COCO object classes** (people, cars, furniture, animals, electronics, food, etc.)
-- Uses **YOLOv8n** (nano) model for fast on-device inference via TensorFlow Lite
-- Runs detection every **1.5 seconds** using camera snapshots
-- All processing happens **locally on the device** — no internet required
-
-### 🖼️ Scene Description (Groq LLaMA)
-- Summarizes the current scene in natural Arabic sentences optimized for blind users
-- Uses **Groq API** with the `meta-llama/llama-4-scout-17b-16e-instruct` model for blazing fast vision inference
-- Adjusts description verbosity (brief, normal, detailed)
-- Intelligent prompt engineering to emphasize safety hazards and accurate direction
-
-### 🗣️ Arabic Text-to-Speech (TTS)
-- Announces detected objects in **Egyptian Arabic** with natural pronunciation
-- Full translation dictionary for all 80 COCO classes (e.g., "person" → "شخص", "car" → "سيارة")
-- Smart announcement system: avoids repeating the same object, waits 3 seconds between identical announcements
-
-### 💵 Egyptian Currency Recognition
-- Detects Egyptian Pound banknotes (10, 20, 50, 100, 200 EGP) using a custom YOLOv8 model.
-- Fast, reliable bounding box detection with tuned confidence thresholds.
-- Specialized audio feedback in Arabic for recognized denominations.
-
-### 📖 Text Reading (OCR)
-- On-device Optical Character Recognition (OCR) powered by Tesseract.
-- Allows visually impaired users to read text from signs, products, or labels.
-- Integration with TTS for seamless reading aloud.
-
-### 🧭 Spatial Direction Feedback
-- Tells the user **WHERE** objects are relative to them:
-  - **على اليسار** — on the left
-  - **في الوسط** — in the center  
-  - **على اليمين** — on the right
-- Estimates object **distance** based on bounding box size:
-  - **قريب جداً** — very close (box > 15% of image)
-  - **قريب** — close (box > 5% of image)
-  - **بعيد** — far (box < 5% of image)
-- Example TTS output: **"شخص على اليمين، قريب"** (person on the right, close)
-- Announces **up to 3 objects** per detection cycle with full spatial context
-
-### 📦 Bounding Box Visualization
-- Color-coded bounding boxes drawn over detected objects on the camera preview
-- Arabic labels with confidence percentages displayed above each box
-- 8 rotating colors for visual distinction between multiple objects
-- Semi-transparent fill inside boxes for better visibility
-
-### 📷 High-Resolution Camera
-- Uses `ResolutionPreset.high` for better image quality and detection accuracy
-- Center-crops portrait images to square before inference to preserve aspect ratio
-- Automatic lifecycle handling — pauses detection when app is backgrounded, resumes when foregrounded
+Built with Flutter. Runs on Android.
 
 ---
 
-## 🏗️ Architecture
+## Features
 
-### Project Structure
+### Object Detection
+- Detects 80 COCO classes in real time (people, vehicles, furniture, food, electronics, etc.)
+- YOLOv8n running on-device via TensorFlow Lite — no internet required
+- Spatial feedback: announces direction (left/center/right) and estimated distance (close/far) per object
+- Up to 3 objects announced per detection cycle
 
-```
-warene/
-├── lib/
-│   ├── main.dart          # App UI, camera, TTS, spatial feedback, bounding boxes
-│   ├── detector.dart      # YoloDetector wrapper, center-crop preprocessing
-│   ├── ocr_service.dart   # Text Reading component (Tesseract OCR)
-│   └── gemini_service.dart# Scene description service (using Groq API)
-├── assets/
-│   ├── models/
-│   │   ├── yolov8n.tflite           # YOLOv8 nano TFLite model (6.3 MB)
-│   │   ├── labels.txt               # 80 COCO class labels
-│   │   ├── currency_yolov8n.tflite  # Egyptian Currency YOLOv8 model
-│   │   └── currency_labels.txt      # Currency labels (10, 20, 50, 100, 200 EGP)
-│   ├── tessdata/                    # Tesseract OCR language data models
-│   └── tessdata_config.json         # Tesseract configuration file
-├── android/                # Android platform configuration
-├── pubspec.yaml            # Flutter dependencies
-└── README.md               # This file
-```
+### Scene Description
+- One-shot scene summary powered by Groq LLaMA 4 Vision API
+- Output in natural Egyptian Arabic
+- Three verbosity levels: brief (1 sentence), normal (2–3 sentences), detailed (4–5 sentences)
+- Prompt-engineered to prioritize hazards, spatial layout, and relevant context for blind users
 
-### Detection Pipeline
+### Egyptian Currency Recognition
+- Custom YOLOv8 model trained on Egyptian pound banknotes
+- Recognizes 1, 5, 10, 20, 50, 100, 200 EGP denominations (front and back variants)
+- Tuned confidence threshold for folded and angled notes
 
-```
-┌─────────────┐    ┌──────────────┐    ┌────────────────┐    ┌──────────────┐
-│ Camera Feed │───▶│ takePicture()│───▶│ Center Crop    │───▶│ flutter_vision│
-│ (1280x720)  │    │ JPEG snapshot│    │ 720x720 square │    │ yoloOnImage() │
-└─────────────┘    └──────────────┘    └────────────────┘    └──────┬───────┘
-                                                                    │
-┌─────────────┐    ┌──────────────┐    ┌────────────────┐           │
-│ Arabic TTS  │◀──│ Spatial Info  │◀──│ Coordinate     │◀──────────┘
-│ Announcement│    │ Direction +  │    │ Mapping +      │    (detections in
-│             │    │ Distance     │    │ Crop Offset    │     cropped coords)
-└─────────────┘    └──────────────┘    └────────────────┘
-```
+### Object Finder
+- **Fast mode**: YOLO-based search for any of 80 known object classes
+- **Smart mode**: Groq vision-based search for arbitrary objects (keys, glasses, medicine, ID card, charger, remote, etc.)
+- Announces direction and distance when target is found
+- Periodic guidance cues while searching; 2-minute timeout
 
-### Data Flow (Step by Step)
+### Text Reading (OCR)
+- English text: Google ML Kit (printed signs, labels, documents)
+- Arabic text: Tesseract 5 with Arabic language pack
+- Result announced via TTS
 
-1. **Camera Capture**: Every 1.5 seconds, `takePicture()` captures a JPEG snapshot from the camera (720×1280 portrait).
-2. **Center Crop**: The portrait image is center-cropped to a 720×720 square using `dart:ui` canvas operations. This avoids the model squishing the image.
-3. **Native Inference**: The cropped JPEG is passed to `flutter_vision`'s `yoloOnImage()`, which runs TFLite inference through the YOLOv8n model and returns bounding box coordinates.
-4. **Coordinate Mapping**: Bounding box coordinates are mapped from cropped-image space back to original-image space.
-5. **Spatial Analysis**: Each detection's bounding box center determines direction, and its area determines estimated distance.
-6. **Arabic TTS**: A natural Arabic sentence is constructed for the top 3 detections and spoken via `flutter_tts`.
-7. **Scene Description (On-Demand)**: When the user activates the scene description button, YOLO is paused, a snapshot is captured, and sent to the **Groq LLaMA Vision API** which returns a comprehensive Arabic description of the scene spoken via TTS.
+### Color Detection
+- Identifies dominant color in camera center
+- Reports in Arabic: أسود، أبيض، أحمر، أزرق، أخضر، إلخ
 
 ---
 
-## 🔧 Technology Stack
+## Tech Stack
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| **Framework** | Flutter (Dart) | Cross-platform UI and app logic |
-| **Object Detection** | YOLOv8n (TFLite) | Real-time object detection model |
-| **Inference Engine** | flutter_vision 2.0.0 | Native C++/Java TFLite inference wrapper |
-| **Scene Description** | Groq LLaMA Vision API | Fast inference for rich scene context (`meta-llama/llama-4-scout-17b-16e-instruct`) |
-| **Camera** | camera 0.11.0 | Camera preview and image capture |
-| **Text-to-Speech** | flutter_tts 4.0.2 | Arabic speech synthesis |
-| **Permissions** | permission_handler 11.3.1 | Camera and microphone permissions |
-| **Networking** | http 1.2.2 | API requests for scene generation |
-| **Screen Wake** | wakelock_plus 1.2.8 | Keeps screen on during use |
-
----
-
-## 📂 Key Files
-
-### `lib/detector.dart` — YoloDetector
-The core detection engine that wraps `flutter_vision`. Handles model lifecycle (load/unload), runs inference (`detectFromFile()`), and maps 80 COCO class names translated to Egyptian Arabic. Also manages the secondary YOLOv8 model for **Egyptian Currency Recognition**.
-
-### `lib/ocr_service.dart` — OCR Service
-Handles on-device Optical Character Recognition (OCR) using Tesseract, allowing the app to extract text from images and pass it to the TTS engine.
-
-### `lib/gemini_service.dart` — GeminiService (Groq Backend)
-Handles the scene description capability. Formats images to base64 and sends them to the Groq API for rapid processing using a LLaMA vision model, handling timeouts, and connection errors to guarantee speech output.
-
-### `lib/main.dart` — App UI and Logic
-The main application containing the Camera Screen, bounding box painter mapping coordinates to the display screen, timer-based local object detection (running every 1.5s), and the TTS announcements.
+| Component | Technology |
+|-----------|-----------|
+| Framework | Flutter 3.11.0 (Dart) |
+| Object Detection | YOLOv8n TFLite |
+| Inference Engine | flutter_vision 2.0.0 |
+| Scene Description / Smart Finder | Groq API — LLaMA 4 Scout 17B |
+| English OCR | Google ML Kit |
+| Arabic OCR | Tesseract 5 |
+| Text-to-Speech | flutter_tts 4.0.2 (Egyptian Arabic) |
+| Camera | camera 0.11.0 |
+| Environment | flutter_dotenv 6.0.0 |
 
 ---
 
-## 🚀 Getting Started
+## Quick Start
 
-### Prerequisites
-
-- **Flutter SDK** 3.11.0 or later
-- **Android SDK** with NDK installed (required by flutter_vision for native C++ compilation)
-- **Java Development Kit** 11+
-- An **Android device** with a camera (API 21+)
-- **ADB** configured for device deployment
-
-### Installation
+See [docs/SETUP.md](docs/SETUP.md) for full setup instructions.
 
 ```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd warene
-
-# 2. Install Flutter dependencies
 flutter pub get
-
-# 3. Connect your Android device via USB or wireless ADB
-
-# 4. Run the app
+# Create .env with: GROQ_API_KEY=your_key_here
 flutter run
 ```
 
----
-
-## ⚠️ Known Considerations
-
-### YUV Stride Bug Workaround
-flutter_vision's `yoloOnFrame()` has a bug where the Y plane stride padding on some Android devices corrupts the NV21→Bitmap conversion. **Warene uses `takePicture()` JPEG snapshots instead**, bypassing this bug.
-
-### Center Crop for Accuracy
-The YOLOv8 model expects square 640×640 input. Warene center-crops to square first, so the model sees undistorted objects and only needs a mild downscale.
+Requires Android device (API 21+) with NDK installed.
 
 ---
 
-## 🗺️ Roadmap
+## Gestures
 
-Planned features for future development:
-
-- [x] **Scene Description** — summarize all detected objects into one natural Arabic sentence (Implemented via Groq)
-- [x] **Text Reading (OCR)** — read signs, labels, and prices using Tesseract OCR
-- [x] **Currency Recognition** — identify Egyptian pound banknotes
-- [ ] **Obstacle Warning with Haptic Vibration** — vibrate when large objects are very close
-- [ ] **Voice Commands** — activate features using voice input
-- [ ] **Color Detection** — announce the color of objects
-
----
-
-## 📄 License
-
-This project is for educational and humanitarian purposes.
+| Gesture | Action |
+|---------|--------|
+| Double-tap | Describe scene (one-shot) |
+| Triple-tap | Toggle color mode |
+| Swipe right | Toggle currency / general objects |
+| Swipe left | Toggle OCR language (EN / AR) |
+| Long-press | Open mode menu |
 
 ---
 
-## 🙏 Acknowledgments
+## Documentation
 
-- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) — State-of-the-art object detection model
-- [Groq](https://groq.com/) — Fast AI inference engine
-- [flutter_vision](https://pub.dev/packages/flutter_vision) — Native TFLite inference for Flutter
-- [COCO Dataset](https://cocodataset.org/) — 80-class object detection benchmark
-- [Flutter](https://flutter.dev/) — Cross-platform mobile framework
+| Document | Purpose |
+|----------|---------|
+| [docs/SETUP.md](docs/SETUP.md) | Environment setup and build guide |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and data flow |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Feature roadmap and milestone tracking |
+| [CLAUDE.md](CLAUDE.md) | AI assistant reference (architecture, gotchas, status) |
+
+---
+
+## License
+
+Educational and humanitarian use. See [docs/thesis.pdf](docs/thesis.pdf) for full research context.
+
+## Acknowledgments
+
+- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics)
+- [Groq](https://groq.com/)
+- [flutter_vision](https://pub.dev/packages/flutter_vision)
+- [Flutter](https://flutter.dev/)

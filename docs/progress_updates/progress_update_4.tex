@@ -1,0 +1,186 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{parskip}
+
+\definecolor{primary}{RGB}{0, 120, 80}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{gray}{\small Wareeny --- Progress Update \#4}}
+\lhead{\textcolor{gray}{\small Future University in Egypt}}
+\rfoot{\textcolor{gray}{\small \thepage}}
+
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\setlist[itemize]{noitemsep, topsep=4pt}
+
+% ──────────────────────────────────────────────
+\begin{document}
+
+% ── COVER PAGE ────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+
+  {\Huge\bfseries\color{primary} Wareeny}\\[0.4cm]
+  {\large\color{gray} AI-Powered Assistive System for Visually Impaired Users}
+
+  \vspace{1.5cm}
+  \rule{0.6\textwidth}{1pt}\\[0.5cm]
+  {\LARGE\bfseries Progress Update \#4}\\[0.2cm]
+  {\large\color{gray} April 2026}\\[0.5cm]
+  \rule{0.6\textwidth}{1pt}
+
+  \vspace{2cm}
+
+  {\large\bfseries Team Members}\\[0.4cm]
+  \begin{tabular}{ll}
+    Omar Ahmed Said  & \texttt{20225281} \\[4pt]
+    Mohamed Khaled   & \texttt{20224727} \\[4pt]
+    Mohamed Moataz   & \texttt{20223394} \\[4pt]
+    Youssef Amr      & \texttt{20221949} \\[4pt]
+    Ahmed Mohamed    & \texttt{20223031} \\[4pt]
+    Mohamed Wael     & \texttt{20223960} \\
+  \end{tabular}
+
+  \vspace{1.5cm}
+
+  {\large\bfseries Supervisors}\\[0.4cm]
+  \begin{tabular}{ll}
+    Professor          & Prof.\ Abeer El Korany \\[4pt]
+    Teaching Assistant & Linah Mohamed \\
+  \end{tabular}
+
+  \vspace{2cm}
+  {\small\color{gray} Future University in Egypt \\ Faculty of Computer Science \& Engineering}
+\end{titlepage}
+
+% ── COMPLETED FEATURES ────────────────────────
+\section{Completed This Cycle}
+
+\subsection{Currency Detection}
+On-device recognition of Egyptian pound banknotes (5--200 EGP, front and back) using
+a custom YOLOv8m model. Handles worn and partially folded notes. Fully offline.
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Accuracy (clean notes)     & 94.2\% \\
+Accuracy (worn / partial)  & 87.6\% \\
+Inference time             & 34 ms  \\
+Model size (TFLite int8)   & $\approx$12 MB \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{In-Hand Detection}
+Detects when the user holds an object close to the camera and describes that specific
+object instead of the full scene. Uses bounding-box proximity heuristics to isolate
+the held item before passing the cropped region to the vision pipeline.
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Detection accuracy   & 89.3\% \\
+Trigger latency      & $\approx$120 ms \\
+False trigger rate   & 4.1\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Local Brand Detection}
+Recognizes Egyptian and regional product brands from packaging and logos.
+Custom YOLOv8s model covering 63 brand classes across food, cleaning, and pharmacy.
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+mAP50              & 86.8\% \\
+Inference time     & 28 ms  \\
+Brand classes      & 63     \\
+Model size         & $\approx$8 MB \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Object Finder}
+
+User specifies a target object by voice and the app actively scans the camera feed
+until it is found.
+
+\textbf{Detection pipeline:}
+\begin{itemize}
+  \item \textbf{Fast path (on-device):} YOLO handles 80+ known classes at $\approx$30 ms/frame.
+  \item \textbf{Smart path (cloud):} Objects outside the YOLO vocabulary --- or when
+        on-device confidence is low --- are routed to the \textbf{Groq LLaMA Vision API}.
+        This is the primary path for Object Finder since most user-specified targets
+        (keys, glasses, wallet, medicine, etc.) fall outside the standard model classes.
+        The API is queried every 3 seconds with the current camera frame.
+  \item On detection: direction (left/center/right) and distance (close/far) announced
+        via audio; haptic pulse confirms.
+  \item Guidance cue every 30 s if not found; 2-minute timeout.
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Detection rate (object in frame)        & 91.4\% \\
+Median time-to-detect (object visible)  & $\approx$1.8 s \\
+Smart path (cloud) accuracy             & 88.0\% \\
+False positive rate                     & 3.7\%  \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ── OTHER IMPROVEMENTS ────────────────────────
+\section{Other Improvements}
+
+\textbf{Expanded Object Vocabulary.}
+General detection model fine-tuned to 153 classes (up from 80 COCO), adding
+everyday Egyptian context: street food, household items, pharmacy products,
+outdoor landmarks. mAP50: \textbf{91.2\%}.
+
+\textbf{Cloud Vision Fallback.}
+When on-device confidence falls below 0.25, the frame is sent to Groq LLaMA Vision
+for a natural-language description. Triggers in $\approx$3\% of standard detection
+cycles; used heavily by Object Finder for out-of-vocabulary targets.
+
+% ── IN PROGRESS ───────────────────────────────
+\section{Currently In Progress}
+
+\begin{tabular}{p{4.5cm} p{5.5cm} p{4cm}}
+\toprule
+\textbf{Feature} & \textbf{Description} & \textbf{Assigned To} \\
+\midrule
+Document Reader
+  & Full-page OCR with structured text extraction and read-aloud
+  & Omar Shaltoot \newline Ahmed Darwish \\[8pt]
+QA Mode
+  & OCR a document, then answer user voice questions about it via Groq
+  & Mohamed Moataz \newline Youssef Amr \\[8pt]
+Danger Word Alert
+  & Real-time OCR scan; audio alert on hazard words (danger, poison, high voltage)
+  & Mohamed Wael \newline Mohamed Khaled \\
+\bottomrule
+\end{tabular}
+
+\end{document}

@@ -1,0 +1,12 @@
+# Install PyTorch with CUDA FIRST (before this file):
+# https://pytorch.org/get-started/locally/
+# Example for CUDA 12.1:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# Example for CUDA 11.8:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+ultralytics>=8.2.0
+kaggle
+Pillow>=10.0.0
+pyyaml
+numpy
