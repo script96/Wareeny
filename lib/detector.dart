@@ -199,7 +199,7 @@ class YoloDetector {
       } else {
         await _vision.loadYoloModel(
           labels: 'assets/models/currency_labels.txt',
-          modelPath: 'assets/models/currency_yolov8n.tflite',
+          modelPath: 'assets/models/currency_yolov8m.tflite',
           modelVersion: 'yolov8',
           quantization: false,
           numThreads: 4,

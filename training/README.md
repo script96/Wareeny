@@ -35,7 +35,7 @@ python export_tflite.py
 After export, **copy only this one file back** to your dev machine:
 ```
 training/runs/currency/train/weights/best.pt   ← optional, keep as backup
-assets/models/currency_yolov8n.tflite          ← copy this to your dev machine
+assets/models/currency_yolov8m.tflite          ← copy this to your dev machine
 ```
 
 The export script also prints a Dart snippet — paste it into `lib/detector.dart` on your dev machine (see Step 4 below).
@@ -97,7 +97,7 @@ Downloads the dataset, detects its format, converts to YOLO layout, splits into 
 python train.py
 ```
 
-Trains YOLOv8s for 150 epochs with currency-tuned augmentation. Watches for early stopping (patience=30). Best weights saved to `runs/currency/train/weights/best.pt`.
+Trains YOLOv8m for 150 epochs with currency-tuned augmentation. Watches for early stopping (patience=30). Best weights saved to `runs/currency/train/weights/best.pt`.
 
 Training time estimates (GPU, YOLOv8m):
 - RTX 3060 / 4060: ~60–90 min
@@ -112,7 +112,7 @@ Monitor progress: `runs/currency/train/results.png` updates live.
 python export_tflite.py
 ```
 
-Exports `best.pt` → TFLite int8, copies to `assets/models/currency_yolov8n.tflite`, and prints the Dart class-mapping snippet to paste into `lib/detector.dart`.
+Exports `best.pt` → TFLite fp16, copies to `assets/models/currency_yolov8m.tflite`, and prints the Dart class-mapping snippet to paste into `lib/detector.dart`.
 
 ### Step 4 — Update detector.dart
 

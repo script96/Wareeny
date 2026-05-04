@@ -1,7 +1,7 @@
 """
-Export trained YOLOv8 weights → TFLite int8.
+Export trained YOLOv8 weights → TFLite fp16.
 
-Copies the result to assets/models/currency_yolov8n.tflite and prints
+Copies the result to assets/models/currency_yolov8m.tflite and prints
 the updated Dart class-mapping snippet to paste into detector.dart.
 """
 
@@ -12,8 +12,7 @@ from ultralytics import YOLO
 
 WEIGHTS     = Path("runs/currency/train/weights/best.pt")
 DATA_YAML   = Path("data/data.yaml")
-ASSETS_DST  = Path("../assets/models/currency_yolov8n.tflite")
-CALIB_DIR   = Path("data/yolo/train/images")   # used for int8 calibration
+ASSETS_DST  = Path("../assets/models/currency_yolov8m.tflite")
 
 
 def export():

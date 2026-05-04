@@ -112,7 +112,7 @@ assets/
 ├── models/
 │   ├── yolov8n.tflite           43 MB, 80 COCO classes, threshold 0.25
 │   ├── labels.txt               80 COCO class names
-│   ├── currency_yolov8n.tflite  6 MB, 14 EGP denominations, threshold 0.15
+│   ├── currency_yolov8m.tflite  ~24 MB, YOLOv8m fp16, 14 EGP denominations, threshold 0.15
 │   └── currency_labels.txt      Currency class names
 └── tessdata/
     ├── ara.traineddata          Arabic OCR language pack
