@@ -5,8 +5,8 @@ void main() {
   // ── WareneMode ──
 
   group('WareneMode', () {
-    test('has 5 values', () {
-      expect(WareneMode.values.length, 5);
+    test('has 6 values', () {
+      expect(WareneMode.values.length, 6);
     });
 
     test('contains all expected modes', () {
@@ -16,6 +16,7 @@ void main() {
         WareneMode.objectFinderFast,
         WareneMode.objectFinderSmart,
         WareneMode.color,
+        WareneMode.documentQa,
       };
       expect(WareneMode.values.toSet(), expected);
     });

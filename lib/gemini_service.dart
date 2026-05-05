@@ -1,7 +1,7 @@
-// Warene — Scene description service (Groq / Llama Vision)
+// Warene — Scene description + Document QA service (Groq / Llama)
 //
-// Sends a camera snapshot to Groq's Llama Vision API and returns
-// a natural Arabic description optimized for blind users.
+// Scene description: sends camera snapshots to Groq's Llama Vision API.
+// Document QA: answers questions from OCR text via Groq's text LLM.
 //
 // NOTE: The class is still named GeminiService for historical reasons.
 // It originally targeted Google Gemini but now uses Groq.
@@ -11,6 +11,8 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'services/object_finder_types.dart';
+import 'models/qa_types.dart';
+import 'ocr_service.dart';
 
 /// Description verbosity level.
 enum DescriptionStyle {
@@ -238,6 +240,158 @@ Rules:
       }
       return const SmartFindResult.error('حصل خطأ غير متوقع. حاول تاني.');
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  DOCUMENT QA — Text-only Q&A from OCR content
+  // ══════════════════════════════════════════════════════════════════
+
+  /// Maximum document context size in characters.
+  static const int _maxDocumentChars = 4000;
+
+  /// Text-only model for QA (better reasoning than vision model).
+  static const String _qaModel = 'llama-3.3-70b-versatile';
+
+  /// Answer a question using only the provided document text.
+  ///
+  /// Returns a [DocumentQaResult] with the Arabic answer or an error
+  /// message. Never returns null — always returns a speakable result.
+  Future<DocumentQaResult> answerQuestionFromDocument({
+    required String documentText,
+    required String question,
+    List<QaTurn> history = const [],
+    OCRLanguage language = OCRLanguage.arabic,
+  }) async {
+    if (!_isReady) {
+      return const DocumentQaResult.error(
+        'خدمة الإجابة مش جاهزة. تأكد من مفتاح الـ API.',
+      );
+    }
+
+    if (_apiKey.isEmpty) {
+      return const DocumentQaResult.error(
+        'مفتاح الـ API مش موجود. تحقق من ملف الإعدادات.',
+      );
+    }
+
+    try {
+      // Truncate document if too long
+      String docContext = documentText;
+      if (docContext.length > _maxDocumentChars) {
+        docContext = docContext.substring(0, _maxDocumentChars);
+        print('📄 Document truncated to $_maxDocumentChars chars for QA');
+      }
+
+      // Build messages array
+      final messages = <Map<String, dynamic>>[
+        {
+          'role': 'system',
+          'content': _buildQaSystemPrompt(docContext),
+        },
+      ];
+
+      // Add conversation history (last N turns)
+      for (final turn in history) {
+        messages.add({'role': 'user', 'content': turn.question});
+        messages.add({'role': 'assistant', 'content': turn.answer});
+      }
+
+      // Add current question
+      messages.add({'role': 'user', 'content': question});
+
+      final response = await http.post(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $_apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': _qaModel,
+          'messages': messages,
+          'max_tokens': 300,
+        }),
+      ).timeout(const Duration(seconds: 15), onTimeout: () {
+        throw Exception('timeout');
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // Defensive parsing against missing fields
+        final choices = data is Map<String, dynamic> ? data['choices'] : null;
+        if (choices is! List || choices.isEmpty) {
+          return const DocumentQaResult.error('مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.');
+        }
+
+        final choice = choices.first;
+        if (choice is! Map<String, dynamic>) {
+          return const DocumentQaResult.error('مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.');
+        }
+
+        final message = choice['message'];
+        if (message is! Map<String, dynamic>) {
+          return const DocumentQaResult.error('مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.');
+        }
+
+        final text = message['content'];
+        if (text is! String || text.trim().isEmpty) {
+          return const DocumentQaResult.error(
+            'مقدرتش ألاقي إجابة. حاول تسأل بطريقة تانية.',
+          );
+        }
+        return DocumentQaResult(answer: text.trim());
+      } else if (response.statusCode == 429) {
+        return const DocumentQaResult.error(
+          'الخدمة مشغولة دلوقتي. استنى دقيقة وحاول تاني.',
+        );
+      } else if (response.statusCode == 401 || response.statusCode == 400) {
+        return const DocumentQaResult.error(
+          'خطأ في المفتاح، تحقق من الإعدادات.',
+        );
+      } else {
+        return DocumentQaResult.error(
+          'خطأ من الخدمة: ${response.statusCode}',
+        );
+      }
+    } on Exception catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('timeout')) {
+        return const DocumentQaResult.error(
+          'الإجابة أخدت وقت طويل. حاول تاني.',
+        );
+      }
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
+        return const DocumentQaResult.error('مفيش اتصال بالإنترنت.');
+      }
+      return const DocumentQaResult.error(
+        'حصل خطأ غير متوقع. حاول تاني.',
+      );
+    }
+  }
+
+  /// Build the system prompt for document QA.
+  String _buildQaSystemPrompt(String documentText) {
+    return '''
+أنت مساعد ذكي بتجاوب على أسئلة عن نص مكتوب.
+المستخدم كفيف وبيسمع الإجابة صوتياً.
+
+النص المكتوب:
+---
+$documentText
+---
+
+القواعد:
+١. جاوب بالعربي المصري البسيط.
+٢. جاوب من النص اللي فوق بس. ماتخترعش أي معلومة مش موجودة.
+٣. لو المعلومة مش موجودة في النص، قول: "المعلومة دي مش موجودة في النص."
+٤. خلي الإجابة قصيرة ومباشرة — جملة أو اتنين كفاية.
+٥. ماتذكرش أسماء أو أرقام أو تواريخ مش موجودة في النص.
+٦. لو النص مش واضح أو فيه أخطاء إملائية، قول إن النص مش واضح في الجزء ده.
+٧. ماتقولش "حسب النص" أو "النص بيقول" — جاوب مباشرة.
+٨. الإجابة لازم تكون نص عادي (بدون Markdown، بدون قوائم نقطية).
+''';
   }
 
   void dispose() {

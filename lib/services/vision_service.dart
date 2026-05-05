@@ -4,9 +4,12 @@ import 'package:camera/camera.dart';
 import '../detector.dart';
 import '../gemini_service.dart';
 import '../ocr_service.dart';
+import '../models/ocr_result.dart';
+import '../models/qa_types.dart';
 import 'camera_service.dart';
 import 'speech_service.dart';
 import 'color_service.dart';
+import 'voice_input_service.dart';
 import 'object_finder_types.dart';
 
 class VisionService {
@@ -20,6 +23,7 @@ class VisionService {
   final SpeechService _speech = SpeechService();
   final ColorService _color = ColorService();
   final OCRService _ocr = OCRService();
+  final VoiceInputService _voice = VoiceInputService();
 
   // ── Central mode state ──
 
@@ -37,7 +41,7 @@ class VisionService {
 
   /// True when a one-shot action (OCR, scene) is running.
   bool _isOneShot = false;
-  bool get isBusy => _isSwitchingMode || _isOneShot;
+  bool get isBusy => _isSwitchingMode || _isOneShot || _isQaListening || _isQaAnswering;
 
   // ── YOLO state ──
 
@@ -101,6 +105,33 @@ class VisionService {
   String _lastColorSpoken = '';
   DateTime _lastColorSpeakTime = DateTime.fromMillisecondsSinceEpoch(0);
 
+  // ── QA Mode state ──
+
+  String? _qaDocumentText;
+  OCRLanguage? _qaLanguage;
+  List<QaTurn> _qaHistory = [];
+  bool _isQaListening = false;
+  bool _isQaAnswering = false;
+  bool get hasActiveQaDocument => _qaDocumentText != null;
+  static const int _maxQaHistory = 5;
+
+  /// Pure helper to trim QA history to [maxTurns].
+  /// Delegates to the testable `trimQaHistory` in `qa_types.dart`.
+  List<QaTurn> _trimHistory(List<QaTurn> history) =>
+      trimQaHistory(history, maxTurns: _maxQaHistory);
+
+  /// Clears QA state safely.
+  Future<void> _clearDocumentQaState({bool stopVoice = true}) async {
+    _qaDocumentText = null;
+    _qaLanguage = null;
+    _qaHistory.clear();
+    _isQaListening = false;
+    _isQaAnswering = false;
+    if (stopVoice && _voice.isListening) {
+      await _voice.stopListening();
+    }
+  }
+
   // ── Spatial helpers ──
 
   String getDirection(Detection d, int imageWidth) {
@@ -134,6 +165,7 @@ class VisionService {
     await _detector.loadModel(DetectionModel.general);
     _currentModel = DetectionModel.general;
     await _gemini.init();
+    await _voice.init();
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -192,7 +224,12 @@ class VisionService {
           await _detector.loadModel(DetectionModel.currency);
         }
       }
-      // color & smartFinder don't need YOLO
+      // color, smartFinder, documentQa don't need YOLO
+
+      // 4b. Clear QA state when leaving QA mode
+      if (_mode == WareneMode.documentQa && newMode != WareneMode.documentQa) {
+        await _clearDocumentQaState(stopVoice: true);
+      }
 
       // 5. Set mode and finder target
       final previousMode = _mode;
@@ -223,6 +260,9 @@ class VisionService {
           break;
         case WareneMode.color:
           _startColorTimer();
+          break;
+        case WareneMode.documentQa:
+          // No timer — QA is event-driven (user double-taps to ask)
           break;
       }
 
@@ -262,6 +302,8 @@ class VisionService {
         return 'جاري البحث عن ${target?.arabicName ?? '...'}';
       case WareneMode.color:
         return 'وضع الألوان';
+      case WareneMode.documentQa:
+        return 'وضع سؤال وجواب عن نص';
     }
   }
 
@@ -761,6 +803,240 @@ class VisionService {
       await switchMode(previousMode, target: previousTarget, speak: false);
     }
   }
+  // ══════════════════════════════════════════════════════════════════
+  //  DOCUMENT QA MODE
+  //  Persistent mode: scan once, ask many questions via voice.
+  // ══════════════════════════════════════════════════════════════════
+
+  /// Start QA mode: scan a document, store text, await voice questions.
+  ///
+  /// Call from the action menu. The user should point the camera at a
+  /// document before calling this. Returns a status message.
+  Future<String> startDocumentQa({required OCRLanguage language}) async {
+    if (_isSwitchingMode || _isOneShot) return 'جاري العمل...';
+
+    _isOneShot = true;
+    stopAllTimers();
+    await _waitForActiveDetection();
+
+    currentDetections = [];
+    _detectionController.add(currentDetections);
+
+    XFile? snapshot;
+    try {
+      // Switch to QA mode
+      await switchMode(WareneMode.documentQa, speak: false);
+
+      // Instruct user
+      _setStatus('وجه الكاميرا على الورقة وثبتها');
+      await _speech.speakAndWait('وجه الكاميرا على الورقة وثبتها');
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Take snapshot
+      _setStatus('جاري مسح النص...');
+      snapshot = await _camera.takeSnapshot();
+      if (snapshot == null) {
+        final err = 'خطأ في الكاميرا';
+        _setStatus(err);
+        await _speech.speakAndWait(err);
+        _isOneShot = false;
+        await endDocumentQa();
+        return err;
+      }
+
+      // Run OCR
+      final ocrResult = await _ocr.extractStructured(
+        snapshot,
+        language: language,
+      );
+
+      print('📄 OCR result: $ocrResult');
+
+      // Check quality
+      switch (ocrResult.quality) {
+        case OCRQuality.empty:
+          final msg = 'مش واضح أي نص. قرب الورقة وثبت الكاميرا وحاول تاني.';
+          _setStatus(msg);
+          await _speech.speakAndWait(msg);
+          _isOneShot = false;
+          await endDocumentQa();
+          return msg;
+
+        case OCRQuality.tooShort:
+          final msg = 'النص مش واضح كفاية. حاول تثبت الكاميرا وتقرب شوية.';
+          _setStatus(msg);
+          await _speech.speakAndWait(msg);
+          _isOneShot = false;
+          await endDocumentQa();
+          return msg;
+
+        case OCRQuality.valid:
+          // Store document context
+          _qaDocumentText = ocrResult.rawText;
+          _qaLanguage = language;
+          _qaHistory.clear();
+
+          if (_qaDocumentText!.length > 4000) {
+            _qaDocumentText = _qaDocumentText!.substring(0, 4000);
+            print('⚠️ Document QA context truncated to 4000 chars (was ${ocrResult.rawText.length})');
+            final confirmation = 'النص طويل، هجاوب من أول جزء واضح منه.';
+            _setStatus(confirmation);
+            await _speech.speakAndWait(confirmation);
+          } else {
+            final confirmation = 'قرأت النص. دبل تاب واسألني عنه.';
+            _setStatus(confirmation);
+            await _speech.speakAndWait(confirmation);
+          }
+
+          _isOneShot = false;
+          return statusText;
+      }
+    } catch (e) {
+      print('⚠️ startDocumentQa error: $e');
+      final errMsg = 'حصل خطأ في مسح النص. حاول تاني.';
+      _setStatus(errMsg);
+      await _speech.speakAndWait(errMsg);
+      _isOneShot = false;
+      await endDocumentQa();
+      return errMsg;
+    } finally {
+      if (snapshot != null) {
+        try { await File(snapshot.path).delete(); } catch (_) {}
+      }
+    }
+  }
+
+  /// Ask a voice question about the scanned document.
+  ///
+  /// Call from double-tap when in QA mode. Listens for speech,
+  /// sends to Groq, speaks the answer, and stays in QA mode.
+  Future<String> askDocumentQuestion() async {
+    // Guard: no document
+    if (_qaDocumentText == null) {
+      final msg = 'امسح ورقة الأول. افتح القائمة واختار اسأل عن نص.';
+      _setStatus(msg);
+      await _speech.speak(msg, force: true, throttle: false);
+      return msg;
+    }
+
+    // Guard: already processing
+    if (_isQaListening || _isQaAnswering) {
+      return 'جاري العمل...';
+    }
+
+    try {
+      // Prompt user to speak
+      _setStatus('اسأل سؤالك دلوقتي');
+      await _speech.speakAndWait('اسأل سؤالك دلوقتي');
+
+      // Short pause before listening (let TTS finish)
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Listen for question
+      _isQaListening = true;
+      _setStatus('بسمعك...');
+      final voiceResult = await _voice.listenOnce(
+        language: _qaLanguage ?? OCRLanguage.arabic,
+      );
+      _isQaListening = false;
+
+      if (!voiceResult.isSuccess) {
+        String errorMsg;
+        switch (voiceResult.failure) {
+          case VoiceInputFailure.noSpeech:
+          case VoiceInputFailure.timeout:
+            errorMsg = 'مسمعتش السؤال. دبل تاب وحاول تاني.';
+            break;
+          case VoiceInputFailure.permissionDenied:
+            errorMsg = 'الميكروفون محتاج إذن من الإعدادات.';
+            break;
+          case VoiceInputFailure.unavailable:
+            errorMsg = 'التعرف على الصوت مش جاهز على الجهاز.';
+            break;
+          case VoiceInputFailure.error:
+          case null:
+            errorMsg = 'حصل خطأ في التعرف على الصوت. حاول تاني.';
+            break;
+        }
+        _setStatus(errorMsg);
+        await _speech.speakAndWait(errorMsg);
+        return errorMsg;
+      }
+
+      // Question cleanup
+      final rawQuestion = voiceResult.text!;
+      final question = rawQuestion.trim().replaceAll(RegExp(r'\s+'), ' ');
+      print('❓ QA question: "$question"');
+
+      if (question.length < 2) {
+        final errMsg = 'السؤال مش واضح. دبل تاب واسأل تاني.';
+        _setStatus(errMsg);
+        await _speech.speakAndWait(errMsg);
+        return errMsg;
+      }
+
+      // Processing indicator
+      _setStatus('ثواني، بدور في النص...');
+      await _speech.speak('ثواني، بدور في النص', force: true, throttle: false);
+
+      // Call Groq QA
+      _isQaAnswering = true;
+      final qaResult = await _gemini.answerQuestionFromDocument(
+        documentText: _qaDocumentText!,
+        question: question,
+        history: _qaHistory,
+        language: _qaLanguage ?? OCRLanguage.arabic,
+      );
+      _isQaAnswering = false;
+
+      if (qaResult.isError) {
+        _setStatus(qaResult.answer);
+        await _speech.speakAndWait(qaResult.answer);
+        return qaResult.answer;
+      }
+
+      // Speak answer
+      _setStatus(qaResult.answer);
+      await _speech.speakAndWait(qaResult.answer);
+
+      // Append to history (trim to max)
+      _qaHistory.add(QaTurn(question: question, answer: qaResult.answer));
+      _qaHistory = _trimHistory(_qaHistory);
+
+      // Prompt for follow-up
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _speech.speak(
+        'ممكن تسأل سؤال تاني. دبل تاب.',
+        force: false,
+        throttle: false,
+      );
+
+      return qaResult.answer;
+    } catch (e) {
+      print('⚠️ askDocumentQuestion error: $e');
+      _isQaListening = false;
+      _isQaAnswering = false;
+      final errMsg = 'حصل خطأ. حاول تسأل تاني.';
+      _setStatus(errMsg);
+      await _speech.speakAndWait(errMsg);
+      return errMsg;
+    }
+  }
+
+  /// Exit QA mode, clear document context and history.
+  ///
+  /// If [resumeGeneral] is true, switches back to generalObjects mode.
+  Future<void> endDocumentQa({bool resumeGeneral = true}) async {
+    await _clearDocumentQaState(stopVoice: false);
+
+    if (_voice.isListening) {
+      await _voice.stopListening();
+    }
+
+    if (resumeGeneral && _mode == WareneMode.documentQa) {
+      await switchMode(WareneMode.generalObjects);
+    }
+  }
 
   // ── Finder state helper ──
 
@@ -779,6 +1055,18 @@ class VisionService {
   void _setStatus(String text) {
     statusText = text;
     _statusController.add(text);
+  }
+
+  /// Stop everything when app goes to background.
+  Future<void> handleAppPause() async {
+    stopAllTimers();
+    if (_voice.isListening) {
+      await _voice.stopListening();
+    }
+    _isQaListening = false;
+    _isQaAnswering = false;
+    // We intentionally DO NOT clear _qaDocumentText here, so the user
+    // doesn't lose their scan just by locking the screen momentarily.
   }
 
   // ── Cleanup ──

@@ -38,8 +38,7 @@ class _CameraScreenState extends State<CameraScreen>
   // Mode state (driven by VisionService streams)
   WareneMode _currentMode = WareneMode.generalObjects;
 
-  // Finder UI state — target name persists while in finder mode,
-  // highlight label only set when target is visible (tracking).
+  // Finder UI state
   bool _finderIsTracking = false;
   String? _finderTargetArabic;
   String? _finderHighlightLabel;
@@ -63,23 +62,36 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+        state == AppLifecycleState.detached) {
       _handlePause();
     } else if (state == AppLifecycleState.resumed) {
-      _initAll();
+      // If we are resuming but the camera is already alive, it means we
+      // only went 'inactive' (e.g. opened a bottom sheet) and didn't
+      // actually pause/dispose the camera. DO NOT re-initialize.
+      if (!_camera.isInitialized) {
+        _initAll();
+      }
     }
+    // 'inactive' is intentionally ignored to keep the camera alive behind menus.
   }
 
-  void _handlePause() {
-    _vision.stopAllTimers();
-    _camera.dispose();
+  Future<void> _handlePause() async {
+    await _vision.handleAppPause();
+    await _camera.dispose(); // must be awaited — avoids race with _initAll
     if (mounted) setState(() => _isInit = false);
   }
 
   Future<void> _initAll() async {
     if (mounted) setState(() => _statusText = 'جاري التشغيل...');
 
-    final cameraOk = await _camera.init();
+    // Retry init up to 3 times to survive brief _isDisposing windows
+    bool cameraOk = false;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      cameraOk = await _camera.init();
+      if (cameraOk) break;
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
+
     if (!mounted) return;
 
     if (!cameraOk) {
@@ -89,21 +101,19 @@ class _CameraScreenState extends State<CameraScreen>
 
     await _vision.init();
 
-    // Listen to status updates
+    // Subscribe to streams
     _statusSub?.cancel();
     _statusSub = _vision.statusStream.listen((status) {
       if (mounted) setState(() => _statusText = status);
     });
 
-    // Listen to mode changes
     _modeSub?.cancel();
     _modeSub = _vision.modeStream.listen(_handleModeChange);
 
-    // Listen to finder state
     _finderSub?.cancel();
     _finderSub = _vision.finderStateStream.listen(_handleFinderState);
 
-    // Start in current mode (restore after resume)
+    // Restore mode (resume after background)
     await _vision.switchMode(_currentMode, speak: false);
 
     if (mounted) {
@@ -112,16 +122,23 @@ class _CameraScreenState extends State<CameraScreen>
         _statusText = 'AI Ready ✓';
       });
     }
-    await _speech.speak('وَرِّينِي جَاهِز', throttle: false);
+
+    if (_currentMode == WareneMode.documentQa && _vision.hasActiveQaDocument) {
+      final msg = 'دبل تاب واسألني عن النص';
+      if (mounted) setState(() => _statusText = msg);
+      await _speech.speak(msg, throttle: false);
+    } else {
+      await _speech.speak('وَرِّينِي جَاهِز', throttle: false);
+    }
   }
 
   void _handleModeChange(WareneMode newMode) {
     if (!mounted) return;
     setState(() {
       _currentMode = newMode;
-      // Clear finder UI ONLY when leaving finder mode
-      if (newMode != WareneMode.objectFinderFast &&
-          newMode != WareneMode.objectFinderSmart) {
+      if ((newMode != WareneMode.objectFinderFast &&
+              newMode != WareneMode.objectFinderSmart) ||
+          newMode == WareneMode.documentQa) {
         _finderIsTracking = false;
         _finderTargetArabic = null;
         _finderHighlightLabel = null;
@@ -134,7 +151,6 @@ class _CameraScreenState extends State<CameraScreen>
 
     switch (state.status) {
       case ObjectFinderStatus.searching:
-        // Target not visible — keep target name, clear highlight
         setState(() {
           _finderTargetArabic = state.targetArabicName;
           _finderHighlightLabel = null;
@@ -143,10 +159,7 @@ class _CameraScreenState extends State<CameraScreen>
         break;
 
       case ObjectFinderStatus.tracking:
-        // Target visible — haptic only on transition
-        if (!_finderIsTracking) {
-          HapticFeedback.heavyImpact();
-        }
+        if (!_finderIsTracking) HapticFeedback.heavyImpact();
         setState(() {
           _finderIsTracking = true;
           _finderHighlightLabel = state.targetLabel;
@@ -173,8 +186,6 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  /// VisionService is an app-lifetime singleton,
-  /// so we only stop its timers here, not call _vision.dispose().
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -209,13 +220,23 @@ class _CameraScreenState extends State<CameraScreen>
   void _onDoubleTap() async {
     if (_vision.isBusy) return;
     HapticFeedback.mediumImpact();
-    if (mounted) setState(() => _statusText = 'جاري الوصف...');
-    final desc = await _vision.describeScene();
-    if (mounted) setState(() => _statusText = desc);
+    if (_currentMode == WareneMode.documentQa) {
+      final answer = await _vision.askDocumentQuestion();
+      if (mounted) setState(() => _statusText = answer);
+    } else {
+      if (mounted) setState(() => _statusText = 'جاري الوصف...');
+      final desc = await _vision.describeScene();
+      if (mounted) setState(() => _statusText = desc);
+    }
   }
 
   void _onSwipeRight() async {
     if (_vision.isBusy) return;
+    if (_currentMode == WareneMode.documentQa) {
+      _speech.speak('افتح القائمة لو عايز تخرج من سؤال النص',
+          force: true, throttle: false);
+      return;
+    }
     HapticFeedback.lightImpact();
     final newMode = _currentMode == WareneMode.currency
         ? WareneMode.generalObjects
@@ -225,6 +246,11 @@ class _CameraScreenState extends State<CameraScreen>
 
   void _onSwipeLeft() {
     if (_vision.isBusy) return;
+    if (_currentMode == WareneMode.documentQa) {
+      _speech.speak('اللغة ثابتة لحد ما تمسح نص جديد',
+          force: true, throttle: false);
+      return;
+    }
     HapticFeedback.lightImpact();
     setState(() {
       _ocrLanguage = _ocrLanguage == OCRLanguage.english
@@ -246,6 +272,12 @@ class _CameraScreenState extends State<CameraScreen>
       currentMode: _currentMode,
     );
 
+    // Force the native camera preview to unfreeze. On some Android devices,
+    // showing an overlay/modal freezes the camera texture surface.
+    try {
+      await _camera.controller?.resumePreview();
+    } catch (_) {}
+
     if (result == null || !mounted) return;
 
     switch (result) {
@@ -257,6 +289,9 @@ class _CameraScreenState extends State<CameraScreen>
         break;
       case ActionMenuResult.findObject:
         final target = await showTargetPicker(context);
+        try {
+          await _camera.controller?.resumePreview();
+        } catch (_) {}
         if (target != null && mounted) {
           final mode = target.mode == ObjectFinderMode.fastYolo
               ? WareneMode.objectFinderFast
@@ -277,11 +312,30 @@ class _CameraScreenState extends State<CameraScreen>
         final desc = await _vision.describeScene();
         if (mounted) setState(() => _statusText = desc);
         break;
+      case ActionMenuResult.documentQa:
+        if (mounted) setState(() => _statusText = 'جاري مسح النص...');
+        final qaResult = await _vision.startDocumentQa(language: _ocrLanguage);
+        if (mounted) setState(() => _statusText = qaResult);
+        break;
+      case ActionMenuResult.rescanDocumentQa:
+        if (mounted) setState(() => _statusText = 'جاري مسح النص...');
+        final rescanResult =
+            await _vision.startDocumentQa(language: _ocrLanguage);
+        if (mounted) setState(() => _statusText = rescanResult);
+        break;
+      case ActionMenuResult.exitDocumentQa:
+        await _vision.endDocumentQa(resumeGeneral: true);
+        break;
     }
   }
 
   void _onTripleTap() async {
     if (_vision.isBusy) return;
+    if (_currentMode == WareneMode.documentQa) {
+      _speech.speak('افتح القائمة لو عايز تخرج من سؤال النص',
+          force: true, throttle: false);
+      return;
+    }
     HapticFeedback.heavyImpact();
     await _vision.switchMode(WareneMode.color);
   }
@@ -290,14 +344,22 @@ class _CameraScreenState extends State<CameraScreen>
   //  BUILD — 3 INDEPENDENT LAYERS
   // ══════════════════════════════════════════════════════════════════
 
-  /// Layer 1: Camera preview — always visible when initialized.
-  /// Not inside any StreamBuilder. Never depends on detection or mode state.
   Widget _buildCameraPreview() {
     final controller = _camera.controller;
 
-    if (controller == null || !controller.value.isInitialized) {
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        controller.value.previewSize == null) {
       return const Positioned.fill(
-        child: ColoredBox(color: Colors.black),
+        child: ColoredBox(
+          color: Colors.red,
+          child: Center(
+            child: Text(
+              'CAMERA PREVIEW UNAVAILABLE',
+              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
       );
     }
 
@@ -307,18 +369,19 @@ class _CameraScreenState extends State<CameraScreen>
         child: SizedBox(
           width: controller.value.previewSize!.height,
           height: controller.value.previewSize!.width,
-          child: CameraPreview(controller),
+          child: CameraPreview(
+            controller,
+            key: ValueKey(controller.cameraId),
+          ),
         ),
       ),
     );
   }
 
-  /// Layer 2: Detection overlay — bounding boxes on top of preview.
-  /// Hidden in color mode and smart finder mode (no YOLO boxes).
-  /// Returns SizedBox.shrink() when no boxes to draw.
   Widget _buildDetectionOverlay() {
     if (_currentMode == WareneMode.color ||
-        _currentMode == WareneMode.objectFinderSmart) {
+        _currentMode == WareneMode.objectFinderSmart ||
+        _currentMode == WareneMode.documentQa) {
       return const SizedBox.shrink();
     }
 
@@ -335,7 +398,9 @@ class _CameraScreenState extends State<CameraScreen>
           return LayoutBuilder(
             builder: (context, constraints) {
               final controller = _camera.controller;
-              if (controller == null || !controller.value.isInitialized) {
+              if (controller == null ||
+                  !controller.value.isInitialized ||
+                  controller.value.previewSize == null) {
                 return const SizedBox.shrink();
               }
 
@@ -344,8 +409,7 @@ class _CameraScreenState extends State<CameraScreen>
               final previewH = previewSize.width;
               final screenW = constraints.maxWidth;
               final screenH = constraints.maxHeight;
-              final scale =
-                  math.max(screenW / previewW, screenH / previewH);
+              final scale = math.max(screenW / previewW, screenH / previewH);
               final displayW = previewW * scale;
               final displayH = previewH * scale;
               final offsetX = (screenW - displayW) / 2;
@@ -361,8 +425,7 @@ class _CameraScreenState extends State<CameraScreen>
                   displayHeight: displayH,
                   offsetX: offsetX,
                   offsetY: offsetY,
-                  highlightLabel:
-                      isFinder ? _finderHighlightLabel : null,
+                  highlightLabel: isFinder ? _finderHighlightLabel : null,
                 ),
               );
             },
@@ -372,14 +435,13 @@ class _CameraScreenState extends State<CameraScreen>
     );
   }
 
-  /// Layer 3: Top UI — badges, status, hints. Independent of preview.
   List<Widget> _buildTopUi() {
     final isFinder = _currentMode == WareneMode.objectFinderFast ||
         _currentMode == WareneMode.objectFinderSmart;
     final isColor = _currentMode == WareneMode.color;
+    final isQa = _currentMode == WareneMode.documentQa;
 
     return [
-      // App title
       Positioned(
         top: 48,
         left: 0,
@@ -397,7 +459,6 @@ class _CameraScreenState extends State<CameraScreen>
         ),
       ),
 
-      // Mode badge
       Positioned(
         top: 48,
         left: 16,
@@ -408,8 +469,7 @@ class _CameraScreenState extends State<CameraScreen>
         ),
       ),
 
-      // Detection count badge — only for general/currency
-      if (!isFinder && !isColor)
+      if (!isFinder && !isColor && !isQa)
         StreamBuilder<List<Detection>>(
           stream: _vision.detectionStream,
           builder: (context, snapshot) {
@@ -420,8 +480,8 @@ class _CameraScreenState extends State<CameraScreen>
               top: 48,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.green.withAlpha(180),
                   borderRadius: BorderRadius.circular(12),
@@ -439,7 +499,6 @@ class _CameraScreenState extends State<CameraScreen>
           },
         ),
 
-      // Status bar
       Positioned(
         bottom: 100,
         left: 20,
@@ -453,24 +512,22 @@ class _CameraScreenState extends State<CameraScreen>
           child: Text(
             _statusText,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
             maxLines: 4,
             overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
 
-      // Gesture hints
       Positioned(
         bottom: 30,
         left: 0,
         right: 0,
         child: Center(
           child: Text(
-            'مطول: القائمة  •  نقرتين: وصف  •  سحب: تبديل',
+            isQa
+                ? 'نقرتين: اسأل سؤال  •  مطول: القائمة'
+                : 'مطول: القائمة  •  نقرتين: وصف  •  سحب: تبديل',
             style: TextStyle(
               color: Colors.white.withAlpha(120),
               fontSize: 11,
@@ -480,8 +537,6 @@ class _CameraScreenState extends State<CameraScreen>
       ),
     ];
   }
-
-  // ── Mode badge helpers ──
 
   Color _modeBadgeColor() {
     switch (_currentMode) {
@@ -494,6 +549,8 @@ class _CameraScreenState extends State<CameraScreen>
         return Colors.orange;
       case WareneMode.color:
         return Colors.purple;
+      case WareneMode.documentQa:
+        return Colors.teal;
     }
   }
 
@@ -508,6 +565,8 @@ class _CameraScreenState extends State<CameraScreen>
         return '🔍 ${_finderTargetArabic ?? 'بحث'}';
       case WareneMode.color:
         return '🎨 ألوان';
+      case WareneMode.documentQa:
+        return '❓ سؤال عن نص';
     }
   }
 
@@ -546,13 +605,14 @@ class _CameraScreenState extends State<CameraScreen>
             _onSwipeLeft();
           }
         },
-        // 3 independent layers — preview never depends on detections
-        child: Stack(
-          children: [
-            _buildCameraPreview(),     // Layer 1: always visible
-            _buildDetectionOverlay(),  // Layer 2: boxes only
-            ..._buildTopUi(),          // Layer 3: badges, status
-          ],
+        child: SizedBox.expand(
+          child: Stack(
+            children: [
+              _buildCameraPreview(),
+              _buildDetectionOverlay(),
+              ..._buildTopUi(),
+            ],
+          ),
         ),
       ),
     );

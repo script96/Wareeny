@@ -20,6 +20,7 @@ dependencies:
   flutter_dotenv: ^6.0.0
   google_mlkit_text_recognition: ^0.13.1
   tesseract_ocr: ^0.5.0
+  speech_to_text: ^7.3.0
 
 dev_dependencies:
   flutter_test:

@@ -9,6 +9,9 @@ enum ActionMenuResult {
   findObject,
   colorMode,
   readText,
+  documentQa,
+  exitDocumentQa,
+  rescanDocumentQa,
   describeScene,
 }
 
@@ -73,6 +76,28 @@ class _ActionMenuSheet extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
+              // ── QA specific actions ──
+              if (currentMode == WareneMode.documentQa) ...[
+                _ActionTile(
+                  icon: Icons.document_scanner_rounded,
+                  label: 'اسأل عن نص جديد',
+                  color: Colors.tealAccent,
+                  semanticsLabel: 'اسأل عن نص جديد',
+                  onTap: () =>
+                      Navigator.pop(context, ActionMenuResult.rescanDocumentQa),
+                ),
+                const SizedBox(height: 12),
+                _ActionTile(
+                  icon: Icons.close_rounded,
+                  label: 'إنهاء سؤال النص',
+                  color: Colors.redAccent,
+                  semanticsLabel: 'إنهاء سؤال النص',
+                  onTap: () =>
+                      Navigator.pop(context, ActionMenuResult.exitDocumentQa),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               // ── Mode switches ──
 
               // General Objects — show when not already in general
@@ -136,6 +161,18 @@ class _ActionMenuSheet extends StatelessWidget {
                     Navigator.pop(context, ActionMenuResult.readText),
               ),
               const SizedBox(height: 12),
+
+              if (currentMode != WareneMode.documentQa) ...[
+                _ActionTile(
+                  icon: Icons.quiz_rounded,
+                  label: 'اسأل عن نص',
+                  color: Colors.tealAccent,
+                  semanticsLabel: 'وضع سؤال وجواب عن نص',
+                  onTap: () =>
+                      Navigator.pop(context, ActionMenuResult.documentQa),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               _ActionTile(
                 icon: Icons.image_rounded,

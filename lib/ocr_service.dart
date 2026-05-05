@@ -4,11 +4,16 @@
 // Arabic mode: Tesseract OCR with ara.traineddata (offline Arabic support)
 //
 // User selects which mode to use — no mixing.
+//
+// Two extraction APIs:
+//   extractText()       — original string-only return for readText() TTS
+//   extractStructured() — returns OCRResult with rawText + spokenPreview for QA
 
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:tesseract_ocr/tesseract_ocr.dart';
 import 'package:tesseract_ocr/ocr_engine_config.dart';
+import 'models/ocr_result.dart';
 
 enum OCRLanguage { english, arabic }
 
@@ -17,12 +22,10 @@ class OCRService {
 
   bool _isDisposed = false;
 
-  /// Extract text from a camera snapshot using the specified language engine.
-  Future<String> extractText(XFile imageFile, {OCRLanguage language = OCRLanguage.english}) async {
-    if (_isDisposed) return 'حدث خطأ، حاول مرة أخرى';
+  // ── Shared raw extraction ──
 
-    final imagePath = imageFile.path;
-
+  /// Run the OCR engine and return the raw (untouched) text.
+  Future<String> _extractRaw(String imagePath, OCRLanguage language) async {
     String rawText = '';
 
     if (language == OCRLanguage.english) {
@@ -53,11 +56,36 @@ class OCRService {
       }
     }
 
+    return rawText;
+  }
+
+  // ── Original string API (unchanged behavior) ──
+
+  /// Extract text from a camera snapshot using the specified language engine.
+  /// Returns a cleaned, TTS-safe string. Used by readText().
+  Future<String> extractText(XFile imageFile, {OCRLanguage language = OCRLanguage.english}) async {
+    if (_isDisposed) return 'حدث خطأ، حاول مرة أخرى';
+
+    final rawText = await _extractRaw(imageFile.path, language);
+
     if (rawText.isEmpty) {
       return 'لا يوجد نص في الصورة';
     }
 
     return _cleanText(rawText);
+  }
+
+  // ── Structured API for QA ──
+
+  /// Extract text and return a structured OCRResult with full rawText
+  /// (paragraph breaks preserved) and a short spokenPreview for TTS.
+  Future<OCRResult> extractStructured(XFile imageFile, {OCRLanguage language = OCRLanguage.english}) async {
+    if (_isDisposed) {
+      return OCRResult.fromRawText('', language);
+    }
+
+    final rawText = await _extractRaw(imageFile.path, language);
+    return OCRResult.fromRawText(rawText, language);
   }
 
   /// Clean up recognized text for TTS delivery.

@@ -16,6 +16,7 @@ enum WareneMode {
   objectFinderFast,
   objectFinderSmart,
   color,
+  documentQa,
 }
 
 // ── Object Finder Enums ──────────────────────────────────────────────

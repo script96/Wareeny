@@ -16,15 +16,32 @@ class CameraService {
   CameraController? get controller => _controller;
   bool get isInitialized => _isInitialized;
 
-  /// Initialize the camera. Safe to call multiple times — returns
-  /// immediately if already initialized. Skips if disposing or
-  /// already initializing.
+  /// Initialize the camera. Safe to call multiple times.
+  ///
+  /// If a dispose is still in progress, waits up to 1 second for it
+  /// to finish before attempting init (avoids silent failures caused
+  /// by paused→resumed race conditions).
   Future<bool> init() async {
     if (_isInitialized && _controller != null) {
-      return true; // Already initialized, don't double-init
+      return true; // Already initialized
     }
-    if (_isInitializing || _isDisposing) {
-      print('⚠️ Camera init skipped (initializing=$_isInitializing, disposing=$_isDisposing)');
+
+    // If currently disposing, wait for it to finish (up to 1s)
+    if (_isDisposing) {
+      const pollInterval = Duration(milliseconds: 50);
+      const maxWait = Duration(seconds: 1);
+      final deadline = DateTime.now().add(maxWait);
+      while (_isDisposing && DateTime.now().isBefore(deadline)) {
+        await Future.delayed(pollInterval);
+      }
+      if (_isDisposing) {
+        print('⚠️ Camera init skipped — still disposing after 1s wait');
+        return false;
+      }
+    }
+
+    if (_isInitializing) {
+      print('⚠️ Camera init skipped — already initializing');
       return false;
     }
 
@@ -53,8 +70,7 @@ class CameraService {
     }
   }
 
-  /// Take a snapshot. Returns null if camera is not ready, disposing,
-  /// initializing, or already taking a picture.
+  /// Take a snapshot. Returns null if camera is not ready.
   Future<XFile?> takeSnapshot() async {
     if (!_isInitialized || _controller == null) return null;
     if (_isTakingPicture || _isDisposing || _isInitializing) return null;
@@ -71,7 +87,7 @@ class CameraService {
   }
 
   /// Release the camera. Safe to call multiple times.
-  /// Skips if already disposing.
+  /// Must be awaited to prevent race conditions with init().
   Future<void> dispose() async {
     if (_isDisposing) return;
     _isDisposing = true;

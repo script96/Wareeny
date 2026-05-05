@@ -64,11 +64,14 @@ Current app is a prototype. Full rebuild once all models and core features are f
 
 ---
 
-## Milestone 4: Advanced Interaction Features (Planned)
+## Milestone 4: Advanced Interaction Features (In Progress)
 
 New modes and input methods.
 
-- [ ] QA Mode — OCR document → Groq system context → conversational Q&A via voice
+- [x] QA Mode — OCR document → Groq system context → conversational Q&A via voice
+  - [ ] Follow-up: Long-document chunking for texts > 4000 characters
+  - [ ] Follow-up: Optional privacy warning before sending text to Groq
+  - [ ] Follow-up: Manual Android QA test pass on real device
 - [ ] Hand-held object focus — detect user holding object, auto-describe that specific object
 - [ ] Haptic feedback — vibrate pattern when obstacle is very close in general objects mode
 - [ ] Voice commands — activate modes and trigger one-shot actions by speech
