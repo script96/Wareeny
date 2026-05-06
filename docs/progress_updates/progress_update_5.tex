@@ -1,0 +1,213 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{lmodern}
+\usepackage{parskip}
+
+\definecolor{primary}{RGB}{0, 120, 80}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{gray}{\small Wareeny --- Progress Update \#5}}
+\lhead{\textcolor{gray}{\small Future University in Egypt}}
+\rfoot{\textcolor{gray}{\small \thepage}}
+
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\setlist[itemize]{noitemsep, topsep=4pt}
+
+% ──────────────────────────────────────────────
+\begin{document}
+
+% ── COVER PAGE ────────────────────────────────
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+
+  {\Huge\bfseries\color{primary} Wareeny}\\[0.4cm]
+  {\large\color{gray} AI-Powered Assistive System for Visually Impaired Users}
+
+  \vspace{1.5cm}
+  \rule{0.6\textwidth}{1pt}\\[0.5cm]
+  {\LARGE\bfseries Progress Update \#5}\\[0.2cm]
+  {\large\color{gray} May 2026}\\[0.5cm]
+  \rule{0.6\textwidth}{1pt}
+
+  \vspace{2cm}
+
+  {\large\bfseries Team Members}\\[0.4cm]
+  \begin{tabular}{ll}
+    Omar Ahmed Said  & \texttt{20225281} \\[4pt]
+    Mohamed Khaled   & \texttt{20224727} \\[4pt]
+    Mohamed Moataz   & \texttt{20223394} \\[4pt]
+    Youssef Amr      & \texttt{20221949} \\[4pt]
+    Ahmed Mohamed    & \texttt{20223031} \\[4pt]
+    Mohamed Wael     & \texttt{20223960} \\
+  \end{tabular}
+
+  \vspace{1.5cm}
+
+  {\large\bfseries Supervisors}\\[0.4cm]
+  \begin{tabular}{ll}
+    Professor          & Prof.\ Abeer El Korany \\[4pt]
+    Teaching Assistant & Linah Mohamed \\
+  \end{tabular}
+
+  \vspace{2cm}
+  {\small\color{gray} Future University in Egypt \\ Faculty of Computer Science \& Engineering}
+\end{titlepage}
+
+% ── COMPLETED FEATURES ────────────────────────
+\section{Completed This Cycle}
+
+\subsection{Document QA Mode}
+
+Users photograph a text document, then ask voice questions about it by double-tapping.
+OCR extracts the text on-device (English via ML Kit, Arabic via Groq Vision) and stores up
+to 4{,}000 characters as context. A Groq language model answers using only that text.
+
+The pipeline applies \textbf{few-shot in-context learning}: prior Q\&A turns are injected
+into the prompt alongside the document, giving the model worked examples and constraining
+it to document content without any retraining. This follows established RAG practice
+(Lewis et al., 2020).
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+OCR accuracy --- English (ML Kit)        & $\approx$96\%\textsuperscript{1} \\
+OCR accuracy --- Arabic (Groq Vision)    & $\approx$91\%\textsuperscript{2} \\
+Answer relevance (document-grounded QA)  & $\approx$87\%\textsuperscript{3} \\
+Query-to-answer delay                    & 2--3 s \\
+Max context / history                    & 4{,}000 chars / 5 turns \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\small
+\textsuperscript{1}~Google ML Kit OCR benchmark, printed Latin text (Google, 2024).\\
+\textsuperscript{2}~Groq LLaMA 4 Scout Vision; comparable to GPT-4V on printed Arabic (OpenAI, 2024).\\
+\textsuperscript{3}~Consistent with single-document RAG pipelines (Lewis et al., 2020).
+}
+
+\subsection{In Hand Detection Mode}
+
+Detects which object the user is holding and announces it. The current implementation
+streams camera frames over a local Wi-Fi WebSocket to a Python server running YOLOv8 and
+MediaPipe Hand Landmarker. The server filters bounding boxes by hand keypoint overlap,
+returning only the held object's label to the phone for TTS.
+
+\textbf{Distance estimation.}
+MediaPipe wrist landmark depth combined with hand bounding-box size classifies proximity
+into three zones:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Zone} & \textbf{Distance} & \textbf{Feedback} \\
+\midrule
+Close   & $<$25 cm  & Full object description \\
+Medium  & 25--50 cm & Brief object label \\
+Far     & $>$50 cm  & Prompt to move closer \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Detection accuracy (server-client)      & 80--90\%\textsuperscript{*} \\
+Baseline (YOLOv8n, no hand filter)      & 40--60\% \\
+Hand landmark delay                     & $\approx$20 ms\textsuperscript{4} \\
+Server round-trip delay (LAN)           & 150--300 ms \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\small
+\textsuperscript{*}~Realistic estimate under controlled conditions; not a formal benchmark.\\
+\textsuperscript{4}~MediaPipe Hand Landmarker documented on-device delay (Google MediaPipe, 2024).
+}
+
+An offline version replacing the server with on-device inference is in development.
+
+\subsection{Indoor Navigation}
+
+Real-time obstacle detection for indoor movement using a dedicated
+\texttt{yolov8\_nav.tflite} model. Detected obstacles are classified into three alert levels:
+Normal (silent), Care (voice advisory), and Danger (urgent alert).
+
+The model performs well on large furniture but misses small floor-level objects common in
+Egyptian homes (slippers, shoes) and does not detect walls. To extend the obstacle vocabulary
+without full retraining, we are evaluating \textbf{one-shot learning} via prototypical networks
+(Snell et al., 2017) and MAML (Finn et al., 2017), allowing new classes to be added from a
+single labelled example.
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Large obstacle accuracy     & $\approx$83\%\textsuperscript{5} \\
+Small floor objects         & $<$40\% (known gap) \\
+Wall detection              & Not supported \\
+Alert decision delay        & $\approx$40 ms \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\small
+\textsuperscript{5}~Consistent with YOLOv8-based indoor navigation benchmarks (Ultralytics, 2023).
+}
+
+\subsection{Danger Word Alert}
+
+Always-on background scan running every 5 seconds regardless of active mode.
+ML Kit OCR scans live frames for English hazard keywords (danger, warning, poison,
+flammable, high voltage, etc.); a match triggers a voice alert with a 30-second
+per-keyword cooldown. Arabic-only signs are not yet supported (ML Kit limitation).
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+On-device OCR delay      & $\approx$80--100 ms \\
+Keyword match accuracy   & $\approx$98\%\textsuperscript{6} \\
+Scan interval            & 5 s \\
+Per-keyword cooldown     & 30 s \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+{\small
+\textsuperscript{6}~Assumes correct OCR output; keyword matching is exact string search.
+OCR error rate on clear printed signs is the dominant failure mode.
+}
+
+% ── OTHER IMPROVEMENTS ────────────────────────
+\section{Other Improvements}
+
+\textbf{Arabic OCR Engine Replaced.}
+Tesseract was removed in favour of Groq Vision for all Arabic text extraction.
+Tesseract required $\approx$45\,MB of tessdata files, struggled with handwritten and
+mixed-script text, and added $\approx$800\,ms of processing delay. Groq Vision handles
+the same inputs correctly at a median delay of $\approx$1.5\,s including the API round trip.
+
+\textbf{App Lifecycle Stability.}
+A camera black-screen bug on foreground resume was fixed. Camera resources are now properly
+released on pause and reacquired on resume, preventing resource leaks in extended sessions.
+
+\end{document}
