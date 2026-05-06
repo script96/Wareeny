@@ -1,18 +1,14 @@
-// OCR Service — Separate English and Arabic text recognition
+// OCR Service — text recognition using Google ML Kit (Latin/English).
 //
-// English mode: Google ML Kit (fast, accurate for Latin scripts + numbers)
-// Arabic mode: Tesseract OCR with ara.traineddata (offline Arabic support)
+// Arabic OCR is handled via Groq Vision in VisionService (not here).
 //
-// User selects which mode to use — no mixing.
-//
-// Two extraction APIs:
-//   extractText()       — original string-only return for readText() TTS
-//   extractStructured() — returns OCRResult with rawText + spokenPreview for QA
+// APIs:
+//   extractText()       — ML Kit extraction for readText() TTS
+//   extractStructured() — returns OCRResult with rawText + quality for QA
+//   scanForDanger()     — background scan for danger/warning keywords
 
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:tesseract_ocr/tesseract_ocr.dart';
-import 'package:tesseract_ocr/ocr_engine_config.dart';
 import 'models/ocr_result.dart';
 
 enum OCRLanguage { english, arabic }
@@ -22,86 +18,89 @@ class OCRService {
 
   bool _isDisposed = false;
 
-  // ── Shared raw extraction ──
+  // English/Latin danger keywords found on warning signs.
+  // Arabic signs are not detected here — ML Kit Latin doesn't support Arabic script.
+  static const List<String> _dangerKeywords = [
+    'wet floor', 'slippery floor', 'slippery',
+    'danger', 'dangerous',
+    'warning',
+    'caution',
+    'hazard', 'hazardous',
+    'beware',
+    'high voltage',
+    'do not enter', 'no entry',
+    'restricted area', 'keep out',
+    'emergency',
+    'fire hazard',
+    'poison', 'toxic',
+    'flammable',
+    'no smoking',
+    'explosive',
+  ];
 
-  /// Run the OCR engine and return the raw (untouched) text.
-  Future<String> _extractRaw(String imagePath, OCRLanguage language) async {
-    String rawText = '';
-
-    if (language == OCRLanguage.english) {
-      // ── ML Kit (English + numbers) ──
-      try {
-        final inputImage = InputImage.fromFilePath(imagePath);
-        final RecognizedText result =
-            await _latinRecognizer.processImage(inputImage);
-        rawText = result.text.trim();
-        print('🔤 ML Kit result (${rawText.length} chars)');
-      } catch (e) {
-        print('⚠️ ML Kit OCR error: $e');
-      }
-    } else {
-      // ── Tesseract (Arabic) ──
-      try {
-        rawText = await TesseractOcr.extractText(
-          imagePath,
-          config: const OCRConfig(
-            language: 'ara',
-            engine: OCREngine.tesseract,
-          ),
-        );
-        rawText = rawText.trim();
-        print('🔠 Tesseract result (${rawText.length} chars)');
-      } catch (e) {
-        print('⚠️ Tesseract OCR error: $e');
-      }
+  Future<String> _extractRaw(String imagePath) async {
+    try {
+      final inputImage = InputImage.fromFilePath(imagePath);
+      final RecognizedText result =
+          await _latinRecognizer.processImage(inputImage);
+      final text = result.text.trim();
+      print('🔤 ML Kit result (${text.length} chars)');
+      return text;
+    } catch (e) {
+      print('⚠️ ML Kit OCR error: $e');
+      return '';
     }
-
-    return rawText;
   }
 
-  // ── Original string API (unchanged behavior) ──
-
-  /// Extract text from a camera snapshot using the specified language engine.
-  /// Returns a cleaned, TTS-safe string. Used by readText().
-  Future<String> extractText(XFile imageFile, {OCRLanguage language = OCRLanguage.english}) async {
+  /// Extract text from a camera snapshot. English only — Arabic is routed
+  /// to GeminiService by VisionService before this is called.
+  Future<String> extractText(XFile imageFile,
+      {OCRLanguage language = OCRLanguage.english}) async {
     if (_isDisposed) return 'حدث خطأ، حاول مرة أخرى';
 
-    final rawText = await _extractRaw(imageFile.path, language);
+    final rawText = await _extractRaw(imageFile.path);
 
-    if (rawText.isEmpty) {
-      return 'لا يوجد نص في الصورة';
-    }
+    if (rawText.isEmpty) return 'لا يوجد نص في الصورة';
 
     return _cleanText(rawText);
   }
 
-  // ── Structured API for QA ──
+  /// Extract text and return a structured OCRResult for QA use.
+  /// English only — Arabic is routed to GeminiService by VisionService.
+  Future<OCRResult> extractStructured(XFile imageFile,
+      {OCRLanguage language = OCRLanguage.english}) async {
+    if (_isDisposed) return OCRResult.fromRawText('', language);
 
-  /// Extract text and return a structured OCRResult with full rawText
-  /// (paragraph breaks preserved) and a short spokenPreview for TTS.
-  Future<OCRResult> extractStructured(XFile imageFile, {OCRLanguage language = OCRLanguage.english}) async {
-    if (_isDisposed) {
-      return OCRResult.fromRawText('', language);
-    }
-
-    final rawText = await _extractRaw(imageFile.path, language);
+    final rawText = await _extractRaw(imageFile.path);
     return OCRResult.fromRawText(rawText, language);
   }
 
-  /// Clean up recognized text for TTS delivery.
-  String _cleanText(String raw) {
-    // Remove excessive whitespace
-    String cleaned = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+  /// Scan [imagePath] for danger/warning keywords. Returns the first matched
+  /// keyword (lowercase), or null if none found.
+  Future<String?> scanForDanger(String imagePath) async {
+    if (_isDisposed) return null;
+    try {
+      final inputImage = InputImage.fromFilePath(imagePath);
+      final result = await _latinRecognizer.processImage(inputImage);
+      final lowerText = result.text.toLowerCase();
+      for (final keyword in _dangerKeywords) {
+        if (lowerText.contains(keyword)) return keyword;
+      }
+      return null;
+    } catch (e) {
+      print('⚠️ Danger scan error: $e');
+      return null;
+    }
+  }
 
-    // Limit length — very long text overwhelms the user
+  String _cleanText(String raw) {
+    String cleaned = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (cleaned.length > 500) {
       cleaned = '${cleaned.substring(0, 500)}...';
     }
-
     return cleaned;
   }
 
-  /// Release ML Kit resources. Must be called in widget dispose().
   void dispose() {
     if (_isDisposed) return;
     _isDisposed = true;

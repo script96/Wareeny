@@ -98,6 +98,38 @@ class VisionService {
       _mode == WareneMode.objectFinderFast ||
       _mode == WareneMode.objectFinderSmart;
 
+  // ── Danger Alert state ──
+
+  Timer? _dangerScanTimer;
+  bool _isDangerScanning = false;
+  String _lastDangerKeyword = '';
+  DateTime _lastDangerWarnTime = DateTime.fromMillisecondsSinceEpoch(0);
+
+  static const Map<String, String> _dangerArabic = {
+    'wet floor': 'أرضية زلقة',
+    'slippery floor': 'أرضية زلقة',
+    'slippery': 'أرضية زلقة',
+    'danger': 'خطر',
+    'dangerous': 'خطر',
+    'warning': 'تحذير',
+    'caution': 'انتبه',
+    'hazard': 'خطر',
+    'hazardous': 'خطر',
+    'beware': 'احذر',
+    'high voltage': 'ضغط عالي خطر',
+    'do not enter': 'ممنوع الدخول',
+    'no entry': 'ممنوع الدخول',
+    'restricted area': 'منطقة مقيدة',
+    'keep out': 'ممنوع الاقتراب',
+    'emergency': 'طوارئ',
+    'fire hazard': 'خطر حريق',
+    'poison': 'سم',
+    'toxic': 'مواد سامة',
+    'flammable': 'قابل للاشتعال',
+    'no smoking': 'ممنوع التدخين',
+    'explosive': 'متفجرات',
+  };
+
   // ── Color mode state ──
 
   Timer? _colorTimer;
@@ -166,6 +198,7 @@ class VisionService {
     _currentModel = DetectionModel.general;
     await _gemini.init();
     await _voice.init();
+    _startDangerScanner();
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -283,6 +316,11 @@ class VisionService {
         final announcement = _getModeAnnouncement(newMode, target);
         _setStatus(announcement);
         await _speech.speak(announcement, force: true, throttle: false);
+      }
+
+      // Restart danger scanner if it was stopped (e.g. after app pause).
+      if (_dangerScanTimer == null) {
+        _startDangerScanner();
       }
 
       print('🔄 Mode switched: ${previousMode.name} → ${newMode.name}');
@@ -702,6 +740,52 @@ class VisionService {
   }
 
   // ══════════════════════════════════════════════════════════════════
+  //  DANGER ALERT — always-on background scan (independent of mode)
+  // ══════════════════════════════════════════════════════════════════
+
+  void _startDangerScanner() {
+    _dangerScanTimer?.cancel();
+    _dangerScanTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _runDangerScan(),
+    );
+  }
+
+  Future<void> _runDangerScan() async {
+    // Skip if app is busy with mode switch or one-shot action.
+    if (_isDangerScanning || _isSwitchingMode || _isOneShot) return;
+    _isDangerScanning = true;
+
+    XFile? snapshot;
+    try {
+      snapshot = await _camera.takeSnapshot();
+      if (snapshot == null) return;
+
+      final matched = await _ocr.scanForDanger(snapshot.path);
+      if (matched == null) return;
+
+      final now = DateTime.now();
+      final sameWord = matched == _lastDangerKeyword;
+      final tooSoon = now.difference(_lastDangerWarnTime).inSeconds < 30;
+      if (sameWord && tooSoon) return;
+
+      _lastDangerKeyword = matched;
+      _lastDangerWarnTime = now;
+
+      final arabic = _dangerArabic[matched] ?? 'تحذير';
+      await _speech.speak('تنبيه: $arabic', force: true, throttle: false);
+      print('⚠️ Danger alert: "$matched" → $arabic');
+    } catch (e) {
+      print('⚠️ Danger scan error: $e');
+    } finally {
+      if (snapshot != null) {
+        try { await File(snapshot.path).delete(); } catch (_) {}
+      }
+      _isDangerScanning = false;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
   //  ONE-SHOT ACTIONS (OCR, Scene Description)
   //  These pause the current mode, perform the action, then resume.
   // ══════════════════════════════════════════════════════════════════
@@ -781,7 +865,14 @@ class VisionService {
         return err;
       }
 
-      final text = await _ocr.extractText(snapshot, language: language);
+      String text;
+      if (language == OCRLanguage.arabic) {
+        final bytes = await File(snapshot.path).readAsBytes();
+        final extracted = await _gemini.extractTextFromImage(bytes);
+        text = extracted.isEmpty ? 'لا يوجد نص في الصورة' : extracted;
+      } else {
+        text = await _ocr.extractText(snapshot, language: language);
+      }
       _setStatus(text);
 
       final ttsLang = language == OCRLanguage.english ? 'en-US' : 'ar-EG';
@@ -844,11 +935,15 @@ class VisionService {
         return err;
       }
 
-      // Run OCR
-      final ocrResult = await _ocr.extractStructured(
-        snapshot,
-        language: language,
-      );
+      // Run OCR — Arabic uses Groq Vision, English uses ML Kit.
+      OCRResult ocrResult;
+      if (language == OCRLanguage.arabic) {
+        final bytes = await File(snapshot.path).readAsBytes();
+        final rawText = await _gemini.extractTextFromImage(bytes);
+        ocrResult = OCRResult.fromRawText(rawText, language);
+      } else {
+        ocrResult = await _ocr.extractStructured(snapshot, language: language);
+      }
 
       print('📄 OCR result: $ocrResult');
 
@@ -1060,6 +1155,8 @@ class VisionService {
   /// Stop everything when app goes to background.
   Future<void> handleAppPause() async {
     stopAllTimers();
+    _dangerScanTimer?.cancel();
+    _dangerScanTimer = null;
     if (_voice.isListening) {
       await _voice.stopListening();
     }
@@ -1073,6 +1170,8 @@ class VisionService {
 
   Future<void> dispose() async {
     stopAllTimers();
+    _dangerScanTimer?.cancel();
+    _dangerScanTimer = null;
     await _detector.dispose();
     _gemini.dispose();
     _ocr.dispose();

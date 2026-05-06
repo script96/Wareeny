@@ -147,6 +147,61 @@ class GeminiService {
     }
   }
 
+  // ── Arabic OCR — extract text from image ──
+
+  /// Extract all readable text from [imageBytes] using the vision model.
+  /// Used for Arabic OCR — Groq handles Arabic script that ML Kit cannot.
+  /// Returns the raw extracted text, or empty string on failure.
+  Future<String> extractTextFromImage(Uint8List imageBytes) async {
+    if (!_isReady || _apiKey.isEmpty) return '';
+
+    try {
+      final base64Image = base64Encode(imageBytes);
+
+      const prompt =
+          'اقرأ كل النص الموجود في هذه الصورة وأعده كما هو بالضبط بدون أي تعليق أو إضافة. لو مفيش نص، رد بـ: لا يوجد نص.';
+
+      final response = await http.post(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $_apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+          'messages': [
+            {
+              'role': 'user',
+              'content': [
+                {
+                  'type': 'image_url',
+                  'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}
+                },
+                {'type': 'text', 'text': prompt},
+              ],
+            },
+          ],
+          'max_tokens': 500,
+        }),
+      ).timeout(const Duration(seconds: 20), onTimeout: () {
+        throw Exception('timeout');
+      });
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final text =
+            data['choices'][0]['message']['content'] as String?;
+        if (text == null || text.trim().isEmpty) return '';
+        final result = text.trim();
+        if (result == 'لا يوجد نص.' || result == 'لا يوجد نص') return '';
+        return result;
+      }
+      return '';
+    } on Exception {
+      return '';
+    }
+  }
+
   // ── Smart Finder — Object-in-scene search ──
 
   /// Ask the vision model whether [targetName] is visible in the image.
