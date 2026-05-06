@@ -34,6 +34,4 @@ flutter:
     - assets/models/yolov8n.tflite
     - assets/models/labels.txt
     - assets/models/currency_yolov8m.tflite
-    - assets/models/currency_labels.txt
-    - assets/tessdata_config.json
-    - assets/tessdata/
+    - assets/models/currency_labels.txt

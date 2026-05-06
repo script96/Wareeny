@@ -36,7 +36,15 @@ class OCRService {
     'flammable',
     'no smoking',
     'explosive',
+    'construction',
+    'biohazard',
   ];
+
+  // Word-boundary regex for each keyword. Avoids false positives like
+  // "endangered" matching "danger" or "ranger" matching "danger".
+  static final List<RegExp> _dangerPatterns = _dangerKeywords
+      .map((k) => RegExp(r'\b' + k + r'\b', caseSensitive: false))
+      .toList();
 
   Future<String> _extractRaw(String imagePath) async {
     try {
@@ -76,15 +84,18 @@ class OCRService {
   }
 
   /// Scan [imagePath] for danger/warning keywords. Returns the first matched
-  /// keyword (lowercase), or null if none found.
+  /// keyword (lowercase), or null if none found. Uses word-boundary matching
+  /// to avoid false positives (e.g. "endangered" won't match "danger").
   Future<String?> scanForDanger(String imagePath) async {
     if (_isDisposed) return null;
     try {
       final inputImage = InputImage.fromFilePath(imagePath);
       final result = await _latinRecognizer.processImage(inputImage);
-      final lowerText = result.text.toLowerCase();
-      for (final keyword in _dangerKeywords) {
-        if (lowerText.contains(keyword)) return keyword;
+      final text = result.text;
+      for (var i = 0; i < _dangerPatterns.length; i++) {
+        if (_dangerPatterns[i].hasMatch(text)) {
+          return _dangerKeywords[i];
+        }
       }
       return null;
     } catch (e) {

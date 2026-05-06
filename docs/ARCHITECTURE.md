@@ -114,14 +114,17 @@ Despite the name, uses Groq API (`api.groq.com`), model `meta-llama/llama-4-scou
 
 - `describeScene(image, style)` → Arabic scene summary
 - `findObjectInScene(image, target)` → `SmartFindResult` with direction/distance
+- `extractTextFromImage(image)` → raw extracted text for Arabic OCR (`String?`: null = API error, '' = no text found)
+- `answerQuestionFromDocument(...)` → Document QA via `llama-3.3-70b-versatile` text model
 
 Handles 429 (rate limit), 401/400 (auth), and network timeouts gracefully with Arabic TTS fallbacks.
 
 ### OCRService
 `lib/ocr_service.dart`
 
-- `OCRLanguage.english` → Google ML Kit `TextRecognizer`
-- `OCRLanguage.arabic` → Tesseract 5 with `ara.traineddata`
+- `OCRLanguage.english` → Google ML Kit `TextRecognizer` (Latin script, on-device)
+- `OCRLanguage.arabic` → routed by `VisionService` to `GeminiService.extractTextFromImage()` (Groq Vision). Tesseract removed — ML Kit has no Arabic script support and Tesseract was too slow/inaccurate.
+- `scanForDanger(imagePath)` → word-boundary ML Kit scan, returns first matched danger keyword or null. Called by the always-on danger scanner in `VisionService`.
 
 No auto-language detection. User switches via swipe-left gesture.
 
@@ -143,6 +146,18 @@ Singleton wrapping `flutter_tts`. Default locale `ar-EG`, speed 0.5×.
 `lib/services/color_service.dart`
 
 Samples 5×5 pixel grid from image center. RGB → HSL → nearest Arabic color name. 12 color buckets: أسود، أبيض، رمادي، أحمر، برتقالي، أصفر، أخضر، سماوي، أزرق، بنفسجي، وردي، بني.
+
+### Danger Alert (VisionService internal)
+
+Always-on background scanner independent of active mode. Timer fires every 5 seconds. On each tick:
+1. Skip if any other camera operation is in-flight (`_isDetecting`, `_isSmartFinderProcessing`, `_isColorProcessing`, `_isOneShot`, `_isSwitchingMode`) — avoids `takeSnapshot()` collisions.
+2. Take JPEG snapshot.
+3. `OCRService.scanForDanger()` — ML Kit Latin + word-boundary regex against 22 English danger keywords.
+4. If matched and not throttled (30s per keyword): `SpeechService.speak('تنبيه: [arabic]', force: true)`.
+
+**Limitation:** Detects English-text signs only. Pure Arabic signs (خطر etc.) are not caught — ML Kit Latin does not support Arabic script.
+
+**Lifecycle:** Started in `VisionService.init()`. Stopped in `handleAppPause()` and `dispose()`. Restarted automatically on next `switchMode()` call (covers app resume path).
 
 ### ObjectFinderRegistry
 `lib/services/object_finder_types.dart`

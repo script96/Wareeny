@@ -102,6 +102,7 @@ class VisionService {
 
   Timer? _dangerScanTimer;
   bool _isDangerScanning = false;
+  Completer<void>? _activeDangerScanCompleter;
   String _lastDangerKeyword = '';
   DateTime _lastDangerWarnTime = DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -128,6 +129,8 @@ class VisionService {
     'flammable': 'قابل للاشتعال',
     'no smoking': 'ممنوع التدخين',
     'explosive': 'متفجرات',
+    'construction': 'منطقة بناء',
+    'biohazard': 'خطر بيولوجي',
   };
 
   // ── Color mode state ──
@@ -235,6 +238,7 @@ class VisionService {
 
       // 2. Wait for active detection/processing to finish
       await _waitForActiveDetection();
+      await _waitForActiveDangerScan();
 
       // 3. Clear detections and mode-specific UI state
       currentDetections = [];
@@ -752,9 +756,18 @@ class VisionService {
   }
 
   Future<void> _runDangerScan() async {
-    // Skip if app is busy with mode switch or one-shot action.
-    if (_isDangerScanning || _isSwitchingMode || _isOneShot) return;
+    // Skip if any other camera/CPU work is in progress to avoid
+    // collisions on takeSnapshot() and to keep the app responsive.
+    if (_isDangerScanning ||
+        _isSwitchingMode ||
+        _isOneShot ||
+        _isDetecting ||
+        _isSmartFinderProcessing ||
+        _isColorProcessing) return;
+
     _isDangerScanning = true;
+    final completer = Completer<void>();
+    _activeDangerScanCompleter = completer;
 
     XFile? snapshot;
     try {
@@ -782,6 +795,24 @@ class VisionService {
         try { await File(snapshot.path).delete(); } catch (_) {}
       }
       _isDangerScanning = false;
+      completer.complete();
+      if (_activeDangerScanCompleter == completer) {
+        _activeDangerScanCompleter = null;
+      }
+    }
+  }
+
+  /// Wait for any in-flight danger scan to complete (used by one-shot
+  /// actions before they take their own snapshot).
+  Future<void> _waitForActiveDangerScan() async {
+    if (_activeDangerScanCompleter != null &&
+        !_activeDangerScanCompleter!.isCompleted) {
+      try {
+        await _activeDangerScanCompleter!.future
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // Timeout — proceed anyway
+      }
     }
   }
 
@@ -800,6 +831,7 @@ class VisionService {
     _isOneShot = true;
     stopAllTimers();
     await _waitForActiveDetection();
+    await _waitForActiveDangerScan();
 
     currentDetections = [];
     _detectionController.add(currentDetections);
@@ -849,6 +881,7 @@ class VisionService {
     _isOneShot = true;
     stopAllTimers();
     await _waitForActiveDetection();
+    await _waitForActiveDangerScan();
 
     currentDetections = [];
     _detectionController.add(currentDetections);
@@ -869,7 +902,13 @@ class VisionService {
       if (language == OCRLanguage.arabic) {
         final bytes = await File(snapshot.path).readAsBytes();
         final extracted = await _gemini.extractTextFromImage(bytes);
-        text = extracted.isEmpty ? 'لا يوجد نص في الصورة' : extracted;
+        if (extracted == null) {
+          text = 'حصل خطأ في خدمة القراءة. حاول تاني.';
+        } else if (extracted.isEmpty) {
+          text = 'لا يوجد نص في الصورة';
+        } else {
+          text = extracted;
+        }
       } else {
         text = await _ocr.extractText(snapshot, language: language);
       }
@@ -940,6 +979,15 @@ class VisionService {
       if (language == OCRLanguage.arabic) {
         final bytes = await File(snapshot.path).readAsBytes();
         final rawText = await _gemini.extractTextFromImage(bytes);
+        if (rawText == null) {
+          // API/network failure — distinguish from "no text found".
+          final err = 'حصل خطأ في خدمة القراءة. حاول تاني.';
+          _setStatus(err);
+          await _speech.speakAndWait(err);
+          _isOneShot = false;
+          await endDocumentQa();
+          return err;
+        }
         ocrResult = OCRResult.fromRawText(rawText, language);
       } else {
         ocrResult = await _ocr.extractStructured(snapshot, language: language);
@@ -1157,6 +1205,9 @@ class VisionService {
     stopAllTimers();
     _dangerScanTimer?.cancel();
     _dangerScanTimer = null;
+    // Let any in-flight scan finish so we don't leave the camera
+    // in a half-disposed state.
+    await _waitForActiveDangerScan();
     if (_voice.isListening) {
       await _voice.stopListening();
     }
@@ -1172,6 +1223,10 @@ class VisionService {
     stopAllTimers();
     _dangerScanTimer?.cancel();
     _dangerScanTimer = null;
+    // Wait for in-flight detection and danger scan to finish before
+    // tearing down the underlying recognizers/detectors.
+    await _waitForActiveDetection();
+    await _waitForActiveDangerScan();
     await _detector.dispose();
     _gemini.dispose();
     _ocr.dispose();

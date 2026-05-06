@@ -151,9 +151,13 @@ class GeminiService {
 
   /// Extract all readable text from [imageBytes] using the vision model.
   /// Used for Arabic OCR — Groq handles Arabic script that ML Kit cannot.
-  /// Returns the raw extracted text, or empty string on failure.
-  Future<String> extractTextFromImage(Uint8List imageBytes) async {
-    if (!_isReady || _apiKey.isEmpty) return '';
+  ///
+  /// Returns:
+  ///   - non-empty String: extracted text
+  ///   - empty String: no text found in the image
+  ///   - null: API/network error (rate limit, auth, timeout, etc.)
+  Future<String?> extractTextFromImage(Uint8List imageBytes) async {
+    if (!_isReady || _apiKey.isEmpty) return null;
 
     try {
       final base64Image = base64Encode(imageBytes);
@@ -196,9 +200,12 @@ class GeminiService {
         if (result == 'لا يوجد نص.' || result == 'لا يوجد نص') return '';
         return result;
       }
-      return '';
-    } on Exception {
-      return '';
+      // 429, 401, 400, etc — treat as error so caller can distinguish.
+      print('⚠️ extractTextFromImage HTTP ${response.statusCode}');
+      return null;
+    } on Exception catch (e) {
+      print('⚠️ extractTextFromImage error: $e');
+      return null;
     }
   }
 

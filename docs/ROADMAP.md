@@ -26,7 +26,7 @@ Core app infrastructure.
 - [x] Spatial feedback — direction (left/center/right) + distance (close/far)
 - [x] Scene description one-shot (Groq LLaMA 4 Vision)
 - [x] English OCR (Google ML Kit)
-- [x] Arabic OCR (Tesseract 5)
+- [x] Arabic OCR (Groq Vision — replaces Tesseract; LLaMA 4 Scout handles Arabic natively)
 - [x] Color detection (HSL-based, 12 Arabic color names)
 - [x] TTS throttling (3-second repeat cooldown)
 - [x] Detection persistence (3-frame hysteresis before clearing)
@@ -79,14 +79,14 @@ New modes and input methods.
 
 ---
 
-## Milestone 5: Safety and Environment Detection (Later)
+## Milestone 5: Safety and Environment Detection (Partial)
 
 Hazard awareness features.
 
 - [ ] Traffic light detection — dedicated YOLOv8 model (red/green/yellow)
-- [ ] Wet floor / slippery surface detection
+- [x] Wet floor / slippery surface detection — covered by Danger Alert (English signs)
 - [ ] Obstacle warning — stairs, open manholes, low poles
-- [ ] Danger sign reading (Arabic + English warning signs)
+- [~] Danger sign reading — **English signs implemented** (always-on ML Kit scan, 22 keywords, word-boundary match, 30s throttle). Arabic-only signs not yet covered — ML Kit has no Arabic script support.
 
 ---
 

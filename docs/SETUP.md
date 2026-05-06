@@ -39,8 +39,6 @@ assets/models/yolov8n.tflite             (~43 MB)
 assets/models/labels.txt
 assets/models/currency_yolov8m.tflite    (~24 MB)
 assets/models/currency_labels.txt
-assets/tessdata/ara.traineddata          (~1.4 MB)
-assets/tessdata/eng.traineddata          (~4.0 MB)
 ```
 
 If any are missing, see the Models section below.
@@ -107,13 +105,6 @@ yolo export model=yolov8n.pt format=tflite int8=true
 
 Training pipeline is in `training/wareeny_currency_training.ipynb` (Google Colab). Class mapping is in `lib/detector.dart` under `_currencyArabicNames`.
 
-### Tesseract Language Data
-Download from the official Tesseract tessdata repository:
-- Arabic: `ara.traineddata` (fast variant recommended)
-- English: `eng.traineddata`
-
-Place both in `assets/tessdata/`.
-
 ---
 
 ## Project Structure
@@ -123,8 +114,8 @@ Wareeny-test/
 ├── lib/
 │   ├── main.dart                    Entry point, PermissionGate, app theme
 │   ├── detector.dart                YOLOv8 TFLite wrapper
-│   ├── gemini_service.dart          Groq API client (scene description, smart finder)
-│   ├── ocr_service.dart             Dual OCR: ML Kit (EN) + Tesseract (AR)
+│   ├── gemini_service.dart          Groq API client (scene description, smart finder, Arabic OCR)
+│   ├── ocr_service.dart             ML Kit English OCR + danger keyword scanner
 │   └── services/
 │       ├── vision_service.dart      Central orchestrator — all modes, state
 │       ├── camera_service.dart      Camera singleton
