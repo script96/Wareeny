@@ -10,7 +10,7 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    // Required by flutter_vision — keep .tflite files uncompressed in APK
+    // Keep TensorFlow Lite models uncompressed for faster native loading.
     aaptOptions {
         noCompress("tflite")
     }

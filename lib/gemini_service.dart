@@ -16,12 +16,17 @@ import 'ocr_service.dart';
 
 /// Description verbosity level.
 enum DescriptionStyle {
-  brief,    // 1 sentence — walking/scanning
-  normal,   // 2–3 sentences — default daily use
+  brief, // 1 sentence — walking/scanning
+  normal, // 2–3 sentences — default daily use
   detailed, // 4–5 sentences — exploring a new place
 }
 
 class GeminiService {
+  static const String _dartDefineApiKey = String.fromEnvironment(
+    'GROQ_API_KEY',
+    defaultValue: '',
+  );
+
   bool _isReady = false;
 
   bool get isReady => _isReady;
@@ -30,7 +35,17 @@ class GeminiService {
   // For dev builds this uses flutter_dotenv.
   // For production, consider a backend proxy — secrets bundled
   // into a mobile APK can still be extracted.
-  String get _apiKey => dotenv.env['GROQ_API_KEY'] ?? '';
+  String get _apiKey {
+    try {
+      if (dotenv.isInitialized) {
+        final envKey = dotenv.env['GROQ_API_KEY'] ?? '';
+        if (envKey.isNotEmpty) return envKey;
+      }
+    } catch (_) {
+      // Ignore missing/uninitialized dotenv and fall back to dart-define.
+    }
+    return _dartDefineApiKey;
+  }
 
   /// Initialize the service. Validates the API key is present.
   Future<void> init() async {
@@ -104,33 +119,44 @@ class GeminiService {
       final base64Image = base64Encode(imageBytes);
       final prompt = _buildPrompt(style);
 
-      final response = await http.post(
-        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}},
-                {'type': 'text', 'text': prompt}
-              ]
-            }
-          ],
-          'max_tokens': 300,
-        }),
-      ).timeout(const Duration(seconds: 15), onTimeout: () {
-        throw Exception('timeout');
-      });
+      final response = await http
+          .post(
+            Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+              'messages': [
+                {
+                  'role': 'user',
+                  'content': [
+                    {
+                      'type': 'image_url',
+                      'image_url': {
+                        'url': 'data:image/jpeg;base64,$base64Image',
+                      },
+                    },
+                    {'type': 'text', 'text': prompt},
+                  ],
+                },
+              ],
+              'max_tokens': 300,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('timeout');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final text = data['choices'][0]['message']['content'] as String?;
-        if (text == null || text.trim().isEmpty) return 'مقدرتش أوصف المشهد. حاول تاني.';
+        if (text == null || text.trim().isEmpty)
+          return 'مقدرتش أوصف المشهد. حاول تاني.';
         return text.trim();
       } else if (response.statusCode == 429) {
         return 'الخدمة مشغولة دلوقتي. استنى دقيقة وحاول تاني.';
@@ -142,7 +168,10 @@ class GeminiService {
     } on Exception catch (e) {
       final msg = e.toString().toLowerCase();
       if (msg.contains('timeout')) return 'الوصف أخذ وقت طويل. حاول تاني.';
-      if (msg.contains('socket') || msg.contains('network') || msg.contains('connection')) return 'مفيش اتصال بالإنترنت.';
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection'))
+        return 'مفيش اتصال بالإنترنت.';
       return 'حصل خطأ غير متوقع. حاول تاني.';
     }
   }
@@ -165,36 +194,42 @@ class GeminiService {
       const prompt =
           'اقرأ كل النص الموجود في هذه الصورة وأعده كما هو بالضبط بدون أي تعليق أو إضافة. لو مفيش نص، رد بـ: لا يوجد نص.';
 
-      final response = await http.post(
-        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {
-                  'type': 'image_url',
-                  'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}
-                },
-                {'type': 'text', 'text': prompt},
-              ],
+      final response = await http
+          .post(
+            Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
             },
-          ],
-          'max_tokens': 500,
-        }),
-      ).timeout(const Duration(seconds: 20), onTimeout: () {
-        throw Exception('timeout');
-      });
+            body: jsonEncode({
+              'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+              'messages': [
+                {
+                  'role': 'user',
+                  'content': [
+                    {
+                      'type': 'image_url',
+                      'image_url': {
+                        'url': 'data:image/jpeg;base64,$base64Image',
+                      },
+                    },
+                    {'type': 'text', 'text': prompt},
+                  ],
+                },
+              ],
+              'max_tokens': 500,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw Exception('timeout');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final text =
-            data['choices'][0]['message']['content'] as String?;
+        final text = data['choices'][0]['message']['content'] as String?;
         if (text == null || text.trim().isEmpty) return '';
         final result = text.trim();
         if (result == 'لا يوجد نص.' || result == 'لا يوجد نص') return '';
@@ -229,7 +264,8 @@ class GeminiService {
     try {
       final base64Image = base64Encode(imageBytes);
 
-      final prompt = '''
+      final prompt =
+          '''
 You are helping a blind user find an object.
 Target object: $targetName / $targetArabicName.
 Look ONLY for this specific target in the image.
@@ -243,32 +279,43 @@ Rules:
 - Do not mention other objects.
 ''';
 
-      final response = await http.post(
-        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,$base64Image'}},
-                {'type': 'text', 'text': prompt},
-              ],
+      final response = await http
+          .post(
+            Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
             },
-          ],
-          'max_tokens': 150,
-        }),
-      ).timeout(const Duration(seconds: 10), onTimeout: () {
-        throw Exception('timeout');
-      });
+            body: jsonEncode({
+              'model': 'meta-llama/llama-4-scout-17b-16e-instruct',
+              'messages': [
+                {
+                  'role': 'user',
+                  'content': [
+                    {
+                      'type': 'image_url',
+                      'image_url': {
+                        'url': 'data:image/jpeg;base64,$base64Image',
+                      },
+                    },
+                    {'type': 'text', 'text': prompt},
+                  ],
+                },
+              ],
+              'max_tokens': 150,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('timeout');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final text = (data['choices'][0]['message']['content'] as String?)?.trim() ?? '';
+        final text =
+            (data['choices'][0]['message']['content'] as String?)?.trim() ?? '';
         print('🔍 Smart Finder raw response: $text');
 
         // Extract JSON from the response (it may be wrapped in markdown fences)
@@ -288,7 +335,9 @@ Rules:
       } else if (response.statusCode == 429) {
         return const SmartFindResult.error('الخدمة مشغولة. حاول تاني.');
       } else if (response.statusCode == 401 || response.statusCode == 400) {
-        return const SmartFindResult.error('خطأ في المفتاح، تحقق من الإعدادات.');
+        return const SmartFindResult.error(
+          'خطأ في المفتاح، تحقق من الإعدادات.',
+        );
       } else {
         return SmartFindResult.error('خطأ من الخدمة: ${response.statusCode}');
       }
@@ -297,7 +346,9 @@ Rules:
       if (msg.contains('timeout')) {
         return const SmartFindResult(found: false);
       }
-      if (msg.contains('socket') || msg.contains('network') || msg.contains('connection')) {
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
         return const SmartFindResult.error('البحث الذكي يحتاج إنترنت');
       }
       return const SmartFindResult.error('حصل خطأ غير متوقع. حاول تاني.');
@@ -346,10 +397,7 @@ Rules:
 
       // Build messages array
       final messages = <Map<String, dynamic>>[
-        {
-          'role': 'system',
-          'content': _buildQaSystemPrompt(docContext),
-        },
+        {'role': 'system', 'content': _buildQaSystemPrompt(docContext)},
       ];
 
       // Add conversation history (last N turns)
@@ -361,20 +409,25 @@ Rules:
       // Add current question
       messages.add({'role': 'user', 'content': question});
 
-      final response = await http.post(
-        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': _qaModel,
-          'messages': messages,
-          'max_tokens': 300,
-        }),
-      ).timeout(const Duration(seconds: 15), onTimeout: () {
-        throw Exception('timeout');
-      });
+      final response = await http
+          .post(
+            Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': _qaModel,
+              'messages': messages,
+              'max_tokens': 300,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception('timeout');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -382,17 +435,23 @@ Rules:
         // Defensive parsing against missing fields
         final choices = data is Map<String, dynamic> ? data['choices'] : null;
         if (choices is! List || choices.isEmpty) {
-          return const DocumentQaResult.error('مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.');
+          return const DocumentQaResult.error(
+            'مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.',
+          );
         }
 
         final choice = choices.first;
         if (choice is! Map<String, dynamic>) {
-          return const DocumentQaResult.error('مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.');
+          return const DocumentQaResult.error(
+            'مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.',
+          );
         }
 
         final message = choice['message'];
         if (message is! Map<String, dynamic>) {
-          return const DocumentQaResult.error('مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.');
+          return const DocumentQaResult.error(
+            'مقدرتش أطلع إجابة. حاول تسأل بطريقة تانية.',
+          );
         }
 
         final text = message['content'];
@@ -411,9 +470,7 @@ Rules:
           'خطأ في المفتاح، تحقق من الإعدادات.',
         );
       } else {
-        return DocumentQaResult.error(
-          'خطأ من الخدمة: ${response.statusCode}',
-        );
+        return DocumentQaResult.error('خطأ من الخدمة: ${response.statusCode}');
       }
     } on Exception catch (e) {
       final msg = e.toString().toLowerCase();
@@ -427,9 +484,7 @@ Rules:
           msg.contains('connection')) {
         return const DocumentQaResult.error('مفيش اتصال بالإنترنت.');
       }
-      return const DocumentQaResult.error(
-        'حصل خطأ غير متوقع. حاول تاني.',
-      );
+      return const DocumentQaResult.error('حصل خطأ غير متوقع. حاول تاني.');
     }
   }
 

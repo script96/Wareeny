@@ -1,23 +1,19 @@
-// Warene — YoloDetector wrapper for flutter_vision
+// Warene - cross-platform YOLOv8 detector.
 //
-// Uses yoloOnImage() with JPEG bytes to bypass flutter_vision's
-// broken YUV stride-padding handling in yoloOnFrame().
-// Center-crops portrait images to square before inference
-// to avoid aspect-ratio distortion that kills accuracy.
+// Runs TensorFlow Lite directly so the same detector works on Android and iOS.
 
-import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:flutter_vision/flutter_vision.dart';
 
-// ── Detection result ────────────────────────────────────────────────
+import 'package:flutter/services.dart';
+import 'package:image/image.dart' as img;
+import 'package:tflite_flutter/tflite_flutter.dart';
+
 class Detection {
   final String label;
   final String arabicLabel;
   final double confidence;
-  final List<double> bbox;  // [x1, y1, x2, y2] in ORIGINAL image coords
+  final List<double> bbox; // [x1, y1, x2, y2] in original image coords
 
   Detection({
     required this.label,
@@ -33,8 +29,8 @@ class Detection {
 
 class DetectionResult {
   final List<Detection> detections;
-  final int imageWidth;   // original image width
-  final int imageHeight;  // original image height
+  final int imageWidth;
+  final int imageHeight;
 
   DetectionResult({
     required this.detections,
@@ -43,14 +39,32 @@ class DetectionResult {
   });
 }
 
-enum DetectionModel {
-  general,
-  currency,
+enum DetectionModel { general, currency }
+
+class _Candidate {
+  final int classIndex;
+  final double confidence;
+  final List<double> bbox;
+
+  const _Candidate({
+    required this.classIndex,
+    required this.confidence,
+    required this.bbox,
+  });
 }
 
-// ── Main detector class ─────────────────────────────────────────────
 class YoloDetector {
-  final FlutterVision _vision = FlutterVision();
+  static const String _generalModelPath = 'assets/models/yolov8n.tflite';
+  static const String _generalLabelsPath = 'assets/models/labels.txt';
+  static const String _currencyModelPath =
+      'assets/models/currency_yolov8n.tflite';
+  static const String _currencyLabelsPath = 'assets/models/currency_labels.txt';
+  static const int _maxDetections = 20;
+
+  Interpreter? _interpreter;
+  List<String> _labels = [];
+  List<int> _inputShape = const [1, 640, 640, 3];
+  List<int> _outputShape = const [1, 84, 8400];
   bool _isReady = false;
 
   bool get isReady => _isReady;
@@ -138,272 +152,332 @@ class YoloDetector {
     'toothbrush': 'فُرْشَاة أَسْنَان',
   };
 
-  // Mapping verified from dataset labels analysis:
-  // Class 0 = 10 EGP (back), Class 1 = 5 EGP (back),
-  // Class 2 = 50 EGP (front), Class 3 = 10 EGP (front),
-  // Class 4 = 1 EGP (generated), Class 5 = 1 EGP (generated),
-  // Class 6 = 100 EGP (back), Class 7 = 20 EGP (back),
-  // Class 8 = 200 EGP (front), Class 9 = 200 EGP (back),
-  // Class 10 = 50 EGP (back), Class 11 = 20 EGP (front),
-  // Class 12 = 5 EGP (front), Class 13 = 100 EGP (front)
-  //
-  // Tags come from currency_labels.txt (alphabetically sorted data.yaml names):
-  // Line 0='0', 1='1', 2='10', 3='11', 4='12', 5='13',
-  //      6='2', 7='3', 8='4', 9='5', 10='6', 11='7', 12='8', 13='9'
   static const Map<String, String> currencyArabicNames = {
-    '0': 'عَشَرَة جُنَيْهَات',        // 10 EGP (back)
-    '1': 'خَمْسَة جُنَيْهَات',        // 5 EGP (back)
-    '10': 'خَمْسُونَ جُنَيْهًا',      // 50 EGP (back)
-    '11': 'عِشْرُونَ جُنَيْهًا',      // 20 EGP (front)
-    '12': 'خَمْسَة جُنَيْهَات',       // 5 EGP (front)
-    '13': 'مِائَة جُنَيْه',           // 100 EGP (front)
-    '2': 'مِائَة جُنَيْه',            // 100 EGP (back)
-    '3': 'عِشْرُونَ جُنَيْهًا',       // 20 EGP (back)
-    '4': 'مِائَتَا جُنَيْه',          // 200 EGP (front)
-    '5': 'مِائَتَا جُنَيْه',          // 200 EGP (back)
-    '6': 'خَمْسُونَ جُنَيْهًا',       // 50 EGP (back) — duplicate tag
-    '7': 'عِشْرُونَ جُنَيْهًا',       // 20 EGP (front) — duplicate tag
-    '8': 'خَمْسَة جُنَيْهَات',        // 5 EGP (front) — duplicate tag
-    '9': 'مِائَة جُنَيْه',            // 100 EGP (front) — duplicate tag
+    '0': 'عَشَرَة جُنَيْهَات',
+    '1': 'خَمْسَة جُنَيْهَات',
+    '10': 'خَمْسُونَ جُنَيْهًا',
+    '11': 'عِشْرُونَ جُنَيْهًا',
+    '12': 'خَمْسَة جُنَيْهَات',
+    '13': 'مِائَة جُنَيْه',
+    '2': 'مِائَة جُنَيْه',
+    '3': 'عِشْرُونَ جُنَيْهًا',
+    '4': 'مِائَتَا جُنَيْه',
+    '5': 'مِائَتَا جُنَيْه',
+    '6': 'خَمْسُونَ جُنَيْهًا',
+    '7': 'عِشْرُونَ جُنَيْهًا',
+    '8': 'خَمْسَة جُنَيْهَات',
+    '9': 'مِائَة جُنَيْه',
   };
 
   DetectionModel _currentModel = DetectionModel.general;
   DetectionModel get currentModel => _currentModel;
 
   Future<void> loadModel(DetectionModel modelType) async {
-    print('🔵 Loading YOLOv8 model (${modelType.name}) via flutter_vision...');
+    if (_isReady && _currentModel == modelType) return;
+
     _isReady = false;
-
-    // Close the previous model first — flutter_vision uses a single native
-    // channel and will crash or silently fail if you load a second model
-    // without closing the first one.
-    try {
-      await _vision.closeYoloModel();
-      print('🔵 Previous model closed');
-    } catch (e) {
-      print('⚠️ closeYoloModel (ok if first load): $e');
-    }
-
+    _interpreter?.close();
+    _interpreter = null;
     _currentModel = modelType;
 
     try {
-      if (modelType == DetectionModel.general) {
-        await _vision.loadYoloModel(
-          labels: 'assets/models/labels.txt',
-          modelPath: 'assets/models/yolov8n.tflite',
-          modelVersion: 'yolov8',
-          quantization: false,
-          numThreads: 4,
-          useGpu: false,
-        );
-      } else {
-        await _vision.loadYoloModel(
-          labels: 'assets/models/currency_labels.txt',
-          modelPath: 'assets/models/currency_yolov8m.tflite',
-          modelVersion: 'yolov8',
-          quantization: false,
-          numThreads: 4,
-          useGpu: false,
-        );
+      final options = InterpreterOptions()..threads = 4;
+      if (Platform.isAndroid) {
+        options.addDelegate(XNNPackDelegate());
       }
+
+      final modelPath = modelType == DetectionModel.general
+          ? _generalModelPath
+          : _currencyModelPath;
+      final labelsPath = modelType == DetectionModel.general
+          ? _generalLabelsPath
+          : _currencyLabelsPath;
+
+      _interpreter = await Interpreter.fromAsset(modelPath, options: options);
+      _inputShape = _interpreter!.getInputTensor(0).shape;
+      _outputShape = _interpreter!.getOutputTensor(0).shape;
+
+      final labelText = await rootBundle.loadString(labelsPath);
+      _labels = labelText
+          .split('\n')
+          .map((label) => label.trim())
+          .where((label) => label.isNotEmpty)
+          .toList();
+
       _isReady = true;
-      print('✅ YOLOv8 model loaded (${modelType.name}), isReady=$_isReady');
-    } catch (e) {
-      print('❌ Model load error: $e');
+    } catch (_) {
+      _interpreter?.close();
+      _interpreter = null;
       _isReady = false;
     }
   }
 
-  /// Center-crop image to square (preserves aspect ratio for model).
-  ///
-  /// A 720x1280 portrait image squished to 640x640 distorts objects
-  /// and kills accuracy. Center-cropping to 720x720 first means the
-  /// model only needs to mildly downscale — much better detection.
-  Future<Uint8List?> _centerCropToSquare(Uint8List imageBytes) async {
+  Future<DetectionResult?> detectFromFile(String imagePath) async {
+    final interpreter = _interpreter;
+    if (!_isReady || interpreter == null) return null;
+
     try {
-      final codec = await ui.instantiateImageCodec(imageBytes);
-      final frame = await codec.getNextFrame();
-      final srcImage = frame.image;
-      final w = srcImage.width;
-      final h = srcImage.height;
-
-      // Already square (or close enough)
-      if ((w - h).abs() < 10) {
-        srcImage.dispose();
-        codec.dispose();
-        return null; // signal: use original
-      }
-
-      final side = math.min(w, h);
-      final cropX = (w - side) / 2;
-      final cropY = (h - side) / 2;
-
-      // Draw center crop to new canvas
-      final recorder = ui.PictureRecorder();
-      final canvas = ui.Canvas(recorder);
-      canvas.drawImageRect(
-        srcImage,
-        ui.Rect.fromLTWH(cropX, cropY, side.toDouble(), side.toDouble()),
-        ui.Rect.fromLTWH(0, 0, side.toDouble(), side.toDouble()),
-        ui.Paint(),
-      );
-      final picture = recorder.endRecording();
-      final croppedImage = await picture.toImage(side, side);
-
-      // Encode as PNG
-      final byteData =
-          await croppedImage.toByteData(format: ui.ImageByteFormat.png);
-
-      srcImage.dispose();
-      croppedImage.dispose();
-      picture.dispose();
-      codec.dispose();
-
-      return byteData?.buffer.asUint8List();
-    } catch (e) {
-      print('⚠️ Center crop failed: $e');
+      final originalBytes = await File(imagePath).readAsBytes();
+      return detectFromBytes(originalBytes);
+    } catch (_) {
       return null;
     }
   }
 
-  /// Run YOLOv8 detection on a JPEG image file.
-  ///
-  /// Center-crops to square first for better accuracy,
-  /// then maps coordinates back to original image space.
-  Future<DetectionResult?> detectFromFile(String imagePath) async {
-    if (!_isReady) return null;
+  DetectionResult? detectFromBytes(Uint8List imageBytes) {
+    final interpreter = _interpreter;
+    if (!_isReady || interpreter == null) return null;
 
     try {
-      final Uint8List originalBytes = await File(imagePath).readAsBytes();
+      final decoded = img.decodeImage(imageBytes);
+      if (decoded == null) return null;
 
-      // Get original image dimensions.
-      final origCodec = await ui.instantiateImageCodec(originalBytes);
-      final origFrame = await origCodec.getNextFrame();
-      final int origW = origFrame.image.width;
-      final int origH = origFrame.image.height;
-      origFrame.image.dispose();
-      origCodec.dispose();
+      final originalImage = img.bakeOrientation(decoded);
+      final origW = originalImage.width;
+      final origH = originalImage.height;
 
-      // Center-crop to square for better accuracy.
-      // Skip center-crop for currency mode — notes can be anywhere
-      // in the frame and cropping cuts off edge detections.
-      final int side = math.min(origW, origH);
-      final double cropX;
-      final double cropY;
-
-      Uint8List inferenceBytes;
-      int inferenceW, inferenceH;
-
-      if (_currentModel == DetectionModel.currency) {
-        // Currency: use the full image (no crop)
-        inferenceBytes = originalBytes;
-        inferenceW = origW;
-        inferenceH = origH;
-        cropX = 0;
-        cropY = 0;
-        print('💵 Currency mode: full image ${origW}x$origH (no crop)');
-      } else {
-        // General: center-crop to square for better accuracy
-        cropX = (origW - side) / 2;
-        cropY = (origH - side) / 2;
-        final cropped = await _centerCropToSquare(originalBytes);
-        if (cropped != null) {
-          inferenceBytes = cropped;
-          inferenceW = side;
-          inferenceH = side;
-          print('📷 Cropped ${origW}x$origH → ${side}x$side');
-        } else {
-          inferenceBytes = originalBytes;
-          inferenceW = origW;
-          inferenceH = origH;
-          print('📷 Image ${origW}x$origH (already square)');
-        }
-      }
-
-      // Run inference on the image.
-      // Currency uses lower thresholds for better recall on folded/angled notes.
-      final confThresh = _currentModel == DetectionModel.currency ? 0.15 : 0.25;
-      final iouThresh = _currentModel == DetectionModel.currency ? 0.3 : 0.4;
-      final results = await _vision.yoloOnImage(
-        bytesList: inferenceBytes,
-        imageHeight: inferenceH,
-        imageWidth: inferenceW,
-        iouThreshold: iouThresh,
-        confThreshold: confThresh,
-        classThreshold: confThresh,
+      final inputHeight = _inputShape[1];
+      final inputWidth = _inputShape[2];
+      final crop = _cropForModel(originalImage);
+      final resized = img.copyResize(
+        crop.image,
+        width: inputWidth,
+        height: inputHeight,
+        interpolation: img.Interpolation.linear,
       );
 
-      print('🔍 Detections: ${results.length}');
+      final input = _imageToInput(resized, inputWidth, inputHeight);
+      final output = _createOutputBuffer(_outputShape);
+      interpreter.run(input, output);
 
-      if (results.isEmpty) {
-        return DetectionResult(
-          detections: [],
-          imageWidth: origW,
-          imageHeight: origH,
+      final confidenceThreshold = _currentModel == DetectionModel.currency
+          ? 0.15
+          : 0.25;
+      final iouThreshold = _currentModel == DetectionModel.currency
+          ? 0.30
+          : 0.45;
+      final minBoxArea = _currentModel == DetectionModel.currency
+          ? origW * origH * 0.002
+          : origW * origH * 0.01;
+
+      final candidates = _parseYoloOutput(
+        output,
+        inputWidth: inputWidth,
+        inputHeight: inputHeight,
+        cropWidth: crop.image.width.toDouble(),
+        cropHeight: crop.image.height.toDouble(),
+        cropX: crop.x.toDouble(),
+        cropY: crop.y.toDouble(),
+        confidenceThreshold: confidenceThreshold,
+        minBoxArea: minBoxArea,
+      );
+
+      final detections = _nonMaxSuppression(candidates, iouThreshold).map((
+        candidate,
+      ) {
+        final label = candidate.classIndex < _labels.length
+            ? _labels[candidate.classIndex]
+            : 'object';
+        final arabicLabel = _currentModel == DetectionModel.currency
+            ? currencyArabicNames[label] ?? label
+            : arabicNames[label] ?? label;
+        return Detection(
+          label: label,
+          arabicLabel: arabicLabel,
+          confidence: candidate.confidence,
+          bbox: candidate.bbox,
         );
-      }
-
-      // Convert detections — map from cropped coords back to original.
-      // Filter out tiny boxes that are usually noise.
-      // Currency notes appear flatter/smaller, so use a lower threshold.
-      final double minBoxArea = _currentModel == DetectionModel.currency
-          ? origW * origH * 0.002  // 0.2% for currency
-          : origW * origH * 0.01;  // 1% for general
-
-      final detections = <Detection>[];
-      for (final result in results) {
-        final String tag = result['tag'] as String;
-        final List<dynamic> box = result['box'] as List<dynamic>;
-        final double confidence = (box[4] as num).toDouble();
-
-        print('🏷️ Raw detection: tag=$tag, conf=${(confidence*100).toStringAsFixed(1)}%');
-
-        // Coordinates are in cropped-image space.
-        // Add crop offset to get original-image coordinates.
-        final double x1 = (box[0] as num).toDouble() + cropX;
-        final double y1 = (box[1] as num).toDouble() + cropY;
-        final double x2 = (box[2] as num).toDouble() + cropX;
-        final double y2 = (box[3] as num).toDouble() + cropY;
-
-        // Skip tiny boxes — likely noise or background patches.
-        final double boxArea = (x2 - x1).abs() * (y2 - y1).abs();
-        if (boxArea < minBoxArea) {
-          print('🚫 Skipped tiny box: area=$boxArea, min=$minBoxArea');
-          continue;
-        }
-
-        String arLabel = tag;
-        if (_currentModel == DetectionModel.general) {
-          arLabel = arabicNames[tag] ?? tag;
-        } else {
-          arLabel = currencyArabicNames[tag] ?? tag;
-        }
-
-        detections.add(Detection(
-          label: tag,
-          arabicLabel: arLabel,
-          confidence: confidence,
-          bbox: [x1, y1, x2, y2],
-        ));
-      }
-
-      detections.sort((a, b) => b.confidence.compareTo(a.confidence));
+      }).toList();
 
       return DetectionResult(
         detections: detections,
         imageWidth: origW,
         imageHeight: origH,
       );
-    } catch (e) {
-      print('❌ Detection error: $e');
+    } catch (_) {
       return null;
     }
   }
 
+  _ModelCrop _cropForModel(img.Image originalImage) {
+    if (_currentModel == DetectionModel.currency) {
+      return _ModelCrop(image: originalImage, x: 0, y: 0);
+    }
+
+    final side = math.min(originalImage.width, originalImage.height);
+    final cropX = ((originalImage.width - side) / 2).floor();
+    final cropY = ((originalImage.height - side) / 2).floor();
+    return _ModelCrop(
+      image: img.copyCrop(
+        originalImage,
+        x: cropX,
+        y: cropY,
+        width: side,
+        height: side,
+      ),
+      x: cropX,
+      y: cropY,
+    );
+  }
+
+  List<List<List<List<double>>>> _imageToInput(
+    img.Image image,
+    int width,
+    int height,
+  ) {
+    return [
+      List.generate(
+        height,
+        (y) => List.generate(width, (x) {
+          final pixel = image.getPixel(x, y);
+          return [
+            pixel.r.toDouble() / 255.0,
+            pixel.g.toDouble() / 255.0,
+            pixel.b.toDouble() / 255.0,
+          ];
+        }),
+      ),
+    ];
+  }
+
+  Object _createOutputBuffer(List<int> shape) {
+    if (shape.length == 1) {
+      return List<double>.filled(shape[0], 0);
+    }
+    return List.generate(
+      shape[0],
+      (_) => _createOutputBuffer(shape.sublist(1)),
+    );
+  }
+
+  List<_Candidate> _parseYoloOutput(
+    Object output, {
+    required int inputWidth,
+    required int inputHeight,
+    required double cropWidth,
+    required double cropHeight,
+    required double cropX,
+    required double cropY,
+    required double confidenceThreshold,
+    required double minBoxArea,
+  }) {
+    if (_outputShape.length != 3 || _labels.isEmpty) return [];
+
+    final raw = (output as List).first as List;
+    final dim1 = _outputShape[1];
+    final dim2 = _outputShape[2];
+    final labelCount = _labels.length;
+    final transposed = dim1 < dim2;
+    final candidateCount = transposed ? dim2 : dim1;
+    final attributeCount = transposed ? dim1 : dim2;
+    final classStart = attributeCount == labelCount + 5 ? 5 : 4;
+    final scaleX = cropWidth / inputWidth;
+    final scaleY = cropHeight / inputHeight;
+    final candidates = <_Candidate>[];
+
+    double valueAt(int candidateIndex, int attributeIndex) {
+      if (transposed) {
+        return ((raw[attributeIndex] as List)[candidateIndex] as num)
+            .toDouble();
+      }
+      return ((raw[candidateIndex] as List)[attributeIndex] as num).toDouble();
+    }
+
+    for (int i = 0; i < candidateCount; i++) {
+      final objConfidence = classStart == 5
+          ? valueAt(i, 4).clamp(0.0, 1.0)
+          : 1.0;
+      int bestClass = 0;
+      double bestClassScore = 0;
+
+      for (int c = 0; c < labelCount; c++) {
+        final score = valueAt(i, classStart + c);
+        if (score > bestClassScore) {
+          bestClassScore = score;
+          bestClass = c;
+        }
+      }
+
+      final confidence = bestClassScore * objConfidence;
+      if (confidence < confidenceThreshold) continue;
+
+      final cx = valueAt(i, 0);
+      final cy = valueAt(i, 1);
+      final w = valueAt(i, 2);
+      final h = valueAt(i, 3);
+      final normalized = cx <= 1 && cy <= 1 && w <= 1 && h <= 1;
+      final xScale = normalized ? cropWidth : scaleX;
+      final yScale = normalized ? cropHeight : scaleY;
+
+      final x1 = ((cx - w / 2) * xScale + cropX).clamp(0.0, double.infinity);
+      final y1 = ((cy - h / 2) * yScale + cropY).clamp(0.0, double.infinity);
+      final x2 = ((cx + w / 2) * xScale + cropX).clamp(0.0, double.infinity);
+      final y2 = ((cy + h / 2) * yScale + cropY).clamp(0.0, double.infinity);
+      final boxArea = (x2 - x1).abs() * (y2 - y1).abs();
+      if (boxArea < minBoxArea) continue;
+
+      candidates.add(
+        _Candidate(
+          classIndex: bestClass,
+          confidence: confidence,
+          bbox: [x1, y1, x2, y2],
+        ),
+      );
+    }
+
+    candidates.sort((a, b) => b.confidence.compareTo(a.confidence));
+    return candidates;
+  }
+
+  List<_Candidate> _nonMaxSuppression(
+    List<_Candidate> candidates,
+    double iouThreshold,
+  ) {
+    final selected = <_Candidate>[];
+    final suppressed = List<bool>.filled(candidates.length, false);
+
+    for (int i = 0; i < candidates.length; i++) {
+      if (suppressed[i]) continue;
+      final current = candidates[i];
+      selected.add(current);
+      if (selected.length >= _maxDetections) break;
+
+      for (int j = i + 1; j < candidates.length; j++) {
+        if (suppressed[j]) continue;
+        if (current.classIndex == candidates[j].classIndex &&
+            _iou(current.bbox, candidates[j].bbox) > iouThreshold) {
+          suppressed[j] = true;
+        }
+      }
+    }
+
+    return selected;
+  }
+
+  double _iou(List<double> a, List<double> b) {
+    final left = math.max(a[0], b[0]);
+    final top = math.max(a[1], b[1]);
+    final right = math.min(a[2], b[2]);
+    final bottom = math.min(a[3], b[3]);
+    final intersection =
+        math.max(0.0, right - left) * math.max(0.0, bottom - top);
+    final areaA = math.max(0.0, a[2] - a[0]) * math.max(0.0, a[3] - a[1]);
+    final areaB = math.max(0.0, b[2] - b[0]) * math.max(0.0, b[3] - b[1]);
+    final union = areaA + areaB - intersection;
+    return union <= 0 ? 0 : intersection / union;
+  }
+
   Future<void> dispose() async {
-    try {
-      await _vision.closeYoloModel();
-    } catch (_) {}
+    _interpreter?.close();
+    _interpreter = null;
+    _isReady = false;
   }
 }
 
+class _ModelCrop {
+  final img.Image image;
+  final int x;
+  final int y;
+
+  const _ModelCrop({required this.image, required this.x, required this.y});
+}

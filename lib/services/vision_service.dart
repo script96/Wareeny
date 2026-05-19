@@ -41,7 +41,8 @@ class VisionService {
 
   /// True when a one-shot action (OCR, scene) is running.
   bool _isOneShot = false;
-  bool get isBusy => _isSwitchingMode || _isOneShot || _isQaListening || _isQaAnswering;
+  bool get isBusy =>
+      _isSwitchingMode || _isOneShot || _isQaListening || _isQaAnswering;
 
   // ── YOLO state ──
 
@@ -181,7 +182,8 @@ class VisionService {
   String getDistance(Detection d, int imageWidth, int imageHeight) {
     final boxW = (d.bbox[2] - d.bbox[0]).abs();
     final boxH = (d.bbox[3] - d.bbox[1]).abs();
-    final ratio = (boxW * boxH) / (imageWidth.toDouble() * imageHeight.toDouble());
+    final ratio =
+        (boxW * boxH) / (imageWidth.toDouble() * imageHeight.toDouble());
 
     if (ratio > 0.15) return 'قَرِيب جِدًّا';
     if (ratio > 0.05) return 'قَرِيب';
@@ -200,8 +202,9 @@ class VisionService {
     await _detector.loadModel(DetectionModel.general);
     _currentModel = DetectionModel.general;
     await _gemini.init();
-    await _voice.init();
-    _startDangerScanner();
+    if (!Platform.isIOS) {
+      _startDangerScanner();
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -323,7 +326,7 @@ class VisionService {
       }
 
       // Restart danger scanner if it was stopped (e.g. after app pause).
-      if (_dangerScanTimer == null) {
+      if (!Platform.isIOS && _dangerScanTimer == null) {
         _startDangerScanner();
       }
 
@@ -354,8 +357,9 @@ class VisionService {
     if (_activeDetectionCompleter != null &&
         !_activeDetectionCompleter!.isCompleted) {
       try {
-        await _activeDetectionCompleter!.future
-            .timeout(const Duration(seconds: 3));
+        await _activeDetectionCompleter!.future.timeout(
+          const Duration(seconds: 3),
+        );
       } catch (_) {
         // Timeout — proceed anyway
       }
@@ -382,6 +386,12 @@ class VisionService {
   /// Finder uses a slower interval to reduce preview blackouts
   /// from frequent takePicture() calls on some Android devices.
   Duration _detectionIntervalForMode(WareneMode mode) {
+    if (Platform.isIOS) {
+      return mode == WareneMode.objectFinderFast
+          ? const Duration(seconds: 3)
+          : const Duration(seconds: 2);
+    }
+
     if (mode == WareneMode.objectFinderFast) {
       return const Duration(seconds: 2);
     }
@@ -411,12 +421,11 @@ class VisionService {
     final completer = Completer<void>();
     _activeDetectionCompleter = completer;
 
-    XFile? snapshot;
     try {
-      snapshot = await _camera.takeSnapshot();
-      if (snapshot == null) return;
+      final bytes = await _camera.takeAnalysisBytes();
+      if (bytes == null) return;
 
-      final result = await _detector.detectFromFile(snapshot.path);
+      final result = _detector.detectFromBytes(bytes);
       if (result == null) return;
 
       // Route by mode
@@ -439,9 +448,6 @@ class VisionService {
     } catch (e) {
       print('⚠️ Detection loop error: $e');
     } finally {
-      if (snapshot != null) {
-        try { await File(snapshot.path).delete(); } catch (_) {}
-      }
       _isDetecting = false;
       completer.complete();
       if (_activeDetectionCompleter == completer) {
@@ -472,8 +478,9 @@ class VisionService {
         _lastSpeakTime = now;
 
         _setStatus(
-            '${best.arabicLabel} ${getDirection(best, result.imageWidth)} '
-            '(${(best.confidence * 100).toStringAsFixed(0)}%)');
+          '${best.arabicLabel} ${getDirection(best, result.imageWidth)} '
+          '(${(best.confidence * 100).toStringAsFixed(0)}%)',
+        );
 
         final phrases = result.detections
             .take(3)
@@ -529,8 +536,10 @@ class VisionService {
 
     // Pick the best match: largest bounding-box area, then confidence
     matches.sort((a, b) {
-      final areaA = (a.bbox[2] - a.bbox[0]).abs() * (a.bbox[3] - a.bbox[1]).abs();
-      final areaB = (b.bbox[2] - b.bbox[0]).abs() * (b.bbox[3] - b.bbox[1]).abs();
+      final areaA =
+          (a.bbox[2] - a.bbox[0]).abs() * (a.bbox[3] - a.bbox[1]).abs();
+      final areaB =
+          (b.bbox[2] - b.bbox[0]).abs() * (b.bbox[3] - b.bbox[1]).abs();
       final areaCmp = areaB.compareTo(areaA);
       if (areaCmp != 0) return areaCmp;
       return b.confidence.compareTo(a.confidence);
@@ -548,14 +557,16 @@ class VisionService {
     final announcement = 'لقيت ${target.arabicName} $direction، $distance';
 
     // Emit tracking state
-    _finderStateController.add(ObjectFinderState(
-      status: ObjectFinderStatus.tracking,
-      mode: target.mode,
-      targetLabel: target.label,
-      targetArabicName: target.arabicName,
-      foundDetection: best,
-      statusText: announcement,
-    ));
+    _finderStateController.add(
+      ObjectFinderState(
+        status: ObjectFinderStatus.tracking,
+        mode: target.mode,
+        targetLabel: target.label,
+        targetArabicName: target.arabicName,
+        foundDetection: best,
+        statusText: announcement,
+      ),
+    );
     _setStatus(announcement);
 
     // Speak only when:
@@ -565,8 +576,7 @@ class VisionService {
     final now = DateTime.now();
     final isFirstFound = !_finderWasTracking;
     final isChanged = announcement != _lastFinderSpoken;
-    final isThrottled =
-        now.difference(_lastFinderSpeakTime).inSeconds >= 4;
+    final isThrottled = now.difference(_lastFinderSpeakTime).inSeconds >= 4;
 
     if (isFirstFound || isChanged || isThrottled) {
       _lastFinderSpoken = announcement;
@@ -641,13 +651,15 @@ class VisionService {
             : 'لقيت ${_finderTarget!.arabicName}';
 
         _setStatus(announcement);
-        _finderStateController.add(ObjectFinderState(
-          status: ObjectFinderStatus.tracking,
-          mode: ObjectFinderMode.smartVision,
-          targetLabel: _finderTarget!.label,
-          targetArabicName: _finderTarget!.arabicName,
-          statusText: announcement,
-        ));
+        _finderStateController.add(
+          ObjectFinderState(
+            status: ObjectFinderStatus.tracking,
+            mode: ObjectFinderMode.smartVision,
+            targetLabel: _finderTarget!.label,
+            targetArabicName: _finderTarget!.arabicName,
+            statusText: announcement,
+          ),
+        );
 
         // Speak with throttle — don't repeat same announcement within 4s
         final now = DateTime.now();
@@ -683,7 +695,9 @@ class VisionService {
       print('⚠️ Smart Finder check error: $e');
     } finally {
       if (snapshot != null) {
-        try { await File(snapshot.path).delete(); } catch (_) {}
+        try {
+          await File(snapshot.path).delete();
+        } catch (_) {}
       }
       _isSmartFinderProcessing = false;
     }
@@ -711,12 +725,11 @@ class VisionService {
 
     _isColorProcessing = true;
 
-    XFile? snapshot;
     try {
-      snapshot = await _camera.takeSnapshot();
-      if (snapshot == null) return;
+      final bytes = await _camera.takeAnalysisBytes();
+      if (bytes == null) return;
 
-      final colorName = await _color.detectColor(snapshot.path);
+      final colorName = await _color.detectColorBytes(bytes);
       if (_mode != WareneMode.color) return; // mode changed while processing
 
       final announcement = 'اللون: $colorName';
@@ -725,8 +738,7 @@ class VisionService {
       // Speak only when color changes or 5 seconds since last speech
       final now = DateTime.now();
       final isChanged = colorName != _lastColorSpoken;
-      final isThrottled =
-          now.difference(_lastColorSpeakTime).inSeconds >= 5;
+      final isThrottled = now.difference(_lastColorSpeakTime).inSeconds >= 5;
 
       if (isChanged || isThrottled) {
         _lastColorSpoken = colorName;
@@ -736,9 +748,6 @@ class VisionService {
     } catch (e) {
       print('⚠️ Color check error: $e');
     } finally {
-      if (snapshot != null) {
-        try { await File(snapshot.path).delete(); } catch (_) {}
-      }
       _isColorProcessing = false;
     }
   }
@@ -763,7 +772,9 @@ class VisionService {
         _isOneShot ||
         _isDetecting ||
         _isSmartFinderProcessing ||
-        _isColorProcessing) return;
+        _isColorProcessing) {
+      return;
+    }
 
     _isDangerScanning = true;
     final completer = Completer<void>();
@@ -792,7 +803,9 @@ class VisionService {
       print('⚠️ Danger scan error: $e');
     } finally {
       if (snapshot != null) {
-        try { await File(snapshot.path).delete(); } catch (_) {}
+        try {
+          await File(snapshot.path).delete();
+        } catch (_) {}
       }
       _isDangerScanning = false;
       completer.complete();
@@ -808,8 +821,9 @@ class VisionService {
     if (_activeDangerScanCompleter != null &&
         !_activeDangerScanCompleter!.isCompleted) {
       try {
-        await _activeDangerScanCompleter!.future
-            .timeout(const Duration(seconds: 3));
+        await _activeDangerScanCompleter!.future.timeout(
+          const Duration(seconds: 3),
+        );
       } catch (_) {
         // Timeout — proceed anyway
       }
@@ -863,7 +877,9 @@ class VisionService {
       return errMsg;
     } finally {
       if (snapshot != null) {
-        try { await File(snapshot.path).delete(); } catch (_) {}
+        try {
+          await File(snapshot.path).delete();
+        } catch (_) {}
       }
       _isOneShot = false;
       // Resume previous mode
@@ -926,7 +942,9 @@ class VisionService {
       return errMsg;
     } finally {
       if (snapshot != null) {
-        try { await File(snapshot.path).delete(); } catch (_) {}
+        try {
+          await File(snapshot.path).delete();
+        } catch (_) {}
       }
       _isOneShot = false;
       // Resume previous mode
@@ -1021,7 +1039,9 @@ class VisionService {
 
           if (_qaDocumentText!.length > 4000) {
             _qaDocumentText = _qaDocumentText!.substring(0, 4000);
-            print('⚠️ Document QA context truncated to 4000 chars (was ${ocrResult.rawText.length})');
+            print(
+              '⚠️ Document QA context truncated to 4000 chars (was ${ocrResult.rawText.length})',
+            );
             final confirmation = 'النص طويل، هجاوب من أول جزء واضح منه.';
             _setStatus(confirmation);
             await _speech.speakAndWait(confirmation);
@@ -1044,7 +1064,9 @@ class VisionService {
       return errMsg;
     } finally {
       if (snapshot != null) {
-        try { await File(snapshot.path).delete(); } catch (_) {}
+        try {
+          await File(snapshot.path).delete();
+        } catch (_) {}
       }
     }
   }
@@ -1068,6 +1090,8 @@ class VisionService {
     }
 
     try {
+      await _voice.init();
+
       // Prompt user to speak
       _setStatus('اسأل سؤالك دلوقتي');
       await _speech.speakAndWait('اسأل سؤالك دلوقتي');
@@ -1184,13 +1208,15 @@ class VisionService {
   // ── Finder state helper ──
 
   void _emitFinderState(ObjectFinderStatus status) {
-    _finderStateController.add(ObjectFinderState(
-      status: status,
-      mode: _finderTarget?.mode,
-      targetLabel: _finderTarget?.label,
-      targetArabicName: _finderTarget?.arabicName,
-      statusText: statusText,
-    ));
+    _finderStateController.add(
+      ObjectFinderState(
+        status: status,
+        mode: _finderTarget?.mode,
+        targetLabel: _finderTarget?.label,
+        targetArabicName: _finderTarget?.arabicName,
+        statusText: statusText,
+      ),
+    );
   }
 
   // ── Status helper ──

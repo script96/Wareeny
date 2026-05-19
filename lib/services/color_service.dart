@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 class ColorService {
@@ -11,6 +12,15 @@ class ColorService {
   Future<String> detectColor(String imagePath) async {
     try {
       final bytes = await File(imagePath).readAsBytes();
+      return detectColorBytes(bytes);
+    } catch (e) {
+      print('❌ Color detection error: $e');
+      return 'خطأ في التعرف على اللون';
+    }
+  }
+
+  Future<String> detectColorBytes(Uint8List bytes) async {
+    try {
       final codec = await ui.instantiateImageCodec(bytes);
       final frame = await codec.getNextFrame();
       final image = frame.image;

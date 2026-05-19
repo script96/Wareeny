@@ -26,6 +26,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Warene needs camera access to detect objects, read text, and recognize currency in real time.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Warene needs microphone access so you can ask questions and control the app by voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Warene needs speech recognition to understand spoken questions and commands.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
