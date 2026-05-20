@@ -7,6 +7,9 @@
 //   extractStructured() — returns OCRResult with rawText + quality for QA
 //   scanForDanger()     — background scan for danger/warning keywords
 
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'models/ocr_result.dart';
@@ -21,18 +24,25 @@ class OCRService {
   // English/Latin danger keywords found on warning signs.
   // Arabic signs are not detected here — ML Kit Latin doesn't support Arabic script.
   static const List<String> _dangerKeywords = [
-    'wet floor', 'slippery floor', 'slippery',
-    'danger', 'dangerous',
+    'wet floor',
+    'slippery floor',
+    'slippery',
+    'danger',
+    'dangerous',
     'warning',
     'caution',
-    'hazard', 'hazardous',
+    'hazard',
+    'hazardous',
     'beware',
     'high voltage',
-    'do not enter', 'no entry',
-    'restricted area', 'keep out',
+    'do not enter',
+    'no entry',
+    'restricted area',
+    'keep out',
     'emergency',
     'fire hazard',
-    'poison', 'toxic',
+    'poison',
+    'toxic',
     'flammable',
     'no smoking',
     'explosive',
@@ -49,8 +59,9 @@ class OCRService {
   Future<String> _extractRaw(String imagePath) async {
     try {
       final inputImage = InputImage.fromFilePath(imagePath);
-      final RecognizedText result =
-          await _latinRecognizer.processImage(inputImage);
+      final RecognizedText result = await _latinRecognizer.processImage(
+        inputImage,
+      );
       final text = result.text.trim();
       print('🔤 ML Kit result (${text.length} chars)');
       return text;
@@ -62,8 +73,10 @@ class OCRService {
 
   /// Extract text from a camera snapshot. English only — Arabic is routed
   /// to GeminiService by VisionService before this is called.
-  Future<String> extractText(XFile imageFile,
-      {OCRLanguage language = OCRLanguage.english}) async {
+  Future<String> extractText(
+    XFile imageFile, {
+    OCRLanguage language = OCRLanguage.english,
+  }) async {
     if (_isDisposed) return 'حدث خطأ، حاول مرة أخرى';
 
     final rawText = await _extractRaw(imageFile.path);
@@ -75,8 +88,10 @@ class OCRService {
 
   /// Extract text and return a structured OCRResult for QA use.
   /// English only — Arabic is routed to GeminiService by VisionService.
-  Future<OCRResult> extractStructured(XFile imageFile,
-      {OCRLanguage language = OCRLanguage.english}) async {
+  Future<OCRResult> extractStructured(
+    XFile imageFile, {
+    OCRLanguage language = OCRLanguage.english,
+  }) async {
     if (_isDisposed) return OCRResult.fromRawText('', language);
 
     final rawText = await _extractRaw(imageFile.path);
@@ -91,17 +106,41 @@ class OCRService {
     try {
       final inputImage = InputImage.fromFilePath(imagePath);
       final result = await _latinRecognizer.processImage(inputImage);
-      final text = result.text;
-      for (var i = 0; i < _dangerPatterns.length; i++) {
-        if (_dangerPatterns[i].hasMatch(text)) {
-          return _dangerKeywords[i];
-        }
-      }
-      return null;
+      return _matchDangerKeyword(result.text);
     } catch (e) {
       print('⚠️ Danger scan error: $e');
       return null;
     }
+  }
+
+  Future<String?> scanForDangerBytes(Uint8List imageBytes) async {
+    if (_isDisposed) return null;
+
+    File? tempFile;
+    try {
+      final tempDir = await Directory.systemTemp.createTemp('warene-danger-');
+      tempFile = File('${tempDir.path}/frame.jpg');
+      await tempFile.writeAsBytes(imageBytes, flush: true);
+      return await scanForDanger(tempFile.path);
+    } catch (e) {
+      print('⚠️ Danger scan bytes error: $e');
+      return null;
+    } finally {
+      if (tempFile != null) {
+        try {
+          await tempFile.parent.delete(recursive: true);
+        } catch (_) {}
+      }
+    }
+  }
+
+  String? _matchDangerKeyword(String text) {
+    for (var i = 0; i < _dangerPatterns.length; i++) {
+      if (_dangerPatterns[i].hasMatch(text)) {
+        return _dangerKeywords[i];
+      }
+    }
+    return null;
   }
 
   String _cleanText(String raw) {

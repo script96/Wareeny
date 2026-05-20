@@ -5,8 +5,8 @@ void main() {
   // ── WareneMode ──
 
   group('WareneMode', () {
-    test('has 6 values', () {
-      expect(WareneMode.values.length, 6);
+    test('has 7 values', () {
+      expect(WareneMode.values.length, 7);
     });
 
     test('contains all expected modes', () {
@@ -17,6 +17,7 @@ void main() {
         WareneMode.objectFinderSmart,
         WareneMode.color,
         WareneMode.documentQa,
+        WareneMode.indoorNavigation,
       };
       expect(WareneMode.values.toSet(), expected);
     });
@@ -53,16 +54,29 @@ void main() {
 
     test('fast target keys match expected COCO labels', () {
       final expected = {
-        'apple', 'banana', 'bottle', 'cup', 'chair',
-        'book', 'cell phone', 'laptop', 'backpack', 'person',
+        'apple',
+        'banana',
+        'bottle',
+        'cup',
+        'chair',
+        'book',
+        'cell phone',
+        'laptop',
+        'backpack',
+        'person',
       };
       expect(ObjectFinderRegistry.fastTargets.keys.toSet(), expected);
     });
 
     test('smart target keys match expected presets', () {
       final expected = {
-        'keys', 'wallet', 'glasses', 'charger',
-        'medicine', 'id card', 'remote control',
+        'keys',
+        'wallet',
+        'glasses',
+        'charger',
+        'medicine',
+        'id card',
+        'remote control',
       };
       expect(ObjectFinderRegistry.smartTargets.keys.toSet(), expected);
     });
@@ -161,9 +175,7 @@ void main() {
     });
 
     test('fromJson with missing found field defaults to false', () {
-      final result = SmartFindResult.fromJson({
-        'direction': 'left',
-      });
+      final result = SmartFindResult.fromJson({'direction': 'left'});
       expect(result.found, false);
     });
 

@@ -1,7 +1,7 @@
 
 # Wareeny (واريني)
 
-An AI-powered mobile assistive system for blind and low-vision users in Egypt. Provides real-time object detection, scene description, text reading, and currency recognition — all announced in Egyptian Arabic via text-to-speech.
+An AI-powered mobile assistive system for blind and low-vision users in Egypt. Provides real-time object detection, indoor navigation, scene description, text reading, and currency recognition — all announced in Egyptian Arabic via text-to-speech.
 
 Built with Flutter. Runs on Android.
 
@@ -41,6 +41,13 @@ Built with Flutter. Runs on Android.
 - Identifies dominant color in camera center
 - Reports in Arabic: أسود، أبيض، أحمر، أزرق، أخضر، إلخ
 
+### Indoor Navigation
+- Reactive indoor walking assistance focused on immediate path safety
+- Alerts only for hazards inside the walking corridor, not every detected object in-frame
+- Arabic cues such as `اتجه يمين`، `اتجه يسار`، `قربت من الحيطة`، `قف حالاً`
+- Haptic danger levels for caution, danger, and stop
+- Best experience on depth-capable devices; unsupported devices use an on-device monocular fallback
+
 ---
 
 ## Tech Stack
@@ -53,7 +60,7 @@ Built with Flutter. Runs on Android.
 | Scene Description / Smart Finder | Groq API — LLaMA 4 Scout 17B |
 | English OCR | Google ML Kit |
 | Arabic OCR | Tesseract 5 |
-| Text-to-Speech | flutter_tts 4.0.2 (Egyptian Arabic) |
+| Text-to-Speech | flutter_tts 4.2.5 (Egyptian Arabic) |
 | Camera | camera 0.11.0 |
 | Environment | flutter_dotenv 6.0.0 |
 
@@ -83,6 +90,8 @@ Requires Android device (API 21+) with NDK installed.
 | Swipe left | Toggle OCR language (EN / AR) |
 | Long-press | Open mode menu |
 
+In indoor navigation mode, the user should hold the phone forward around chest height. Gesture shortcuts are intentionally reduced so safety guidance is less likely to be interrupted accidentally.
+
 ---
 
 ## Documentation
@@ -91,6 +100,7 @@ Requires Android device (API 21+) with NDK installed.
 |----------|---------|
 | [docs/SETUP.md](docs/SETUP.md) | Environment setup and build guide |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and data flow |
+| [docs/INDOOR_NAVIGATION.md](docs/INDOOR_NAVIGATION.md) | Indoor navigation logic, danger model, and depth fallback |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Feature roadmap and milestone tracking |
 | [CLAUDE.md](CLAUDE.md) | AI assistant reference (architecture, gotchas, status) |
 

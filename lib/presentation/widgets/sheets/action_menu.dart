@@ -10,6 +10,7 @@ import '../reusable/app_bottom_sheet.dart';
 enum ActionMenuResult {
   generalObjects,
   currency,
+  indoorNavigation,
   findObject,
   colorMode,
   readText,
@@ -112,6 +113,16 @@ class _ActionMenuSheet extends StatelessWidget {
         color: Colors.amber,
         semanticsLabel: 'وضع الفلوس',
         result: ActionMenuResult.currency,
+      );
+    }
+
+    if (currentMode != WareneMode.indoorNavigation) {
+      addOption(
+        icon: Icons.navigation_rounded,
+        label: 'الملاحة الداخلية',
+        color: Colors.lightGreenAccent,
+        semanticsLabel: 'وضع الملاحة الداخلية',
+        result: ActionMenuResult.indoorNavigation,
       );
     }
 

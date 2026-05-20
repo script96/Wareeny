@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:camera/camera.dart';
 import '../detector.dart';
 import '../gemini_service.dart';
@@ -11,8 +13,11 @@ import 'speech_service.dart';
 import 'color_service.dart';
 import 'voice_input_service.dart';
 import 'object_finder_types.dart';
+import 'indoor_navigation_service.dart';
 
 class VisionService {
+  static const double _speechConfidenceThreshold = 0.50;
+
   static final VisionService _instance = VisionService._internal();
   factory VisionService() => _instance;
   VisionService._internal();
@@ -24,6 +29,12 @@ class VisionService {
   final ColorService _color = ColorService();
   final OCRService _ocr = OCRService();
   final VoiceInputService _voice = VoiceInputService();
+  late final IndoorNavigationService _indoorNavigation =
+      IndoorNavigationService(
+        detector: _detector,
+        camera: _camera,
+        speech: _speech,
+      );
 
   // ── Central mode state ──
 
@@ -48,7 +59,8 @@ class VisionService {
 
   DetectionModel _currentModel = DetectionModel.general;
   DetectionModel get currentModel => _currentModel;
-  Timer? _detectionTimer;
+  StreamSubscription<Uint8List>? _analysisFrameSub;
+  Uint8List? _pendingDetectionBytes;
 
   /// Announcement throttle — don't repeat same description within 3s.
   String _lastSpoken = '';
@@ -141,6 +153,8 @@ class VisionService {
   String _lastColorSpoken = '';
   DateTime _lastColorSpeakTime = DateTime.fromMillisecondsSinceEpoch(0);
 
+  // ── Indoor navigation state ──
+
   // ── QA Mode state ──
 
   String? _qaDocumentText;
@@ -202,6 +216,7 @@ class VisionService {
     await _detector.loadModel(DetectionModel.general);
     _currentModel = DetectionModel.general;
     await _gemini.init();
+    await _indoorNavigation.init();
     if (!Platform.isIOS) {
       _startDangerScanner();
     }
@@ -232,16 +247,17 @@ class VisionService {
 
     try {
       // 1. Stop ALL timers
-      _detectionTimer?.cancel();
-      _detectionTimer = null;
+      _stopDetectionWorker();
       _smartFinderTimer?.cancel();
       _smartFinderTimer = null;
       _colorTimer?.cancel();
       _colorTimer = null;
+      await _indoorNavigation.stop();
 
       // 2. Wait for active detection/processing to finish
       await _waitForActiveDetection();
       await _waitForActiveDangerScan();
+      await _indoorNavigation.waitForIdle();
 
       // 3. Clear detections and mode-specific UI state
       currentDetections = [];
@@ -250,7 +266,6 @@ class VisionService {
       _lastSpoken = '';
       _isSmartFinderProcessing = false;
       _isColorProcessing = false;
-
       // 4. Load the correct YOLO model if needed
       if (newMode == WareneMode.generalObjects ||
           newMode == WareneMode.objectFinderFast) {
@@ -262,6 +277,11 @@ class VisionService {
         if (_currentModel != DetectionModel.currency) {
           _currentModel = DetectionModel.currency;
           await _detector.loadModel(DetectionModel.currency);
+        }
+      } else if (newMode == WareneMode.indoorNavigation) {
+        if (_currentModel != DetectionModel.general) {
+          _currentModel = DetectionModel.general;
+          await _detector.loadModel(DetectionModel.general);
         }
       }
       // color, smartFinder, documentQa don't need YOLO
@@ -288,12 +308,18 @@ class VisionService {
         _finderWasTracking = false;
       }
 
+      if (_modeUsesLiveAnalysis(newMode)) {
+        await _camera.startAnalysisStream();
+      } else {
+        await _camera.stopAnalysisStream();
+      }
+
       // 6. Start the correct timer
       switch (newMode) {
         case WareneMode.generalObjects:
         case WareneMode.currency:
         case WareneMode.objectFinderFast:
-          _startDetectionLoop();
+          _startDetectionWorker();
           break;
         case WareneMode.objectFinderSmart:
           _startSmartFinderTimer();
@@ -303,6 +329,9 @@ class VisionService {
           break;
         case WareneMode.documentQa:
           // No timer — QA is event-driven (user double-taps to ask)
+          break;
+        case WareneMode.indoorNavigation:
+          _startIndoorNavigationLoop();
           break;
       }
 
@@ -336,6 +365,20 @@ class VisionService {
     }
   }
 
+  bool _modeUsesLiveAnalysis(WareneMode mode) {
+    switch (mode) {
+      case WareneMode.generalObjects:
+      case WareneMode.currency:
+      case WareneMode.objectFinderFast:
+      case WareneMode.objectFinderSmart:
+      case WareneMode.color:
+      case WareneMode.indoorNavigation:
+        return true;
+      case WareneMode.documentQa:
+        return false;
+    }
+  }
+
   String _getModeAnnouncement(WareneMode mode, ObjectFinderTarget? target) {
     switch (mode) {
       case WareneMode.generalObjects:
@@ -349,6 +392,8 @@ class VisionService {
         return 'وضع الألوان';
       case WareneMode.documentQa:
         return 'وضع سؤال وجواب عن نص';
+      case WareneMode.indoorNavigation:
+        return 'الملاحة الداخلية. امسك الموبايل قدامك على مستوى الصدر';
     }
   }
 
@@ -367,54 +412,70 @@ class VisionService {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  //  DETECTION LOOP (General, Currency, Fast Finder)
+  //  LIVE DETECTION WORKER (General, Currency, Fast Finder)
   // ══════════════════════════════════════════════════════════════════
 
-  void _startDetectionLoop() {
+  void _startDetectionWorker() {
     if (!_detector.isReady) {
-      print('⚠️ Detector not ready, skipping timer start');
+      print('⚠️ Detector not ready, skipping worker start');
       return;
     }
-    _detectionTimer?.cancel();
-    final interval = _detectionIntervalForMode(_mode);
-    _detectionTimer = Timer.periodic(interval, (_) {
-      _runSingleDetection();
-    });
-    print('✅ Detection timer started (${interval.inMilliseconds}ms)');
+    _analysisFrameSub?.cancel();
+    _pendingDetectionBytes = null;
+    _analysisFrameSub = _camera.analysisFrameStream.listen(_queueDetectionFrame);
+    print('✅ Detection worker started for ${_mode.name}');
   }
 
-  /// Finder uses a slower interval to reduce preview blackouts
-  /// from frequent takePicture() calls on some Android devices.
-  Duration _detectionIntervalForMode(WareneMode mode) {
-    if (Platform.isIOS) {
-      return mode == WareneMode.objectFinderFast
-          ? const Duration(seconds: 3)
-          : const Duration(seconds: 2);
-    }
-
-    if (mode == WareneMode.objectFinderFast) {
-      return const Duration(seconds: 2);
-    }
-    return const Duration(milliseconds: 1500);
+  bool _usesDetectionWorker(WareneMode mode) {
+    return mode == WareneMode.generalObjects ||
+        mode == WareneMode.currency ||
+        mode == WareneMode.objectFinderFast;
   }
 
   /// Kept public for lifecycle pause/resume in CameraScreen.
   void stopDetectionLoop() {
-    _detectionTimer?.cancel();
-    _detectionTimer = null;
+    _stopDetectionWorker();
   }
 
   /// Also stop smart finder and color timers — used by lifecycle.
   void stopAllTimers() {
-    _detectionTimer?.cancel();
-    _detectionTimer = null;
+    _stopDetectionWorker();
     _smartFinderTimer?.cancel();
     _smartFinderTimer = null;
     _colorTimer?.cancel();
     _colorTimer = null;
   }
 
-  Future<void> _runSingleDetection() async {
+  void _stopDetectionWorker() {
+    _analysisFrameSub?.cancel();
+    _analysisFrameSub = null;
+    _pendingDetectionBytes = null;
+  }
+
+  void _queueDetectionFrame(Uint8List bytes) {
+    if (!_usesDetectionWorker(_mode) || _isSwitchingMode || _isOneShot) {
+      return;
+    }
+
+    _pendingDetectionBytes = bytes;
+    if (_isDetecting) return;
+    unawaited(_drainDetectionQueue());
+  }
+
+  Future<void> _drainDetectionQueue() async {
+    if (_isDetecting) return;
+
+    while (!_isSwitchingMode &&
+        !_isOneShot &&
+        _usesDetectionWorker(_mode) &&
+        _pendingDetectionBytes != null) {
+      final bytes = _pendingDetectionBytes!;
+      _pendingDetectionBytes = null;
+      await _runSingleDetection(bytes);
+    }
+  }
+
+  Future<void> _runSingleDetection(Uint8List bytes) async {
     if (_isDetecting || _isSwitchingMode || _isOneShot) return;
     if (!_detector.isReady) return;
     _isDetecting = true;
@@ -422,10 +483,7 @@ class VisionService {
     _activeDetectionCompleter = completer;
 
     try {
-      final bytes = await _camera.takeAnalysisBytes();
-      if (bytes == null) return;
-
-      final result = _detector.detectFromBytes(bytes);
+      final result = await _detector.detectFromBytes(bytes);
       if (result == null) return;
 
       // Route by mode
@@ -456,6 +514,23 @@ class VisionService {
     }
   }
 
+  void _startIndoorNavigationLoop() {
+    _indoorNavigation.start(onUpdate: _handleIndoorNavigationUpdate);
+    _setStatus('الملاحة الداخلية: امسك الموبايل قدامك على مستوى الصدر');
+  }
+
+  Future<void> _handleIndoorNavigationUpdate(
+    IndoorNavigationUpdate update,
+  ) async {
+    if (_mode != WareneMode.indoorNavigation) return;
+
+    currentDetections = update.decision.highlightedDetections;
+    sourceWidth = update.imageWidth;
+    sourceHeight = update.imageHeight;
+    _detectionController.add(currentDetections);
+    _setStatus(update.decision.statusText);
+  }
+
   // ── General detection handler ──
 
   void _handleGeneralDetections(DetectionResult result) {
@@ -467,13 +542,18 @@ class VisionService {
       _detectionController.add(currentDetections);
 
       // Announce top detection with throttling
-      final best = result.detections.first;
+      final speakableDetections = result.detections
+          .where((d) => d.confidence >= _speechConfidenceThreshold)
+          .toList();
+      final best = speakableDetections.isNotEmpty
+          ? speakableDetections.first
+          : result.detections.first;
       final desc = buildSpatialDescription(best);
       final now = DateTime.now();
       final timePassed = now.difference(_lastSpeakTime).inSeconds >= 3;
       final differentObject = desc != _lastSpoken;
 
-      if (differentObject || timePassed) {
+      if (speakableDetections.isNotEmpty && (differentObject || timePassed)) {
         _lastSpoken = desc;
         _lastSpeakTime = now;
 
@@ -482,7 +562,7 @@ class VisionService {
           '(${(best.confidence * 100).toStringAsFixed(0)}%)',
         );
 
-        final phrases = result.detections
+        final phrases = speakableDetections
             .take(3)
             .map(buildSpatialDescription)
             .join('، ');
@@ -514,7 +594,11 @@ class VisionService {
 
     // Filter for target label with minimum confidence
     final matches = detections
-        .where((d) => d.label == target.label && d.confidence >= 0.35)
+        .where(
+          (d) =>
+              d.label == target.label &&
+              d.confidence >= _speechConfidenceThreshold,
+        )
         .toList();
 
     if (matches.isEmpty) {
@@ -620,15 +704,12 @@ class VisionService {
 
     _isSmartFinderProcessing = true;
 
-    XFile? snapshot;
     try {
-      snapshot = await _camera.takeSnapshot();
-      if (snapshot == null) {
-        // Camera busy or disposed — skip this tick
-        return;
-      }
+      final bytes = await _camera.takeAnalysisBytes(
+        allowSnapshotFallback: false,
+      );
+      if (bytes == null) return;
 
-      final bytes = await File(snapshot.path).readAsBytes();
       final result = await _gemini.findObjectInScene(
         bytes,
         targetName: _finderTarget!.label,
@@ -694,11 +775,6 @@ class VisionService {
     } catch (e) {
       print('⚠️ Smart Finder check error: $e');
     } finally {
-      if (snapshot != null) {
-        try {
-          await File(snapshot.path).delete();
-        } catch (_) {}
-      }
       _isSmartFinderProcessing = false;
     }
   }
@@ -726,7 +802,9 @@ class VisionService {
     _isColorProcessing = true;
 
     try {
-      final bytes = await _camera.takeAnalysisBytes();
+      final bytes = await _camera.takeAnalysisBytes(
+        allowSnapshotFallback: false,
+      );
       if (bytes == null) return;
 
       final colorName = await _color.detectColorBytes(bytes);
@@ -772,7 +850,8 @@ class VisionService {
         _isOneShot ||
         _isDetecting ||
         _isSmartFinderProcessing ||
-        _isColorProcessing) {
+        _isColorProcessing ||
+        _mode == WareneMode.indoorNavigation) {
       return;
     }
 
@@ -780,12 +859,13 @@ class VisionService {
     final completer = Completer<void>();
     _activeDangerScanCompleter = completer;
 
-    XFile? snapshot;
     try {
-      snapshot = await _camera.takeSnapshot();
-      if (snapshot == null) return;
+      final bytes = await _camera.takeAnalysisBytes(
+        allowSnapshotFallback: false,
+      );
+      if (bytes == null) return;
 
-      final matched = await _ocr.scanForDanger(snapshot.path);
+      final matched = await _ocr.scanForDangerBytes(bytes);
       if (matched == null) return;
 
       final now = DateTime.now();
@@ -802,11 +882,6 @@ class VisionService {
     } catch (e) {
       print('⚠️ Danger scan error: $e');
     } finally {
-      if (snapshot != null) {
-        try {
-          await File(snapshot.path).delete();
-        } catch (_) {}
-      }
       _isDangerScanning = false;
       completer.complete();
       if (_activeDangerScanCompleter == completer) {
@@ -844,6 +919,7 @@ class VisionService {
     // Pause current mode
     _isOneShot = true;
     stopAllTimers();
+    await _indoorNavigation.stop();
     await _waitForActiveDetection();
     await _waitForActiveDangerScan();
 
@@ -896,6 +972,7 @@ class VisionService {
     // Pause current mode
     _isOneShot = true;
     stopAllTimers();
+    await _indoorNavigation.stop();
     await _waitForActiveDetection();
     await _waitForActiveDangerScan();
 
@@ -965,6 +1042,7 @@ class VisionService {
 
     _isOneShot = true;
     stopAllTimers();
+    await _indoorNavigation.stop();
     await _waitForActiveDetection();
 
     currentDetections = [];
@@ -1229,6 +1307,7 @@ class VisionService {
   /// Stop everything when app goes to background.
   Future<void> handleAppPause() async {
     stopAllTimers();
+    await _indoorNavigation.stop();
     _dangerScanTimer?.cancel();
     _dangerScanTimer = null;
     // Let any in-flight scan finish so we don't leave the camera
@@ -1247,12 +1326,14 @@ class VisionService {
 
   Future<void> dispose() async {
     stopAllTimers();
+    await _indoorNavigation.stop();
     _dangerScanTimer?.cancel();
     _dangerScanTimer = null;
     // Wait for in-flight detection and danger scan to finish before
     // tearing down the underlying recognizers/detectors.
     await _waitForActiveDetection();
     await _waitForActiveDangerScan();
+    await _indoorNavigation.dispose();
     await _detector.dispose();
     _gemini.dispose();
     _ocr.dispose();

@@ -17,14 +17,12 @@ enum WareneMode {
   objectFinderSmart,
   color,
   documentQa,
+  indoorNavigation,
 }
 
 // ── Object Finder Enums ──────────────────────────────────────────────
 
-enum ObjectFinderMode {
-  fastYolo,
-  smartVision,
-}
+enum ObjectFinderMode { fastYolo, smartVision }
 
 /// Status of the Object Finder within its mode.
 ///
@@ -32,12 +30,7 @@ enum ObjectFinderMode {
 /// - `searching` — target not currently visible.
 /// - `tracking` — target currently visible and being tracked.
 /// - `error` — something went wrong (camera/API/timeout).
-enum ObjectFinderStatus {
-  inactive,
-  searching,
-  tracking,
-  error,
-}
+enum ObjectFinderStatus { inactive, searching, tracking, error }
 
 // ── Data classes ─────────────────────────────────────────────────────
 
@@ -75,12 +68,12 @@ class ObjectFinderState {
 
   /// Convenience factory for the resting state.
   const ObjectFinderState.inactive()
-      : status = ObjectFinderStatus.inactive,
-        mode = null,
-        targetLabel = null,
-        targetArabicName = null,
-        foundDetection = null,
-        statusText = '';
+    : status = ObjectFinderStatus.inactive,
+      mode = null,
+      targetLabel = null,
+      targetArabicName = null,
+      foundDetection = null,
+      statusText = '';
 }
 
 class SmartFindResult {
@@ -115,11 +108,11 @@ class SmartFindResult {
 
   /// Convenience factory for error states.
   const SmartFindResult.error(String message)
-      : found = false,
-        direction = 'unknown',
-        distance = 'unknown',
-        spokenText = message,
-        isError = true;
+    : found = false,
+      direction = 'unknown',
+      distance = 'unknown',
+      spokenText = message,
+      isError = true;
 }
 
 // ── Target Registry ──────────────────────────────────────────────────
@@ -154,8 +147,7 @@ class ObjectFinderRegistry {
   };
 
   /// All COCO labels the general model knows (from `YoloDetector.arabicNames`).
-  static final Set<String> _cocoLabels =
-      YoloDetector.arabicNames.keys.toSet();
+  static final Set<String> _cocoLabels = YoloDetector.arabicNames.keys.toSet();
 
   /// Resolve a label to the appropriate finder target.
   ///

@@ -202,6 +202,14 @@ class _CameraScreenState extends State<CameraScreen>
   Future<void> _onDoubleTap() async {
     if (_vision.isBusy) return;
     HapticFeedback.mediumImpact();
+    if (_currentMode == WareneMode.indoorNavigation) {
+      await _speech.speak(
+        'الملاحة شغالة. افتح القائمة لو عايز تغير الوضع',
+        force: true,
+        throttle: false,
+      );
+      return;
+    }
     if (_currentMode == WareneMode.documentQa) {
       final answer = await _vision.askDocumentQuestion();
       if (mounted) setState(() => _statusText = answer);
@@ -215,9 +223,12 @@ class _CameraScreenState extends State<CameraScreen>
 
   Future<void> _onSwipeRight() async {
     if (_vision.isBusy) return;
-    if (_currentMode == WareneMode.documentQa) {
+    if (_currentMode == WareneMode.documentQa ||
+        _currentMode == WareneMode.indoorNavigation) {
       _speech.speak(
-        'افتح القائمة لو عايز تخرج من سؤال النص',
+        _currentMode == WareneMode.documentQa
+            ? 'افتح القائمة لو عايز تخرج من سؤال النص'
+            : 'افتح القائمة لو عايز تغير وضع الملاحة الداخلية',
         force: true,
         throttle: false,
       );
@@ -233,9 +244,12 @@ class _CameraScreenState extends State<CameraScreen>
 
   void _onSwipeLeft() {
     if (_vision.isBusy) return;
-    if (_currentMode == WareneMode.documentQa) {
+    if (_currentMode == WareneMode.documentQa ||
+        _currentMode == WareneMode.indoorNavigation) {
       _speech.speak(
-        'اللغة ثابتة لحد ما تمسح نص جديد',
+        _currentMode == WareneMode.documentQa
+            ? 'اللغة ثابتة لحد ما تمسح نص جديد'
+            : 'اللغة ثابتة في الملاحة الداخلية',
         force: true,
         throttle: false,
       );
@@ -278,6 +292,9 @@ class _CameraScreenState extends State<CameraScreen>
       case ActionMenuResult.currency:
         await _vision.switchMode(WareneMode.currency);
         break;
+      case ActionMenuResult.indoorNavigation:
+        await _vision.switchMode(WareneMode.indoorNavigation);
+        break;
       case ActionMenuResult.findObject:
         final target = await showTargetPicker(context);
         try {
@@ -317,9 +334,12 @@ class _CameraScreenState extends State<CameraScreen>
 
   Future<void> _onTripleTap() async {
     if (_vision.isBusy) return;
-    if (_currentMode == WareneMode.documentQa) {
+    if (_currentMode == WareneMode.documentQa ||
+        _currentMode == WareneMode.indoorNavigation) {
       _speech.speak(
-        'افتح القائمة لو عايز تخرج من سؤال النص',
+        _currentMode == WareneMode.documentQa
+            ? 'افتح القائمة لو عايز تخرج من سؤال النص'
+            : 'افتح القائمة لو عايز تخرج من الملاحة الداخلية',
         force: true,
         throttle: false,
       );
@@ -343,6 +363,8 @@ class _CameraScreenState extends State<CameraScreen>
         return Colors.purple;
       case WareneMode.documentQa:
         return Colors.teal;
+      case WareneMode.indoorNavigation:
+        return Colors.lightGreen;
     }
   }
 
@@ -359,6 +381,8 @@ class _CameraScreenState extends State<CameraScreen>
         return '🎨 ألوان';
       case WareneMode.documentQa:
         return '❓ سؤال عن نص';
+      case WareneMode.indoorNavigation:
+        return '🧭 ملاحة داخلية';
     }
   }
 

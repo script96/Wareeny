@@ -62,6 +62,7 @@ class YoloDetector {
   static const int _maxDetections = 20;
 
   Interpreter? _interpreter;
+  IsolateInterpreter? _isolateInterpreter;
   List<String> _labels = [];
   List<int> _inputShape = const [1, 640, 640, 3];
   List<int> _outputShape = const [1, 84, 8400];
@@ -176,6 +177,8 @@ class YoloDetector {
     if (_isReady && _currentModel == modelType) return;
 
     _isReady = false;
+    await _isolateInterpreter?.close();
+    _isolateInterpreter = null;
     _interpreter?.close();
     _interpreter = null;
     _currentModel = modelType;
@@ -194,6 +197,10 @@ class YoloDetector {
           : _currencyLabelsPath;
 
       _interpreter = await Interpreter.fromAsset(modelPath, options: options);
+      _isolateInterpreter = await IsolateInterpreter.create(
+        address: _interpreter!.address,
+        debugName: 'WareneYolo-${modelType.name}',
+      );
       _inputShape = _interpreter!.getInputTensor(0).shape;
       _outputShape = _interpreter!.getOutputTensor(0).shape;
 
@@ -206,6 +213,8 @@ class YoloDetector {
 
       _isReady = true;
     } catch (_) {
+      await _isolateInterpreter?.close();
+      _isolateInterpreter = null;
       _interpreter?.close();
       _interpreter = null;
       _isReady = false;
@@ -218,13 +227,13 @@ class YoloDetector {
 
     try {
       final originalBytes = await File(imagePath).readAsBytes();
-      return detectFromBytes(originalBytes);
+      return await detectFromBytes(originalBytes);
     } catch (_) {
       return null;
     }
   }
 
-  DetectionResult? detectFromBytes(Uint8List imageBytes) {
+  Future<DetectionResult?> detectFromBytes(Uint8List imageBytes) async {
     final interpreter = _interpreter;
     if (!_isReady || interpreter == null) return null;
 
@@ -248,7 +257,12 @@ class YoloDetector {
 
       final input = _imageToInput(resized, inputWidth, inputHeight);
       final output = _createOutputBuffer(_outputShape);
-      interpreter.run(input, output);
+      final isolateInterpreter = _isolateInterpreter;
+      if (isolateInterpreter != null) {
+        await isolateInterpreter.run(input, output);
+      } else {
+        interpreter.run(input, output);
+      }
 
       final confidenceThreshold = _currentModel == DetectionModel.currency
           ? 0.15
@@ -468,6 +482,8 @@ class YoloDetector {
   }
 
   Future<void> dispose() async {
+    await _isolateInterpreter?.close();
+    _isolateInterpreter = null;
     _interpreter?.close();
     _interpreter = null;
     _isReady = false;

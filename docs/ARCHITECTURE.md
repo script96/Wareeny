@@ -5,7 +5,7 @@
 ## System Overview
 
 Wareeny is a client-only Flutter app. No backend server. Processing split between:
-- **On-device**: Object detection (YOLOv8 TFLite), OCR (ML Kit + Tesseract), color analysis
+- **On-device**: Object detection (YOLOv8 TFLite), indoor navigation depth heuristics/native depth, OCR (ML Kit + Tesseract), color analysis
 - **Cloud**: Scene description and smart object search (Groq LLaMA Vision API)
 
 ```
@@ -48,6 +48,7 @@ Wareeny is a client-only Flutter app. No backend server. Processing split betwee
 | `objectFinderFast` | 2000ms | YOLOv8 general | Direction/distance to target |
 | `objectFinderSmart` | 3000ms | Groq Vision | Direction/distance via LMM |
 | `color` | 2000ms | ColorService | Dominant color name in Arabic |
+| `indoorNavigation` | ~160ms | DepthProvider + YOLO | Safe-path cue + danger level |
 
 ### One-Shot Actions (not modes)
 
@@ -62,6 +63,7 @@ Wareeny is a client-only Flutter app. No backend server. Processing split betwee
 | `statusStream` | `String` | Arabic status text for UI |
 | `detectionStream` | `DetectionResult` | Latest YOLO detection results |
 | `finderStateStream` | `ObjectFinderState` | Object Finder status + best match |
+| Indoor navigation callback | `IndoorNavigationUpdate` | Path-safety result + highlighted hazards |
 
 ### Mode Transition
 
@@ -131,7 +133,7 @@ No auto-language detection. User switches via swipe-left gesture.
 ### CameraService
 `lib/services/camera_service.dart`
 
-Singleton. Manages `CameraController` lifecycle. `takeSnapshot()` returns JPEG bytes. Guards against double-init.
+Singleton. Manages `CameraController` lifecycle. `takeSnapshot()` returns JPEG bytes. Also exposes a throttled live analysis stream for indoor navigation and caches the latest converted JPEG analysis frame. Guards against double-init.
 
 ### SpeechService
 `lib/services/speech_service.dart`
@@ -147,6 +149,26 @@ Singleton wrapping `flutter_tts`. Default locale `ar-EG`, speed 0.5×.
 
 Samples 5×5 pixel grid from image center. RGB → HSL → nearest Arabic color name. 12 color buckets: أسود، أبيض، رمادي، أحمر، برتقالي، أصفر، أخضر، سماوي، أزرق، بنفسجي، وردي، بني.
 
+### IndoorNavigationService
+`lib/services/indoor_navigation_service.dart`
+
+Runs a bounded live-analysis loop for reactive walking assistance.
+
+Pipeline:
+1. Pull latest analysis frame from `CameraService`
+2. Estimate depth using `DepthProvider`
+3. Run YOLO general-object detection on a lower-frequency branch
+4. Project detections into the walking corridor
+5. Score free space, blockage, and wall likelihood
+6. Emit haptics immediately and Arabic speech on state changes or danger escalation
+
+The service supports three depth providers:
+- `ArcoreDepthProvider` — Android native depth hook when available
+- `ArkitDepthProvider` — iOS scene-depth hook when available
+- `MonocularDepthProvider` — on-device fallback heuristic when native depth is unsupported
+
+Safe-path logic uses a forward trapezoid corridor in the lower-middle view. Hazards outside that corridor are ignored even if they are visible in-frame.
+
 ### Danger Alert (VisionService internal)
 
 Always-on background scanner independent of active mode. Timer fires every 5 seconds. On each tick:
@@ -158,6 +180,8 @@ Always-on background scanner independent of active mode. Timer fires every 5 sec
 **Limitation:** Detects English-text signs only. Pure Arabic signs (خطر etc.) are not caught — ML Kit Latin does not support Arabic script.
 
 **Lifecycle:** Started in `VisionService.init()`. Stopped in `handleAppPause()` and `dispose()`. Restarted automatically on next `switchMode()` call (covers app resume path).
+
+**Indoor-navigation interaction:** paused while the app is in indoor navigation mode to avoid camera contention with the live safety loop.
 
 ### ObjectFinderRegistry
 `lib/services/object_finder_types.dart`
@@ -196,6 +220,7 @@ Three independent render layers (no cascade repaints):
 Bottom sheet. Shows all 6 actions, hides the currently active mode. RTL layout. Speaks action name in Arabic on selection.
 
 Actions: general objects, currency, find object, color mode, read text, describe scene.
+Also includes indoor navigation mode.
 
 ### BoundingBoxPainter
 `lib/ui/widgets/bounding_box_painter.dart`
@@ -233,6 +258,13 @@ class SmartFindResult {
   String distance;     // "very_close" / "close" / "far"
   String spokenText;   // Arabic sentence for TTS
   bool isError;
+}
+
+enum DangerLevel {
+  safe,
+  caution,
+  danger,
+  stop,
 }
 ```
 
