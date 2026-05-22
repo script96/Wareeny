@@ -3,6 +3,8 @@ import 'package:flutter/semantics.dart';
 
 import 'package:wareny/presentation/camera/camera_feed_view.dart';
 import 'package:wareny/presentation/navigation/app_mode.dart';
+import 'package:wareny/presentation/reusable/camera_side_actions.dart';
+import 'package:wareny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareny/presentation/reusable/two_finger_swipe_detector.dart';
 
@@ -33,6 +35,7 @@ class _NavigationShellState extends State<NavigationShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: TwoFingerSwipeDetector(
         onSwipeLeft: _selectNextMode,
         onSwipeRight: _selectPreviousMode,
@@ -42,7 +45,16 @@ class _NavigationShellState extends State<NavigationShell> {
           child: Stack(
             fit: StackFit.expand,
             children: [
+              // Full-screen camera feed
               const CameraFeedView(),
+
+              // Top HUD bar
+              _TopOverlay(currentMode: _currentMode),
+
+              // Right side action buttons
+              const _RightSideOverlay(),
+
+              // Bottom mode selector
               _BottomModeMenu(
                 previousMode: _previousMode,
                 currentMode: _currentMode,
@@ -75,6 +87,45 @@ class _NavigationShellState extends State<NavigationShell> {
   }
 }
 
+// ── Overlay widgets ──────────────────────────────────────────────────────────
+
+class _TopOverlay extends StatelessWidget {
+  const _TopOverlay({required this.currentMode});
+
+  final AppMode currentMode;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: CameraTopBar(currentMode: currentMode),
+      ),
+    );
+  }
+}
+
+class _RightSideOverlay extends StatelessWidget {
+  const _RightSideOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      right: 16,
+      top: 0,
+      bottom: 0,
+      child: Center(
+        child: SafeArea(
+          child: const CameraSideActions(),
+        ),
+      ),
+    );
+  }
+}
+
 class _BottomModeMenu extends StatelessWidget {
   const _BottomModeMenu({
     required this.previousMode,
@@ -93,7 +144,7 @@ class _BottomModeMenu extends StatelessWidget {
       right: 0,
       bottom: 0,
       child: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Center(
           child: ModeCarouselBar(
             previous: previousMode,

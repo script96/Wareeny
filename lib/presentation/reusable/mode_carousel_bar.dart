@@ -1,8 +1,15 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
+import 'package:wareny/core/theme/app_colors.dart';
 import 'package:wareny/core/theme/app_spacing.dart';
 import 'package:wareny/presentation/navigation/app_mode.dart';
 
+/// Redesigned glassmorphism mode selector bar.
+///
+/// Shows previous and next modes as dimmed icon+label chips,
+/// and the current mode as a glowing highlighted pill.
 class ModeCarouselBar extends StatelessWidget {
   const ModeCarouselBar({
     required this.previous,
@@ -22,78 +29,114 @@ class ModeCarouselBar extends StatelessWidget {
           'Current mode ${current.label}. Previous ${previous.label}. Next ${next.label}.',
       hint:
           'Swipe with two fingers left or right on the camera feed to change mode.',
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.82),
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ModeLabel(mode: previous),
-            _CurrentModeLabel(mode: current),
-            _ModeLabel(mode: next),
-          ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.darkSurface,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: AppColors.glassBorder, width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _SideModePill(mode: previous),
+                const SizedBox(width: AppSpacing.xs),
+                _ActiveModePill(mode: current),
+                const SizedBox(width: AppSpacing.xs),
+                _SideModePill(mode: next),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _ModeLabel extends StatelessWidget {
-  const _ModeLabel({required this.mode});
+class _SideModePill extends StatelessWidget {
+  const _SideModePill({required this.mode});
 
   final AppMode mode;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 82,
-      child: Text(
-        mode.label.toUpperCase(),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: Colors.white54,
-          fontWeight: FontWeight.w700,
-        ),
+      width: 76,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(mode.icon, color: Colors.white38, size: 18),
+          const SizedBox(height: 3),
+          Text(
+            mode.label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _CurrentModeLabel extends StatelessWidget {
-  const _CurrentModeLabel({required this.mode});
+class _ActiveModePill extends StatelessWidget {
+  const _ActiveModePill({required this.mode});
 
   final AppMode mode;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minWidth: 116),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      constraints: const BoxConstraints(minWidth: 110),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+        vertical: AppSpacing.sm + 2,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
+        color: AppColors.electricGreenDim,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(color: AppColors.electricGreen, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.electricGreen.withValues(alpha: 0.35),
+            blurRadius: 18,
+            spreadRadius: 1,
+          ),
+        ],
       ),
-      child: Text(
-        mode.label.toUpperCase(),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: const Color(0xFFFFD600),
-          fontWeight: FontWeight.w800,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(mode.icon, color: AppColors.electricGreen, size: 22),
+          const SizedBox(height: 4),
+          Text(
+            mode.label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.electricGreen,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }

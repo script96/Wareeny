@@ -46,12 +46,18 @@ class _CameraFeedViewState extends State<CameraFeedView> {
       );
     }
 
+    // Fill the full screen without distortion.
+    // FittedBox with cover crops to fill, preserving the sensor's native ratio.
     return ColoredBox(
       color: Colors.black,
-      child: Center(
-        child: AspectRatio(
-          aspectRatio: controller.value.aspectRatio,
-          child: CameraPreview(controller),
+      child: SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: controller.value.previewSize!.height,
+            height: controller.value.previewSize!.width,
+            child: CameraPreview(controller),
+          ),
         ),
       ),
     );
