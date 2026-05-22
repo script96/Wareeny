@@ -1,9 +1,9 @@
 class NativeBridgeChannels {
   const NativeBridgeChannels._();
 
-  static const camera = 'com.wareny.bridge/camera';
-  static const audioHaptics = 'com.wareny.bridge/audio_haptics';
-  static const batteryThermal = 'com.wareny.bridge/battery_thermal';
-  static const fileDownload = 'com.wareny.bridge/file_download';
-  static const localAiRuntime = 'com.wareny.bridge/local_ai_runtime';
+  static const camera = 'com.wareeny.bridge/camera';
+  static const audioHaptics = 'com.wareeny.bridge/audio_haptics';
+  static const batteryThermal = 'com.wareeny.bridge/battery_thermal';
+  static const fileDownload = 'com.wareeny.bridge/file_download';
+  static const localAiRuntime = 'com.wareeny.bridge/local_ai_runtime';
 }

@@ -1,3 +1,3 @@
-import 'package:wareny/app/bootstrap.dart';
+import 'package:wareeny/app/bootstrap.dart';
 
 Future<void> main() => bootstrap();

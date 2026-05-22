@@ -1,7 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
-import 'package:wareny/presentation/reusable/camera_status_view.dart';
+import 'package:wareeny/presentation/reusable/camera_status_view.dart';
 
 class CameraFeedView extends StatefulWidget {
   const CameraFeedView({super.key});

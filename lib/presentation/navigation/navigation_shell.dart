@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
-import 'package:wareny/presentation/camera/camera_feed_view.dart';
-import 'package:wareny/presentation/navigation/app_mode.dart';
-import 'package:wareny/presentation/reusable/camera_side_actions.dart';
-import 'package:wareny/presentation/reusable/camera_top_bar.dart';
-import 'package:wareny/presentation/reusable/mode_carousel_bar.dart';
-import 'package:wareny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareeny/presentation/camera/camera_feed_view.dart';
+import 'package:wareeny/presentation/navigation/app_mode.dart';
+import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
+import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
+import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
+import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 
 class NavigationShell extends StatefulWidget {
   const NavigationShell({super.key});

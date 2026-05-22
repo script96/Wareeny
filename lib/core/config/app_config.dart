@@ -56,7 +56,7 @@ class AppConfig {
       ),
       localModelRegistryName: String.fromEnvironment(
         'LOCAL_MODEL_REGISTRY',
-        defaultValue: 'wareny-local-models-dev',
+        defaultValue: 'wareeny-local-models-dev',
       ),
       enableDiagnostics: bool.fromEnvironment(
         'ENABLE_DIAGNOSTICS',
@@ -79,7 +79,7 @@ class AppConfig {
       ),
       localModelRegistryName: String.fromEnvironment(
         'LOCAL_MODEL_REGISTRY',
-        defaultValue: 'wareny-local-models',
+        defaultValue: 'wareeny-local-models',
       ),
       enableDiagnostics: bool.fromEnvironment('ENABLE_DIAGNOSTICS'),
     );

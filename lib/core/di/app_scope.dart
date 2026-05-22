@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:wareny/core/config/app_config.dart';
-import 'package:wareny/core/di/service_registry.dart';
+import 'package:wareeny/core/config/app_config.dart';
+import 'package:wareeny/core/di/service_registry.dart';
 
 class AppScope extends InheritedWidget {
   const AppScope({required this.services, required super.child, super.key});

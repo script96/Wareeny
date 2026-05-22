@@ -1,0 +1,1613 @@
+Future University in Egypt
+Faculty of Computers & Information Technology
+Department of Computer Science
+
+Wareeny
+An AI-Powered Mobile Assistive System
+for Visually Impaired Users
+Thesis Submitted in Partial Fulfillment of the Requirements for the Degree of Bachelor
+of Science in Computer Science
+
+By:
+Youssef Amr
+
+20221949
+
+Mohamed Moataz
+
+20223394
+
+Omar Ahmed Said
+
+20225281
+
+Ahmed Mohamed
+
+20223031
+
+Mohamed Wael
+
+20223960
+
+Mohamed Khaled
+
+20224727
+
+Under the Supervision of:
+Professor: Prof. Abeer El Korany
+Teaching Assistant: Linah Mohamed
+
+© FUE 2025–2026
+
+Contents
+
+i
+
+Abstract
+This thesis presents Wareeny, an AI-powered mobile assistive system designed to support blind and low-vision
+users through real-time computer vision, audio feedback, and haptic cues. The system addresses critical gaps
+in existing assistive technologies, particularly for users in the Middle East and North Africa region. By integrating state-of-the-art deep learning architectures including YOLOv8 for real-time object detection and Large
+Multimodal Models for semantic understanding, Wareeny provides comprehensive assistance for both indoor
+and outdoor environments. The system features indoor object detection with distance estimation, in-hand object recognition, currency identification, outdoor obstacle detection, traffic light recognition, document reading
+with question-answering capabilities, and emergency safety features. Unlike existing solutions that rely heavily on cloud processing, Wareeny emphasizes privacy-preserving local AI while maintaining high accuracy and
+low latency. The application is developed using Flutter for cross-platform compatibility and incorporates Arabic
+language support, addressing the linguistic and cultural needs of users in the Arab world.
+
+Contents
+Abstract
+
+i
+
+List of Abbreviations
+
+iv
+
+1
+
+Introduction
+
+1
+
+1.1
+1.2
+
+Background of the Study . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+Problem Statement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+2
+2
+
+1.3
+
+Aim and Objectives . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+2
+
+1.3.1
+
+General Aim . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+2
+
+1.3.2
+
+Specific Objectives . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+1.4
+
+1.5
+
+3
+
+Included Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+1.4.2
+
+Excluded Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+1.4.3
+
+Constraints . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+Significance of the Project . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+4
+
+1.5.1
+
+Beneficiaries . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+4
+
+1.5.2
+
+Potential Impact . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+4
+
+Project Methodology . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+
+1.6.1
+
+Development Approach . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+
+1.6.2
+
+Key Technologies and Tools . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+
+Project Organization . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+
+Literature Review
+2.1 Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+6
+7
+
+1.6
+
+1.7
+2
+
+Scope of the Project . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.4.1
+
+Contents
+
+2.2
+
+2.3
+
+2.4
+
+3
+
+ii
+
+Review of Related Systems and Studies . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+7
+
+2.2.1
+
+Analysis of Commercial Assistive Applications . . . . . . . . . . . . . . . . . . . . . . .
+
+7
+
+2.2.2
+
+Review of Academic Research . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+9
+
+Research Gap and Summary . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+12
+
+2.3.1
+2.3.2
+
+The Geo-Linguistic Disparity Gap . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+The Obsolescence of Legacy Computer Vision Architectures . . . . . . . . . . . . . . . .
+
+12
+13
+
+2.3.3
+
+The Privacy-Utility Paradox . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+13
+
+2.3.4
+
+Lack of Interactive Contextual Awareness . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+14
+
+Summary of Existing Technologies . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+15
+
+2.4.1
+
+Cross-Platform Mobile Development Frameworks . . . . . . . . . . . . . . . . . . . . .
+
+15
+
+2.4.2
+
+Real-Time Object Detection Architectures . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+15
+
+2.4.3
+
+Large Multimodal Models for Semantic Understanding . . . . . . . . . . . . . . . . . . .
+
+16
+
+2.4.4
+
+On-Device Optical Character Recognition Engines . . . . . . . . . . . . . . . . . . . . .
+
+16
+
+2.4.5
+
+Hybrid Cloud-Local Processing Architectures . . . . . . . . . . . . . . . . . . . . . . . .
+
+17
+
+System Analysis and Design
+
+18
+
+3.1
+
+System Overview and Proposed Concept . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+19
+
+3.2
+
+Functional Requirements . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+19
+
+3.2.1
+
+Indoor Assistance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+19
+
+3.2.2
+
+Outdoor Assistance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+20
+
+3.2.3
+
+OCR Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+20
+
+3.3
+
+3.2.4 Audio and Haptics Service . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+Non-Functional Requirements . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+20
+20
+
+3.4
+
+System Environment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+
+3.4.1
+
+Hardware Environment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+
+3.4.2
+
+Software Environment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+
+3.5
+
+System Architecture . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+23
+
+3.6
+
+Class Diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+24
+
+3.7
+
+Use Case Diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+25
+
+3.8
+
+Sequence Diagrams . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+
+3.8.1
+
+General Flow Diagrams . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+
+3.8.2
+
+Indoor Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+27
+
+3.8.3
+
+Outdoor Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+
+3.8.4
+
+OCR Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+32
+
+3.8.5
+
+Safety and Emergency Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+34
+
+3.8.6
+
+Audio and Haptics Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+35
+
+ERD Diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+36
+
+3.9
+
+List of Tables
+
+iii
+
+List of Figures
+3.1
+
+System Architecture Diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+23
+
+3.2
+
+Class Diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+24
+
+3.3
+
+Use Case Diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+25
+
+3.4
+
+General Flow 1: OCR Processing . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+
+3.5
+
+General Flow 2: Object Detection Processing . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+
+3.6
+
+General Flow 3: Navigation Processing . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+27
+
+3.7
+
+Sequence Diagram: Indoor Object Detection and Distance Estimation . . . . . . . . . . . . . . .
+
+27
+
+3.8
+3.9
+
+Sequence Diagram: In-Hand Object Detection . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+Sequence Diagram: Brand and Currency Detection . . . . . . . . . . . . . . . . . . . . . . . . .
+
+28
+28
+
+3.10 Sequence Diagram: Saved Items Finder . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+
+3.11 Sequence Diagram: Outdoor Object Detection . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+
+3.12 Sequence Diagram: Outdoor Object Finder . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+30
+
+3.13 Sequence Diagram: Outdoor Reader for Signs . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+30
+
+3.14 Sequence Diagram: Outdoor Navigation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+31
+
+3.15 Sequence Diagram: Traffic Light Status Detection . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+32
+
+3.16 Sequence Diagram: Read Document . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+32
+
+3.17 Sequence Diagram: QA Mode (Visual Query) . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+33
+
+3.18 Sequence Diagram: Danger Word Alerts . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+33
+
+3.19 Sequence Diagram: Danger Mode (Hazard Detection) . . . . . . . . . . . . . . . . . . . . . . . .
+
+34
+
+3.20 Sequence Diagram: Emergency Auto Call and Location Sharing . . . . . . . . . . . . . . . . . .
+
+34
+
+3.21 Sequence Diagram: Privacy Mode (Secure Shutdown) . . . . . . . . . . . . . . . . . . . . . . . .
+
+35
+
+3.22 Sequence Diagram: Directional Audio . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+35
+
+3.23 Entity-Relationship Diagram . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+36
+
+List of Tables
+2.1
+
+Comparison of Commercial Assistive Applications . . . . . . . . . . . . . . . . . . . . . . . . .
+
+9
+
+3.1
+
+Hardware Environment Specifications . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+21
+
+3.2
+
+Software Environment Technologies . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+22
+
+List of Abbreviations
+
+List of Abbreviations
+AI
+
+Artificial Intelligence
+
+API
+
+Application Programming Interface
+
+COCO
+
+Common Objects in Context
+
+CPU
+
+Central Processing Unit
+
+CV
+
+Computer Vision
+
+GAN
+
+Generative Adversarial Network
+
+GPU
+
+Graphics Processing Unit
+
+LF-VQA
+
+Long-Form Visual Question Answering
+
+LMM
+
+Large Multimodal Models
+
+MENA
+
+Middle East and North Africa
+
+OCR
+
+Optical Character Recognition
+
+RAM
+
+Random Access Memory
+
+TTS
+
+Text-to-Speech
+
+VQA
+
+Visual Question Answering
+
+WHO
+
+World Health Organization
+
+YOLO
+
+You Only Look Once
+
+iv
+
+Chapter 1
+Introduction
+
+Chapter 1. Introduction
+
+2
+
+Introduction
+This chapter introduces the project, provides background context, defines the problem, and outlines the objectives
+and significance of the Wareeny assistive system for visually impaired users.
+
+1.1
+
+Background of the Study
+
+This project focuses on assistive technology for blind and low-vision users using computer vision, Optical Character Recognition (OCR), audio, and haptic feedback. Smartphones now include powerful cameras, sensors, and
+on-device AI capabilities. These capabilities create an opportunity to deliver real-time environmental awareness
+without specialized hardware.
+Vision-impaired users face daily barriers both indoors and outdoors. Objects, obstacles, text, and signals are often
+inaccessible without assistance. Human assistance is not always available, and traditional aids do not provide
+contextual understanding.
+Current assistive applications handle isolated tasks. Many focus only on OCR or basic object detection. They lack
+context awareness, struggle in cluttered environments, and often overwhelm users with unnecessary information.
+There is a gap in integrated systems that combine object detection, text understanding, safety alerts, and directional
+feedback. Few systems filter information based on user intent or risk, and privacy handling remains limited.
+This study addresses the need for a unified mobile system that delivers accurate, timely, and safe assistance tailored
+to real-world situations. By leveraging modern deep learning architectures and mobile computing capabilities, the
+proposed system aims to significantly improve independence and safety for visually impaired individuals.
+
+1.2
+
+Problem Statement
+
+Blind and low-vision users lack a single reliable mobile system that provides real-time contextual understanding
+of their surroundings. Existing solutions handle isolated functions and fail in complex environments. They do not
+prioritize safety-critical information and offer limited privacy control. This results in reduced independence and
+increased risk during daily activities.
+
+1.3
+
+Aim and Objectives
+
+1.3.1 General Aim
+The general aim of this project is to build a mobile assistive system that supports blind and low-vision users
+through real-time vision, audio, and haptic feedback. The system seeks to improve safety, independence, and
+access to information in both indoor and outdoor spaces.
+
+Chapter 1. Introduction
+
+3
+
+1.3.2 Specific Objectives
+The specific objectives of this project are:
+
+1. Detect indoor objects and estimate distance with high accuracy.
+2. Detect the object held in the user’s hand with low false detection rate.
+3. Read currency and identify value quickly.
+4. Detect outdoor obstacles and traffic lights with real-time response with very low latency.
+5. Read text and answer user questions from documents with correct intent recognition.
+6. Trigger danger mode and emergency call very quickly.
+
+1.4
+
+Scope of the Project
+
+1.4.1 Included Features
+The following features are included in the scope of this project:
+
+• Indoor object detection, brand recognition, and in-hand detection.
+• Outdoor object detection, obstacle awareness, and object finding.
+• OCR for documents, signs, and labels.
+• Integrating LMM-based question answering.
+• Audio cues and haptic alerts.
+• Emergency call and danger mode activation.
+
+1.4.2 Excluded Features
+The following aspects are excluded from the scope of this project:
+
+• Hardware Manufacturing: The project focuses on a software-based mobile application. It does not include the development or sale of custom wearable hardware (such as smart glasses).
+
+1.4.3 Constraints
+The project is subject to the following constraints:
+
+Chapter 1. Introduction
+
+Data Constraints
+• Limited availability of labeled datasets for in-hand detection, brand recognition, and currency.
+• Dataset bias toward common objects and environments.
+• Language and currency coverage restricted to selected regions.
+
+Hardware Constraints
+• Mobile phone CPU, GPU, and memory limitations.
+• Camera resolution and low-light performance vary across devices.
+• Battery consumption restricts continuous real-time processing.
+
+Time Constraints
+• Fixed academic timeline limits model training and optimization cycles.
+• Restricted time for large-scale user testing.
+• Limited duration for dataset collection and annotation.
+
+1.5
+
+Significance of the Project
+
+1.5.1 Beneficiaries
+The project benefits multiple stakeholders:
+
+• Blind and low-vision users: Gain independence in daily activities.
+• Caregivers: Gain safety assurance for their dependents.
+• Researchers: Gain access to a modular assistive vision system for further study.
+• Organizations: Gain a deployable accessibility tool for their constituents.
+
+1.5.2 Potential Impact
+The potential impact of this project includes:
+
+• Reduces daily dependency on human assistance.
+• Combines vision, language, audio, and haptics in one integrated system.
+
+4
+
+Chapter 1. Introduction
+
+5
+
+• Focuses on context filtering to reduce cognitive noise.
+• Helps blind individuals perform daily tasks with greater ease and confidence.
+
+1.6
+
+Project Methodology
+
+1.6.1 Development Approach
+The project follows an iterative Agile development approach with the following characteristics:
+
+• Incremental feature delivery with regular milestones.
+• Continuous testing after each module integration.
+• User-centered design with feedback-driven refinement.
+
+1.6.2 Key Technologies and Tools
+The following technologies and tools are employed in the development:
+
+• Deep learning models for object detection and OCR.
+• Mobile frameworks for on-device inference.
+• Text recognition and assistant LMM models.
+• Audio output and vibration APIs for feedback.
+• Smartphone camera, microphone, and motion sensors.
+
+1.7
+
+Project Organization
+
+This thesis is organized as follows:
+
+• Chapter One: Introduces the project, presents the problem statement, defines the aim and objectives, and
+outlines the scope.
+• Chapter Two: Provides a literature review of assistive vision systems, object detection, OCR, and audio
+feedback technologies.
+• Chapter Three: Presents the system analysis and design, including models, datasets, and design decisions.
+
+Chapter 2
+Literature Review
+
+Chapter 2. Literature Review
+
+7
+
+Literature Review
+2.1
+
+Introduction
+
+Visual impairment represents a significant global health challenge, affecting approximately 2.2 billion people
+worldwide, with over 1 billion cases that could have been prevented or remain unaddressed [19]. These individuals face substantial barriers in navigating their environments, accessing textual information, and maintaining
+independent daily activities. The burden of visual impairment falls disproportionately on developing regions,
+particularly in the Middle East and North Africa (MENA), where access to assistive technologies remains limited.
+Recent advances in artificial intelligence and edge computing have opened new possibilities for developing sophisticated assistive technologies. However, the market remains dominated by solutions designed with a Westerncentric focus, lacking robust support for non-Latin scripts, regional entities, and cultural contexts. In Egypt and
+the broader Arab world, visually impaired individuals encounter a critical scarcity of assistive technologies that
+are linguistically adapted for Arabic and culturally tailored to recognize region-specific currency, products, and
+environmental elements. Furthermore, the majority of existing commercial solutions rely heavily on cloud-based
+processing architectures, raising significant privacy concerns regarding the transmission of sensitive personal data,
+including images of users’ environments and biometric information.
+This project, Wareeny, proposes a novel, comprehensive mobile application designed to bridge these specific
+accessibility gaps. By integrating state-of-the-art 2025 AI architectures—combining real-time AI processing for
+safety with Large Multimodal Models (LMMs) for semantic understanding—Wareeny aims to empower visually
+impaired users in the Arab world with a reliable, localized, and privacy-preserving assistive tool.
+
+2.2
+
+Review of Related Systems and Studies
+
+The domain of assistive technology for the visually impaired is characterized by a mix of commercial mobile
+applications and academic research targeting specific computer vision problems. A critical review of these systems
+highlights both the progress made and the significant limitations that persist.
+
+2.2.1 Analysis of Commercial Assistive Applications
+Several prominent mobile applications currently serve the visually impaired community. However, a detailed
+analysis reveals deficiencies in accuracy, localization, and usability, particularly for users in the MENA region.
+
+Microsoft Seeing AI (2017)
+Microsoft Seeing AI [7], launched in 2017, represents one of the earliest comprehensive AI-powered assistive
+applications, providing multiple channels for text reading, scene description, and object identification. The ap-
+
+Chapter 2. Literature Review
+
+8
+
+plication leverages cloud-based computer vision models to deliver real-time audio feedback through smartphone
+cameras. However, systematic user studies have revealed several critical limitations. First, the system exhibits
+reduced accuracy in complex, cluttered environments, where it struggles to distinguish foreground objects from
+background elements. Second, users report experiencing cognitive overload due to the system’s tendency to narrate non-essential environmental details rather than prioritizing safety-critical information such as obstacles or
+hazards. Third, its natural language processing capabilities are optimized predominantly for English, with substantially degraded performance when processing Arabic text due to the morphological complexity and cursive
+nature of Arabic script. Finally, the application’s exclusive availability on iOS limits accessibility for Android
+users, particularly in developing regions where Android devices dominate the market.
+
+Google Lookout (2019)
+Google Lookout [8], released in 2019, employs camera-based computer vision to identify objects, text, and people
+in the user’s environment. The application offers three operational modes: Explore, Shopping, and Scan, each
+optimized for specific use cases. Despite these capabilities, the system faces multiple technical and accessibility
+limitations. First, it is exclusively available on the Android platform, effectively excluding the substantial iOS user
+base. Second, users have reported system instability characterized by frequent application crashes, particularly
+during extended usage sessions or when processing complex visual scenes. Third, the continuous camera streaming and real-time AI inference impose substantial computational demands, resulting in rapid battery depletion that
+limits practical usage duration. Most critically, the application relies predominantly on cloud-based processing,
+requiring transmission of captured images to Google’s servers for analysis. This architecture introduces privacy
+vulnerabilities, particularly when users scan sensitive personal documents, financial information, or private correspondence. Additionally, the cloud dependency introduces latency in response times and renders the application
+non-functional in offline scenarios or areas with limited network connectivity.
+
+Envision AI (2018)
+Envision AI [9], introduced in 2018, has gained recognition for its optical character recognition (OCR) capabilities and cross-platform availability on both iOS and Android devices. The application provides functionality for
+document reading, object recognition, scene description, and color identification. However, it exhibits significant
+limitations in regional localization and technical architecture. The system’s object detection models are trained primarily on Western-centric datasets such as COCO [11], resulting in poor recognition accuracy for region-specific
+items including local Egyptian products, Middle Eastern food items, and Arabic-labeled packaging. Currency
+recognition is similarly limited, failing to accurately identify Egyptian pounds or other regional currencies, particularly when banknotes are worn, folded, or partially visible. From a technical perspective, the application relies on
+computer vision architectures predating 2020, which lack the inference speed and semantic understanding capabilities of modern state-of-the-art models such as YOLOv8 and vision transformers. This results in higher latency
+and reduced accuracy compared to contemporary deep learning approaches. Furthermore, while the application
+offers a hybrid processing model combining on-device and cloud-based inference, the lack of complete offline
+functionality limits its applicability in connectivity-constrained environments.
+
+Chapter 2. Literature Review
+
+9
+
+E3rafli by Vodafone (2017)
+E3rafli [10], developed by Vodafone Egypt in 2017, represents one of the few assistive applications specifically designed for the Egyptian market and Arabic-speaking users. The application provides a native Arabic user interface
+and voice feedback system, addressing a critical linguistic gap in the assistive technology landscape. However,
+its technical capabilities remain substantially limited compared to global alternatives. The application demonstrates acceptable performance only in two specific domains: color detection and Egyptian currency recognition.
+These features employ relatively simple computer vision algorithms that can operate effectively on limited training data. In contrast, the application’s general object detection capabilities suffer from low accuracy, likely due
+to insufficient training data and the use of lightweight, less sophisticated detection models. Scene understanding
+functionality is similarly restricted, providing only basic environmental descriptions without contextual awareness or safety-relevant information filtering. Document reading and OCR performance are particularly weak, with
+poor text recognition accuracy for both printed and handwritten Arabic text, limiting the application’s utility for
+accessing written information. The application is available exclusively on Android devices and employs primarily
+on-device processing, offering privacy advantages over cloud-dependent alternatives. However, the limited feature set and accuracy constraints render it insufficient as a comprehensive assistive tool for daily independence,
+necessitating supplementation with additional assistive technologies.
+
+Comparative Analysis
+Table 2.1 provides a comparative analysis of the key commercial assistive applications, highlighting their strengths
+and limitations across critical dimensions.
+Table 2.1: Comparison of Commercial Assistive Applications
+Application
+
+Year
+
+Platform
+
+Arabic Support
+
+Processing
+
+Key Limitations
+
+Microsoft Seeing AI
+
+2017
+
+iOS only
+
+Limited
+
+Cloud-based
+
+Inaccurate in clutter; cogni-
+
+[7]
+
+tive overload
+
+Google Lookout [8]
+
+2019
+
+Android only
+
+Limited
+
+Cloud-based
+
+Frequent crashes; high battery usage; privacy concerns
+
+Envision AI [9]
+
+2018
+
+iOS & Android
+
+Weak
+
+Hybrid
+
+Poor localization; outdated
+CV models
+
+E3rafli
+
+(Voda-
+
+2017
+
+Android only
+
+fone) [10]
+
+Native
+
+Local
+
+Limited features; inaccurate object detection
+
+2.2.2 Review of Academic Research
+While commercial applications reveal practical limitations in deployment, academic research provides the theoretical foundation and technical innovations necessary to address these challenges. Recent scholarly work has concentrated on three critical dimensions: (1) optimizing state-of-the-art artificial intelligence models for resourceconstrained mobile deployment, (2) developing localization techniques for non-Western languages and cultural
+contexts, and (3) implementing privacy-preserving architectures that eliminate dependence on cloud infrastructure. This section systematically reviews key contributions in each domain, highlighting their relevance to the
+
+Chapter 2. Literature Review
+
+10
+
+development of next-generation assistive systems.
+
+Image Quality and Interactive Visual Question Answering (VQA)
+A persistent challenge in assistive computer vision is that visually impaired users frequently capture images that
+are blurry, poorly framed, or partially obscured, resulting from the inherent difficulty of camera alignment without visual feedback. Traditional image captioning systems provide static, single-utterance descriptions that often
+fail to address the specific informational needs of users in these suboptimal capture scenarios. Huh et al. (2024)
+conducted a comprehensive user study to address this limitation, proposing a “Long-Form Visual Question Answering” (LF-VQA) framework [1]. Their empirical findings demonstrate that visually impaired users derive
+significantly greater value from interactive multimodal models that support iterative questioning, allowing them
+to request clarification, probe specific regions of interest, and obtain contextual information beyond initial descriptions. The study revealed that interactive dialogue-based systems improved task completion rates by 40%
+compared to static captioning approaches, particularly for scenarios involving document analysis, navigation decisions, and object identification. This research validates the critical necessity of transitioning from one-way
+image description to bidirectional conversational assistive agents capable of natural language interaction.
+
+Arabic Optical Character Recognition (OCR)
+Optical character recognition systems, while achieving accuracy rates exceeding 95% on printed Latin scripts,
+exhibit substantially degraded performance when processing Arabic text due to several linguistic and typographic
+characteristics. Arabic script is inherently cursive, with character shapes varying significantly based on positional
+context (isolated, initial, medial, or final forms). Additionally, diacritical marks, ligatures, and right-to-left text
+flow introduce complexities that generic multilingual OCR engines struggle to handle accurately. Ayadi et al.
+(2025) conducted a systematic investigation of this challenge, proposing specialized deep learning architectures
+including optimized Generative Adversarial Networks (GANs) specifically trained on Arabic handwritten and
+printed text datasets [2]. Their experimental results demonstrated that generic multilingual OCR models (such
+as Tesseract with Arabic language packs) achieve only 68% character-level accuracy on handwritten Arabic text,
+whereas their specialized GAN-based architecture achieved 89% accuracy on the same test set. The study conclusively establishes that reliable Arabic OCR for assistive applications requires dedicated, culturally-aware models
+trained on region-specific datasets encompassing diverse Arabic fonts, handwriting styles, and document types.
+This finding has direct implications for developing assistive systems targeting Arabic-speaking populations in the
+MENA region.
+
+Localized Currency Recognition
+Financial independence represents a critical component of daily autonomy for visually impaired individuals, requiring reliable identification of local currency denominations. However, global currency recognition models
+exhibit poor generalization to regional currencies, particularly for nations outside North America and Western
+Europe. This limitation is exacerbated when banknotes are worn, folded, partially visible, or photographed under
+variable lighting conditions. Ghanem et al. (2025) addressed this gap by developing a specialized deep learning system for Egyptian currency recognition, constructing a custom dataset of 5,000 images encompassing all
+current Egyptian pound denominations across varying conditions [3]. Their comparative evaluation demonstrated
+that transfer learning from global currency datasets achieved only 72% recognition accuracy on Egyptian notes,
+
+Chapter 2. Literature Review
+
+11
+
+whereas their locally-trained convolutional neural network architecture achieved 94% accuracy under controlled
+conditions and 87% accuracy with worn or partially occluded banknotes. The study provides empirical validation
+for the necessity of region-specific training data and localized model development in assistive applications, particularly for underrepresented currencies and cultural contexts. These findings directly inform the design requirements
+for currency recognition modules in assistive systems targeting the Egyptian and broader MENA market.
+
+Real-Time Obstacle Detection (Safety)
+For outdoor navigation assistance, detection latency directly impacts user safety, as delayed obstacle warnings provide insufficient reaction time to prevent collisions. Real-time object detection on mobile devices thus represents
+a critical technical requirement, necessitating inference speeds exceeding 10 frames per second while maintaining
+acceptable accuracy. Wang et al. (2024) addressed this challenge by introducing “YOLO-OD,” a modified YOLO
+(You Only Look Once) architecture specifically optimized for detecting outdoor navigation obstacles including
+curbstones, poles, stairs, and pedestrian barriers [4]. Their architecture modifications included lightweight feature
+extractors, optimized anchor configurations for obstacle aspect ratios, and pruned network layers to reduce computational complexity. Experimental evaluation on mobile devices demonstrated that YOLO-OD achieved 15.2
+FPS inference speed with 88.3% mean Average Precision (mAP) for obstacle detection, compared to 8.7 FPS and
+91.2% mAP for standard YOLOv5. The research conclusively demonstrates that single-stage detection architectures offer the optimal trade-off between inference speed and accuracy for real-time mobile deployment, providing
+sufficient performance for safety-critical navigation assistance while operating entirely on-device without cloud
+dependency. This work validates the technical feasibility of deploying state-of-the-art object detection models on
+resource-constrained mobile hardware for latency-sensitive assistive applications.
+
+Indoor Navigation and Structural Recognition
+Indoor navigation for visually impaired users requires identification of specific structural and architectural elements beyond generic object classes. Critical indoor elements include doorways, staircases, elevators, handrails,
+chairs, and tables, each requiring precise localization for safe navigation and spatial awareness. Wojtowicz
+(2025) conducted a comprehensive comparative evaluation of YOLOv8 and YOLOv9 architectures within assistive Mixed Reality (MR) applications, specifically assessing their performance on indoor navigation-relevant
+object classes [5]. The experimental study employed a custom indoor navigation dataset comprising 12,000
+annotated images across diverse indoor environments including offices, homes, and public buildings. Results
+demonstrated that YOLOv8 achieved 91.7% precision and 87.3% recall for detecting doors, 89.2% precision for
+staircases, and 85.6% precision for identifying empty seats. Importantly, YOLOv8 maintained real-time inference speeds of 12.8 FPS on mid-range mobile devices, meeting the responsiveness requirements for assistive
+navigation applications. The study’s findings validate YOLOv8’s suitability for the “Indoor Mode” of navigation
+assistance systems, confirming its ability to accurately detect structurally important elements while maintaining
+computational efficiency compatible with mobile deployment constraints.
+
+Privacy-Preserving Computer Vision
+The architectural reliance on cloud processing in existing commercial assistive applications creates substantial
+privacy vulnerabilities, as users must continuously transmit sensitive visual data including images of their home
+environments, personal documents, financial information, and biometric features to third-party servers. This data
+
+Chapter 2. Literature Review
+
+12
+
+exposure contradicts fundamental privacy principles and creates risks of unauthorized access, data breaches, and
+secondary use of personal information. Martin & Moon (2025) proposed a comprehensive “Privacy-Preserving
+Image Captioning” framework that addresses these concerns through a hybrid architecture combining on-device
+detection with selective encryption [6]. Their approach employs a multi-stage pipeline: (1) lightweight object
+detection models run locally to identify sensitive visual elements including faces, text, and personally identifiable
+information; (2) detected sensitive regions are encrypted or redacted using partial image encryption techniques
+before any data transmission; (3) only privacy-filtered images are transmitted for cloud-based semantic analysis
+when needed. Experimental evaluation demonstrated that this approach reduces sensitive data exposure by 94%
+while maintaining 89% of the semantic understanding capabilities compared to unrestricted cloud processing. The
+framework supports implementation of an On-Device Privacy Guard architecture, ensuring that privacy-critical
+detection and filtering occurs locally before any network transmission, effectively providing user control over data
+exposure. This research validates the technical feasibility of privacy-preserving assistive systems that balance
+functional capability with data protection requirements.
+
+2.3
+
+Research Gap and Summary
+
+A systematic analysis of both commercial applications and academic literature reveals a fragmented ecosystem
+in assistive technology for visually impaired users. While significant progress has been achieved in individual
+technical domains—including object detection, optical character recognition, and natural language processing—
+the field lacks integrated, culturally-aware, and privacy-centric systems that address the multidimensional needs
+of users in non-Western contexts. This section identifies four critical research gaps that current state-of-the-art
+solutions fail to address comprehensively.
+
+2.3.1 The Geo-Linguistic Disparity Gap
+Existing commercial assistive applications and academic research exhibit a pronounced Western-centric development bias, optimizing for English-language contexts and environments typical of North American and Western
+European settings. Global applications such as Microsoft Seeing AI [7] and Envision AI [9] demonstrate high
+performance on Latin scripts and Western product recognition but exhibit substantially degraded accuracy when
+deployed in Middle Eastern contexts. This geo-linguistic disparity manifests across multiple technical dimensions:
+Linguistic Limitations: Current systems struggle fundamentally with the morphological complexity of Arabic
+script. The cursive, context-dependent nature of Arabic text, combined with diacritical marks and bidirectional
+text flow, results in OCR error rates 3–5 times higher than equivalent Latin-script recognition. Furthermore, Arabic
+dialect variation across the MENA region introduces additional recognition challenges that monolithic language
+models fail to address. Existing applications provide limited or non-existent support for Arabic voice commands,
+text-to-speech output with natural Arabic prosody, and culturally appropriate audio feedback mechanisms.
+Cultural and Environmental Blindness: Object detection models trained on Western-centric datasets such as
+COCO [11] demonstrate poor generalization to region-specific entities. Critical daily-use items including local
+food products, Arabic-labeled packaging, regional clothing items, and Egyptian currency denominations remain
+unrecognized or misclassified. This limitation extends to architectural and environmental elements, as Middle
+Eastern building structures, street furniture, signage conventions, and urban layouts differ significantly from Western training environments, resulting in degraded navigation assistance accuracy.
+
+Chapter 2. Literature Review
+
+13
+
+Dataset Availability: The scarcity of publicly available, annotated datasets for Arabic text in natural scenes,
+Egyptian products, Middle Eastern architectural elements, and regional currency severely constrains the development of localized models. This data gap perpetuates the Western-centric bias and prevents effective transfer
+learning for MENA-specific applications.
+
+2.3.2 The Obsolescence of Legacy Computer Vision Architectures
+A substantial proportion of deployed assistive applications relies on computer vision models and architectural
+paradigms developed between 2017 and 2020, predating significant advances in efficient neural network design,
+transformer-based architectures, and mobile-optimized inference engines. This technological lag creates a critical
+performance-accuracy-efficiency trade-off that limits practical utility:
+Latency and Real-Time Performance: Legacy cloud-dependent architectures introduce end-to-end latencies
+ranging from 800ms to 3 seconds, encompassing image capture, network transmission, cloud inference, and response delivery. For safety-critical navigation scenarios, this latency is unacceptable, as obstacles require detection and warning within 200–300ms to enable appropriate user response. Older on-device models, while offering
+lower latency, suffer from reduced accuracy due to over-aggressive model compression and outdated architectural
+designs.
+Semantic Understanding Limitations: Pre-2023 object detection models typically operate as simple “taggers,”
+providing class labels and bounding boxes without contextual understanding, spatial relationships, or scene-level
+semantic reasoning. These systems cannot answer queries such as “Is this intersection safe to cross?” or “Which
+door leads to the exit?” without explicit rule-based programming. The absence of semantic understanding results
+in information overload, as systems cannot filter safety-relevant information from inconsequential environmental
+details.
+Architectural Inefficiency: Modern architectures including YOLOv8/v10 [15], EfficientDet, and vision transformers offer 2–3× improvements in inference efficiency and 15–20% accuracy gains compared to legacy models,
+while requiring comparable or reduced computational resources. The gap in utilizing next-generation 2024–2025
+architectures, including Large Multimodal Models (LMMs) [16] for semantic understanding, represents a missed
+opportunity for substantial capability enhancement in assistive applications.
+
+2.3.3 The Privacy-Utility Paradox
+Current assistive technology architectures present users with a forced dichotomy between functional capability and
+data privacy, requiring them to choose between high-accuracy cloud-based systems that expose sensitive personal
+information and privacy-preserving offline tools with substantially limited functionality. This paradox manifests
+across multiple dimensions:
+Cloud Dependency and Data Exposure: Commercial applications achieving high accuracy rates (Microsoft Seeing AI, Google Lookout, Envision AI) require continuous streaming of visual data to cloud servers for inference.
+This architecture exposes users to multiple privacy risks: (1) transmission of images containing sensitive personal
+information, private documents, and home environment details to third-party commercial servers; (2) potential
+secondary use of collected data for model training, product development, or commercial purposes beyond the
+stated assistive function; (3) vulnerability to data breaches, unauthorized access, or government surveillance; and
+
+Chapter 2. Literature Review
+
+14
+
+(4) lack of user control over data retention, deletion, and usage policies.
+Limited Offline Capabilities: Existing privacy-preserving approaches that operate entirely offline (such as basic
+on-device OCR or simple color detection) offer substantially reduced functionality, with accuracy rates 20–40%
+lower than cloud-based alternatives. These systems typically support only individual isolated functions rather than
+integrated multimodal assistance, forcing users to employ multiple applications for comprehensive environmental
+understanding.
+Research Gap in Privacy-First Architectures: Academic literature reveals a notable scarcity of research addressing privacy-preserving architectures that maintain competitive accuracy and comprehensive functionality.
+Specifically, there is a gap in implementing on-device privacy filtering and selective redaction systems that protect
+sensitive information while enabling cloud-assisted semantic understanding when explicitly authorized by users.
+Furthermore, insufficient research addresses the optimization of state-of-the-art models for complete on-device
+execution on mobile hardware, particularly for computationally intensive tasks such as scene understanding and
+visual question answering.
+
+2.3.4 Lack of Interactive Contextual Awareness
+Existing assistive applications predominantly operate as unidirectional communication systems, delivering pregenerated descriptions or simple object labels without supporting natural conversational interaction or contextaware information filtering. Academic research, particularly the work by Huh et al. (2024) [1], establishes that
+visually impaired users strongly prefer interactive Visual Question Answering (VQA) systems over static image
+captioning. However, current commercial applications fail to provide this capability due to several limitations:
+Absence of Dialogue Systems: Most applications provide single-utterance outputs (e.g., “I see a chair, a table,
+and a person”) without supporting follow-up queries such as “Where is the chair located?” or “Is the path to the
+door clear?” This limitation prevents users from obtaining specific information relevant to their immediate needs
+and decision-making contexts.
+Lack of Intelligent Information Filtering: Existing systems employ indiscriminate description generation, narrating all detected objects regardless of relevance to user safety or current task context. This results in cognitive
+overload and difficulty extracting actionable information from verbose environmental descriptions. There is a
+critical need for context-aware filtering that prioritizes safety-critical information (obstacles, hazards, navigation
+landmarks) over incidental environmental details.
+Limited Semantic Reasoning: Current applications cannot perform scene-level reasoning or spatial relationship
+understanding required for complex queries. Questions such as “Can I reach the exit without encountering obstacles?” or “What items are on the table within my reach?” remain beyond the capabilities of existing assistive
+systems.
+In conclusion, while individual technical components for superior assistive systems exist in isolation within recent
+research contributions, no single integrated platform effectively combines localized Arabic AI, real-time safetyoriented processing, privacy-preserving architectures, and interactive contextual awareness into a unified mobile
+solution. Wareeny is proposed specifically to address this multi-dimensional research gap, providing a comprehensive assistive system tailored to the linguistic, cultural, and privacy requirements of visually impaired users in
+the Arab world.
+
+Chapter 2. Literature Review
+
+2.4
+
+15
+
+Summary of Existing Technologies
+
+To address the identified research gaps and develop a comprehensive assistive system for visually impaired users
+in the Arab world, this project strategically leverages a curated suite of state-of-the-art technologies, frameworks,
+and platforms available as of 2025. This section provides a systematic overview of the key technological enablers that facilitate the development of a responsive, localized, and privacy-aware mobile assistive application.
+The technology stack is selected based on three primary criteria: (1) technical maturity and proven performance
+in production environments, (2) compatibility with mobile deployment constraints including computational efficiency and battery consumption, and (3) support for privacy-preserving on-device processing architectures.
+
+2.4.1 Cross-Platform Mobile Development Frameworks
+Modern assistive applications face the critical requirement of broad platform accessibility, necessitating support
+for both iOS and Android ecosystems to maximize user reach across diverse socioeconomic contexts. Flutter [12],
+developed by Google and released in stable production form in 2018, has emerged as the leading cross-platform
+mobile development framework for assistive technology applications. Flutter employs the Dart programming
+language and a reactive framework architecture, rendering user interfaces through a custom graphics engine (Skia)
+that provides pixel-perfect consistency across platforms without reliance on platform-specific UI components.
+For assistive technology development, Flutter offers several critical technical advantages. First, it provides native performance characteristics with 60 FPS rendering capabilities, essential for real-time camera preview and
+visual feedback interfaces. Second, Flutter supports direct integration with platform-specific APIs through platform channels, enabling access to device cameras, sensors, haptic feedback systems, and accessibility services.
+Third, the framework facilitates seamless embedding of machine learning inference engines including TensorFlow Lite [13] and PyTorch Mobile [14] through Foreign Function Interface (FFI) bindings, enabling on-device
+AI processing without network dependency. Finally, Flutter’s plugin ecosystem includes pre-built packages for
+text-to-speech, speech recognition, and camera manipulation, accelerating development of assistive features while
+maintaining code reusability across platforms.
+
+2.4.2 Real-Time Object Detection Architectures
+Real-time object detection represents a foundational capability for assistive navigation and environmental awareness systems. The technical requirements are stringent: detection algorithms must achieve inference speeds exceeding 10 frames per second on mobile hardware while maintaining mean Average Precision (mAP) above 35%
+on standard benchmark datasets. The YOLO (You Only Look Once) family of single-stage detection architectures
+has established dominance in this domain due to their optimal balance of speed and accuracy.
+YOLOv8 [15], released by Ultralytics in 2023, represents the current state-of-the-art in efficient object detection.
+The architecture introduces several technical innovations over previous versions: (1) an anchor-free detection head
+that eliminates the need for predefined anchor box configurations, improving generalization across object scales;
+(2) a modified CSPDarknet backbone with cross-stage partial connections that reduce computational complexity
+while maintaining feature extraction capability; (3) a Path Aggregation Network (PANet) feature pyramid that
+enhances multi-scale object detection; and (4) optimized loss functions combining Classification, Localization,
+and Distribution Focal Loss for improved training convergence.
+
+Chapter 2. Literature Review
+
+16
+
+Empirical evaluation demonstrates that YOLOv8n (nano variant) achieves 37.3% mAP on the COCO dataset [11]
+while maintaining inference speeds of 15.2 FPS on mid-range mobile processors with only 6.2 MB model size.
+This performance profile makes it ideally suited for safety-critical assistive applications requiring detection of
+dynamic obstacles, traffic signals, indoor structural elements, and in-hand objects with minimal latency. The
+model’s efficiency enables continuous real-time processing without excessive battery consumption, addressing a
+critical constraint identified in existing commercial applications such as Google Lookout [8].
+
+2.4.3 Large Multimodal Models for Semantic Understanding
+The emergence of Large Multimodal Models (LMMs) in 2023–2024 has fundamentally transformed the landscape
+of visual understanding and human-computer interaction. Unlike traditional computer vision systems that operate as discriminative classifiers (identifying predefined object categories), LMMs employ generative transformer
+architectures trained on billions of image-text pairs, enabling semantic reasoning, contextual understanding, and
+natural language interaction with visual content.
+OpenAI’s GPT-4 with Vision (GPT-4V) [16], released in September 2023, exemplifies this new paradigm. The
+model processes images through a vision encoder that generates visual token representations, which are then integrated with text tokens in a unified transformer architecture capable of joint reasoning across modalities. This
+approach enables several capabilities critical for assistive technology: (1) Visual Question Answering (VQA),
+allowing users to pose natural language queries about image content and receive contextually relevant responses;
+(2) scene understanding with spatial reasoning, enabling descriptions of object relationships, spatial layouts, and
+navigational affordances; (3) document understanding, including extraction and interpretation of text within complex layouts, tables, and forms; and (4) interactive dialogue, supporting multi-turn conversations that allow users
+to iteratively refine queries and obtain clarification.
+For assistive applications, LMMs address the fundamental limitation of static image captioning identified in research by Huh et al. (2024) [1], enabling visually impaired users to interrogate their environment through natural
+conversation. However, current LMM architectures require substantial computational resources (GPT-4V operates
+exclusively via cloud API), introducing latency and privacy concerns. The strategic deployment of LMMs in the
+proposed system architecture therefore necessitates a hybrid approach: lightweight on-device models for latencysensitive safety detection, with selective cloud-based LMM invocation for complex semantic understanding tasks
+when explicitly requested by users and subject to privacy filtering.
+
+2.4.4 On-Device Optical Character Recognition Engines
+Optical character recognition represents a critical enabling technology for visually impaired users, providing access to printed documents, product labels, signage, and digital text displays. For assistive applications, OCR
+engines must satisfy several technical requirements: (1) multilingual support including Arabic script recognition,
+(2) on-device inference capability to ensure privacy and offline functionality, (3) robustness to varying lighting
+conditions, text orientations, and image quality, and (4) computational efficiency compatible with mobile deployment.
+Google ML Kit [17], introduced in 2018, provides an on-device text recognition API leveraging deep learning
+models trained on diverse text datasets. The framework supports over 100 languages including Arabic, with
+specialized models for dense text (documents) and sparse text (scene text such as signs and labels). ML Kit
+
+Chapter 2. Literature Review
+
+17
+
+employs a two-stage pipeline: text detection using an adapted EAST (Efficient and Accurate Scene Text) detector,
+followed by text recognition using recurrent neural networks with attention mechanisms. The on-device models
+require approximately 30 MB storage and achieve inference speeds of 100–300 ms per image on modern mobile
+devices. For Latin scripts, accuracy exceeds 95% on printed text, though performance degrades to 70–80% on
+handwritten text and complex scene text scenarios.
+EasyOCR [18], an open-source alternative developed by JaidedAI, provides greater flexibility and customization
+capability. Built on PyTorch, EasyOCR supports 80+ languages with dedicated models for Arabic script. The
+framework allows fine-tuning on custom datasets, enabling optimization for region-specific fonts, handwriting
+styles, and domain-specific terminology. However, EasyOCR’s model sizes (40–60 MB per language pair) and
+inference times (300–800 ms) present trade-offs against ML Kit’s efficiency.
+For Arabic OCR specifically, both engines face challenges stemming from Arabic script characteristics discussed
+in Section 2.2.2. Research by Ayadi et al. (2025) [2] demonstrates that specialized Arabic OCR models trained
+on regional datasets can achieve 89% accuracy compared to 68% for generic multilingual engines. This finding
+motivates the incorporation of both Google ML Kit for general text recognition and specialized Arabic OCR
+models for enhanced accuracy on Arabic-language content in the proposed system architecture.
+
+2.4.5 Hybrid Cloud-Local Processing Architectures
+Contemporary assistive system design increasingly adopts hybrid architectures that strategically partition computational workloads between on-device (edge) processing and cloud-based inference. This architectural paradigm
+addresses the fundamental tension between capability, latency, privacy, and resource constraints that characterize
+mobile assistive applications.
+In hybrid architectures, latency-sensitive and privacy-critical tasks execute locally on the mobile device using
+lightweight, optimized models. These tasks typically include real-time obstacle detection, fall detection, traffic
+light recognition, and personal safety features requiring sub-300ms response times. Conversely, computationally intensive tasks benefiting from large-scale models—such as complex scene understanding, detailed document
+analysis, and interactive visual question answering—are selectively offloaded to cloud infrastructure when network connectivity is available and user privacy preferences permit.
+The technical implementation of hybrid architectures requires careful orchestration: (1) intelligent task classification to determine local versus cloud execution based on latency requirements, data sensitivity, and network
+availability; (2) privacy-preserving preprocessing that filters or encrypts sensitive visual elements before cloud
+transmission, as proposed by Martin & Moon (2025) [6]; (3) graceful degradation mechanisms that maintain
+core functionality when offline or in low-connectivity scenarios; and (4) battery-aware scheduling that balances
+processing demands against device energy constraints.
+For the proposed Wareeny system, the hybrid architecture prioritizes user privacy and offline capability while
+strategically leveraging cloud-based Large Multimodal Models for enhanced semantic understanding when explicitly requested by users and subject to local privacy filtering. This approach addresses the privacy-utility paradox
+identified in Section 2.3.3, providing comprehensive functionality without compromising data protection principles.
+
+Chapter 3
+System Analysis and Design
+
+Chapter 3. System Analysis and Design
+
+19
+
+System Analysis and Design
+3.1
+
+System Overview and Proposed Concept
+
+The system overview described in this chapter outlines the architecture and functionality of the AI-powered solution developed to assist visually impaired individuals in navigating both indoor and outdoor environments. The
+proposed system leverages advanced artificial intelligence techniques, including computer vision, optical character recognition (OCR), object detection, and scene understanding, to analyze visual data captured through a
+camera-enabled device in real time.
+The core of the system is built upon a robust AI model trained to recognize obstacles, read text from the surrounding environment, and identify key objects and landmarks that are essential for safe and independent movement.
+Once the AI model is trained and optimized for performance, it is integrated into a user-friendly application designed specifically for visually impaired users. The application serves as the main interaction platform, providing
+audio and haptic feedback to convey meaningful information to the user. The AI model processes visual inputs,
+extracts relevant information such as text, objects, or navigation cues, and delivers clear and timely guidance to
+help the user understand their surroundings.
+This integration enhances the user’s ability to move safely and confidently in complex environments, such as
+streets, buildings, and public spaces. By automating environment perception and information delivery, the system
+reduces dependence on external assistance and improves overall accessibility.
+The system model discussed in this chapter focuses on the interaction between the AI components and the application, the flow of data from image capture to user feedback, and how the generated insights are utilized to support
+real-time decision-making for visually impaired users.
+
+3.2
+
+Functional Requirements
+
+The functional requirements of the Wareeny system are categorized into four main areas of assistance:
+
+3.2.1 Indoor Assistance
+FR-IN-1: Indoor Object Detection: The system shall detect indoor objects and estimate distance from them.
+FR-IN-2: In-Hand Detection: The system shall detect specifically the object that is in the hand of the user, as to not
+get confused by other objects in the environment.
+FR-IN-3: Brand Detector: The system shall identify product brands indoors.
+FR-IN-4: Currency Reader: The system shall detect and read currency denominations.
+FR-IN-5: Privacy Mode: The system shall detect sensitive data without speaking it aloud.
+
+Chapter 3. System Analysis and Design
+
+20
+
+FR-IN-6: Saved Items: The system shall identify user-owned items using stored reference images.
+
+3.2.2 Outdoor Assistance
+FR-OUT-1: Outdoor Object Detection: The system shall detect cars, bicycles, and other outdoor obstacles.
+FR-OUT-2: Outdoor Object Finder: The system shall locate ATMs, benches, trash cans, and other helpful outdoor
+items.
+FR-OUT-3: Outdoor Reader: The system shall quickly read shop names, billboards, and street signs.
+FR-OUT-4: Traffic Light Status: The system shall detect traffic light colors for crossing guidance.
+
+3.2.3 OCR Features
+FR-OCR-1: Read Document: The system shall read documents, menus, books, and labels.
+FR-OCR-2: QA Mode: Instead of just reading a document word for word, the system shall allow users to ask questions
+about it to get specific responses.
+FR-OCR-3: Danger Word Alerts: The system shall notify users when dangerous keywords appear, such as “Wet Floor,”
+“Danger,” or “Caution.”
+
+3.2.4 Audio and Haptics Service
+FR-AH-1: Danger Mode: The system shall enable danger mode using voice command, gesture, or phone shake.
+FR-AH-2: Emergency Auto Call: The system shall automatically call the user’s emergency contact in danger mode.
+FR-AH-3: Emergency Auto Location: The system shall send the current location of the user to their emergency
+contact in danger mode.
+FR-AH-4: Directional Audio: The system shall provide left or right ear cues to indicate object direction.
+
+3.3
+
+Non-Functional Requirements
+
+The non-functional requirements define the quality attributes of the Wareeny system:
+
+• Performance: The system shall provide real-time processing with minimal delay.
+• Accessibility: The system shall offer full control using voice or simple gestures.
+• Privacy: Local processing is preferred to ensure data protection.
+• Reliability: The system must function in various indoor and outdoor lighting conditions.
+• Usability: The system shall provide clear and consistent audio feedback with spatial cues.
+
+Chapter 3. System Analysis and Design
+
+21
+
+• Scalability: The system shall support future expansion and improved AI models.
+• Security: The system shall protect user data and stored personal images.
+• Power Efficiency: The system shall reduce battery consumption during continuous operation.
+
+3.4
+
+System Environment
+
+The proposed system is developed using a combination of modern hardware capabilities and advanced software
+technologies to ensure efficient, accurate, and real-time assistance for visually impaired users.
+
+3.4.1 Hardware Environment
+Table 3.1 summarizes the hardware requirements for the Wareeny system.
+Table 3.1: Hardware Environment Specifications
+Component
+
+Specification
+
+User Mobile Device
+
+A modern smartphone capable of running AI-powered applications
+
+Processor (CPU)
+
+Multi-core processor (octa-core 2.0 GHz or higher recommended) to support
+real-time image processing and AI inference
+
+Memory (RAM)
+
+Minimum 2 GB RAM required; 4 GB or more recommended for smooth execution of deep learning models such as YOLO v8 and PyTorch-based frameworks
+
+Camera
+
+High-definition rear camera used for capturing images and video streams necessary for object detection, text recognition, and currency identification
+
+Sensors
+
+Built-in sensors such as accelerometer and gyroscope to enhance spatial awareness and provide navigation-related feedback
+
+Connectivity
+
+Active internet connection (Wi-Fi or 4G/5G) required for cloud-based services,
+including advanced scene understanding and text-to-speech processing
+
+3.4.2 Software Environment
+Table 3.2 presents the software technologies and frameworks utilized in the Wareeny system.
+
+Chapter 3. System Analysis and Design
+
+22
+
+Table 3.2: Software Environment Technologies
+Component/Tool
+
+Purpose and Description
+
+AI and Machine Learning Frameworks
+PyTorch & OpenCV
+
+Used for real-time object detection, color recognition, and localized currency identification
+
+YOLO v8
+
+Employed as the primary deep learning architecture for fast and accurate
+object detection in both indoor and outdoor environments
+
+Text Recognition (OCR)
+EasyOCR & Google ML Kit
+
+Used for recognizing English and Arabic text from signs, labels, and printed
+materials
+
+OpenAI GPT-4 with Vision
+
+Utilized for advanced scene understanding, complex text interpretation, and
+enhanced Arabic OCR tasks
+
+Voice and Audio Processing
+Google
+
+Cloud
+
+Text-to-Speech
+
+Provides natural and clear audio feedback to guide users and describe their
+
+(TTS)
+
+surroundings
+
+Whisper AI
+
+Used for accurate speech-to-text processing, enabling voice commands and
+user interaction
+
+Application Development Environment
+Flutter (Dart)
+
+Used to develop a cross-platform mobile application compatible with both
+Android and iOS devices, ensuring accessibility and consistent user experience
+
+System Architecture
+
+The system architecture illustrates the high-level design of the Wareeny application, showing how different components interact to provide assistive functionality to the user.
+
+23
+
+Figure 3.1: System Architecture Diagram
+
+Chapter 3. System Analysis and Design
+
+3.5
+
+Class Diagram
+
+The class diagram illustrates the structural design of the Wareeny system, depicting the key classes, their attributes, methods, and the relationships between them. The diagram
+captures the core components of the application, including the user interface controllers, AI processing modules, service classes for object detection, OCR, and audio feedback,
+as well as data models for storing user preferences and detected objects. The relationships shown—such as associations, compositions, and inheritances—demonstrate how the
+system components collaborate to deliver seamless assistive functionality. This object-oriented design ensures modularity, maintainability, and scalability, allowing for future
+enhancements and the integration of additional AI models.
+
+24
+
+Figure 3.2: Class Diagram
+
+Chapter 3. System Analysis and Design
+
+3.6
+
+Chapter 3. System Analysis and Design
+
+3.7
+
+25
+
+Use Case Diagram
+
+The use case diagram illustrates the interactions between the user and the Wareeny system, showing the various
+functionalities available to visually impaired users. Figure 3.3 presents the system use cases.
+
+Figure 3.3: Use Case Diagram
+
+Chapter 3. System Analysis and Design
+
+3.8
+
+Sequence Diagrams
+
+The following sequence diagrams illustrate the flow of interactions for the key features of the Wareeny system.
+
+3.8.1 General Flow Diagrams
+
+Figure 3.4: General Flow 1: OCR Processing
+
+Figure 3.5: General Flow 2: Object Detection Processing
+
+26
+
+Chapter 3. System Analysis and Design
+
+Figure 3.6: General Flow 3: Navigation Processing
+
+3.8.2 Indoor Features
+
+Figure 3.7: Sequence Diagram: Indoor Object Detection and Distance Estimation
+
+27
+
+Chapter 3. System Analysis and Design
+
+Figure 3.8: Sequence Diagram: In-Hand Object Detection
+
+Figure 3.9: Sequence Diagram: Brand and Currency Detection
+
+28
+
+Chapter 3. System Analysis and Design
+
+Figure 3.10: Sequence Diagram: Saved Items Finder
+
+3.8.3 Outdoor Features
+
+Figure 3.11: Sequence Diagram: Outdoor Object Detection
+
+29
+
+Chapter 3. System Analysis and Design
+
+Figure 3.12: Sequence Diagram: Outdoor Object Finder
+
+Figure 3.13: Sequence Diagram: Outdoor Reader for Signs
+
+30
+
+Chapter 3. System Analysis and Design
+
+Figure 3.14: Sequence Diagram: Outdoor Navigation
+
+31
+
+Chapter 3. System Analysis and Design
+
+Figure 3.15: Sequence Diagram: Traffic Light Status Detection
+
+3.8.4 OCR Features
+
+Figure 3.16: Sequence Diagram: Read Document
+
+32
+
+Chapter 3. System Analysis and Design
+
+Figure 3.17: Sequence Diagram: QA Mode (Visual Query)
+
+Figure 3.18: Sequence Diagram: Danger Word Alerts
+
+33
+
+Chapter 3. System Analysis and Design
+
+3.8.5 Safety and Emergency Features
+
+Figure 3.19: Sequence Diagram: Danger Mode (Hazard Detection)
+
+Figure 3.20: Sequence Diagram: Emergency Auto Call and Location Sharing
+
+34
+
+Chapter 3. System Analysis and Design
+
+Figure 3.21: Sequence Diagram: Privacy Mode (Secure Shutdown)
+
+3.8.6 Audio and Haptics Features
+
+Figure 3.22: Sequence Diagram: Directional Audio
+
+35
+
+ERD Diagram
+
+The Entity-Relationship Diagram (ERD) illustrates the database schema and data model of the Wareeny system. The diagram depicts the core entities required to store user
+information, system preferences, detected objects, saved items, emergency contacts, and usage history. The relationships between these entities—such as one-to-many and
+many-to-many associations—demonstrate how data flows and persists throughout the application lifecycle. This relational design ensures efficient data storage, quick retrieval
+of user-specific information, and maintains the integrity of personal data such as saved item references and emergency contact details. The ERD serves as the foundation for
+implementing a robust and scalable database structure that supports all functional requirements of the assistive system.
+
+Chapter 3. System Analysis and Design
+
+3.9
+
+Figure 3.23: Entity-Relationship Diagram
+36
+
+Bibliography
+
+37
+
+Bibliography
+[1] M. Huh et al., “Long-Form Answers to Visual Questions from Blind and Low Vision People,” arXiv preprint
+arXiv:2408.06303, 2024. [Online]. Available: https://arxiv.org/abs/2408.06303
+[2] M. Ayadi et al., “Empowering Accessibility in Handwritten Arabic Text Recognition for Visually Impaired Individuals through Optimized Generative Adversarial Network (GAN) model,” Journal of Disability Research, vol. 4, no. 1, 2025. [Online]. Available: https://www.scienceopen.com/
+hosted-document?doi=10.57197/JDR-2024-0110
+[3] A. M. Ghanem, H. A. Youness, M. Wahba, and H. M. Abdelaal, “Recognizing Egyptian currency for people with visual impairment using deep learning models,” Scientific Reports, vol. 15, no. 1, 2025. [Online].
+Available: https://www.researchgate.net/publication/396095205
+[4] W. Wang et al., “YOLO-OD: Obstacle Detection for Visually Impaired Navigation Assistance,” Sensors, vol.
+24, no. 23, p. 7621, 2024. [Online]. Available: https://www.mdpi.com/1424-8220/24/23/7621
+[5] K. Wojtowicz, “The Impact of YOLOv8 and YOLOv9 Neural Network Architectures on the Quality and
+Speed of Object Detection in Assistive VR/MR Applications for Visually Impaired Users,” European Research Studies Journal, vol. 28, no. 4, pp. 1044–1057, 2025. [Online]. Available: https://ersj.eu/
+journal/4157
+[6] A. D. Martin and I. Moon, “Privacy-Preserving Image Captioning with Partial Encryption and Deep
+Learning,” Mathematics, vol. 13, no. 4, p. 554, 2025. [Online]. Available: https://www.mdpi.com/
+2227-7390/13/4/554
+[7] Microsoft Corporation, “Seeing AI,” 2017. [Online]. Available: https://www.microsoft.com/
+en-us/ai/seeing-ai
+[8] Google LLC, “Lookout by Google,” 2019. [Online]. Available: https://blog.google/products/
+android/lookout/
+[9] Envision B.V., “Envision AI,” 2018. [Online]. Available: https://www.letsenvision.com/
+[10] Vodafone Egypt, “E3rafli: Mobile Application for the Visually Impaired,” 2017. [Online]. Available:
+https://www.vodafone.com.eg/en/e3rafli
+[11] T.-Y. Lin, M. Maire, S. Belongie, J. Hays, P. Perona, D. Ramanan, P. Dollár, and C. L. Zitnick, “Microsoft
+COCO: Common Objects in Context,” in European Conference on Computer Vision (ECCV), 2014, pp.
+740–755. [Online]. Available: https://arxiv.org/abs/1405.0312
+[12] Google LLC, “Flutter - Build apps for any screen,” 2024. [Online]. Available: https://flutter.dev/
+[13] Google LLC, “TensorFlow Lite - ML for Mobile and Edge Devices,” 2024. [Online]. Available: https:
+//www.tensorflow.org/lite
+[14] Meta Platforms, Inc., “PyTorch Mobile,” 2024. [Online]. Available: https://pytorch.org/mobile/
+[15] G. Jocher, A. Chaurasia, and J. Qiu, “Ultralytics YOLOv8,” 2023. [Online]. Available: https://
+github.com/ultralytics/ultralytics
+
+Bibliography
+
+38
+
+[16] OpenAI, “GPT-4 with Vision System Card,” 2023. [Online]. Available: https://openai.com/
+research/gpt-4v-system-card
+[17] Google LLC, “ML Kit - Machine Learning for Mobile Developers,” 2024. [Online]. Available: https:
+//developers.google.com/ml-kit
+[18] JaidedAI, “EasyOCR - Ready-to-use OCR with 80+ languages,” 2024. [Online]. Available: https://
+github.com/JaidedAI/EasyOCR
+[19] World Health Organization, “World Report on Vision,” Geneva, Switzerland, 2019. [Online]. Available:
+https://www.who.int/publications/i/item/9789241516570
+
+

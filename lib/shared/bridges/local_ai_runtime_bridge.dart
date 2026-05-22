@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-import 'package:wareny/shared/bridges/native_bridge_channels.dart';
+import 'package:wareeny/shared/bridges/native_bridge_channels.dart';
 
 class LocalAiRuntimeBridge {
   const LocalAiRuntimeBridge()

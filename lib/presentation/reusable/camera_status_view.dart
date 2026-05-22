@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:wareny/core/theme/app_colors.dart';
-import 'package:wareny/core/theme/app_spacing.dart';
+import 'package:wareeny/core/theme/app_colors.dart';
+import 'package:wareeny/core/theme/app_spacing.dart';
 
 class CameraStatusView extends StatelessWidget {
   const CameraStatusView({

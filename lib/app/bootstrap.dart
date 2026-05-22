@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:wareny/app/wareny_app.dart';
-import 'package:wareny/core/config/app_config.dart';
-import 'package:wareny/core/di/app_scope.dart';
-import 'package:wareny/core/di/service_registry.dart';
+import 'package:wareeny/app/wareny_app.dart';
+import 'package:wareeny/core/config/app_config.dart';
+import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/di/service_registry.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();

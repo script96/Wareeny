@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:wareny/core/theme/app_colors.dart';
-import 'package:wareny/core/theme/app_spacing.dart';
+import 'package:wareeny/core/theme/app_colors.dart';
+import 'package:wareeny/core/theme/app_spacing.dart';
 
 class AppTheme {
   const AppTheme._();

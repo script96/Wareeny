@@ -2,9 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import 'package:wareny/core/theme/app_colors.dart';
-import 'package:wareny/core/theme/app_spacing.dart';
-import 'package:wareny/presentation/navigation/app_mode.dart';
+import 'package:wareeny/core/theme/app_colors.dart';
+import 'package:wareeny/core/theme/app_spacing.dart';
+import 'package:wareeny/presentation/navigation/app_mode.dart';
 
 /// Redesigned glassmorphism mode selector bar.
 ///
