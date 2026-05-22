@@ -1,638 +1,376 @@
-# Wareeny Delivery Roadmap
+# Wareeny Feature Roadmap
 
-This roadmap is optimized for:
+This roadmap is organized around the actual Wareeny feature set described in the thesis and the system architecture diagram.
 
-- less than one month remaining
-- a small team working in parallel
-- an offline-first app with a thin backend
-- one existing remote in-hand detector
-- smoothness and battery efficiency as top priorities
+Wareeny should be implemented as two main AI modules:
+
+- `Object Detection Module`: real-time object, obstacle, traffic light, in-hand, saved item, and finder features.
+- `OCR Module`: document reading, quick text scanning, outdoor reading, currency, brand, privacy, and danger-word features.
+
+The other parts of the application are supporting services. They should not become separate user-facing AI modules. They must plug into the two AI modules above:
+
+- `Feedback and Interaction Service`: speech, haptics, priority queue, audio focus, and directional cues.
+- `Safety and Alert System`: danger mode, emergency call, danger-word alerts, and critical override payloads.
+- `System Controller`: mode manager, permission handler, battery monitor, and runtime throttling.
+- `Presentation Layer`: voice command UI, camera preview, visual overlays, current mode indicator, and danger alerts.
+- `Data Layer`: saved items, emergency contacts, privacy settings, item logs, and offline AI model files.
+- `Backend`: remote in-hand detection, app config, model manifest, cloud AI routes, and storage sync if needed.
 
 ## Delivery Strategy
 
-Ship in layers, not all at once.
+Build the features in a sequence that creates a demoable app early, then deepens accuracy, safety, storage, and backend support.
 
-- `Layer 1`: foundation and critical path
-- `Layer 2`: local CV and OCR flows
-- `Layer 3`: Gemma routing and optional local model install
-- `Layer 4`: polish, profiling, and fallback hardening
+1. Build one object detection feature end-to-end.
+2. Add the special remote-backed in-hand feature.
+3. Add saved/lost item workflows.
+4. Add navigation and obstacle safety.
+5. Add outdoor object and traffic-light support.
+6. Add OCR reading flows.
+7. Add OCR-specialized recognition and privacy features.
+8. Integrate feedback, safety, controls, and runtime performance.
+9. Finish backend, storage, configuration, and release hardening.
 
 ## Definition Of Done For The Graduation Build
 
-The build is done when all of the following work on real phones:
+The build is done when all of these work on real phones:
 
-- indoor or outdoor mode can run smoothly without visible UI lag
-- obstacle-related feedback is local and responsive
-- read mode can OCR and speak text
-- cloud LLM path works through `Gemma 4 E4B`
-- if internet is unavailable and a local model is installed, LLM tasks switch to local automatically
-- the in-hand mode works through the deployed Python server
-- battery and thermal downgrade rules are applied
+- object detection features run through one shared object detection pipeline
+- OCR features run through one shared OCR pipeline
+- only one heavy mode runs at a time
+- results are delivered through speech and haptics without freezing the UI
+- obstacle and danger feedback has priority over normal labels
+- document, quick text, sign, currency, brand, and privacy OCR flows work
+- stuff finder, in-hand detection, saved item finder, obstacle avoidance, outdoor detection, and traffic light status work
+- emergency contact and danger mode flows are configured and testable
+- backend endpoints are reachable and fail safely
+- local storage persists settings, saved items, emergency contacts, logs, and model metadata
+- battery and thermal downgrade rules are active
 
-## Critical Path
+## Module Mapping
 
-These items must start first because everything else depends on them:
+| Feature | Main Module | Supporting Services |
+| --- | --- | --- |
+| Stuff Finder | Object Detection | feedback, camera, mode manager, item log |
+| What's In My Hand | Object Detection | backend proxy, feedback, capture/upload |
+| Lost Item Finder / Saved Items | Object Detection | local storage, reference images, feedback |
+| Obstacle Avoidance | Object Detection | safety alerts, haptics, battery controller |
+| Indoor Navigation | Object Detection | directional audio, mode manager, feedback |
+| Outdoor Object Detection | Object Detection | safety alerts, visual overlay, feedback |
+| Outdoor Object Finder | Object Detection | finder rules, feedback, current mode UI |
+| Traffic Light Status | Object Detection | safety alerts, outdoor mode, speech |
+| Smart Framing | Object Detection + OCR | camera guidance, haptics, visual overlay |
+| Document Reader | OCR | TTS, text chunking, repeat/stop controls |
+| Quick Text Scanner | OCR | camera capture, speech, mode manager |
+| Outdoor Reader | OCR | sign detection, text normalization, feedback |
+| Currency Reader | OCR | local recognition, speech, item log |
+| Brand Detector | OCR | label recognition, product feedback |
+| Privacy Mode | OCR | sensitive text detection, safe suppression |
+| Danger Word Alerts | OCR | safety alerts, priority queue |
+| QA Mode | OCR | OCR context, LMM route, speech |
+| Emergency Auto Call | Supporting Service | danger mode, contacts, location |
+| Backend And Storage | Supporting Service | config, remote AI, persistence |
 
-1. mobile project setup and architecture skeleton
-2. backend deployment skeleton
-3. one real phone benchmark baseline
-4. model routing contract lock
-5. camera and inference loop integration
+## Phase 1: Stuff Finder
 
-## Team Lanes
+Goal: deliver the first complete object detection feature and prove the shared object detection pipeline.
 
-Use 4 working lanes in parallel:
+Module: `Object Detection`
 
-- `Lane A`: mobile shell, state, settings, routing UX
-- `Lane B`: native performance layer, camera, downloads, thermal and battery hooks
-- `Lane C`: CV and OCR features
-- `Lane D`: backend, Gemma cloud path, in-hand service integration
+### Task List
 
-## Phase 1: Foundation And Architecture Lock
-
-Goal: remove uncertainty and create the base that everything else will build on.
-
-### 1. Create the Flutter app shell
-
-Subtasks:
-
-- initialize the Flutter project structure
-- create environment/config support for dev and prod values
-- add navigation shell with placeholder screens for:
-  - home
-  - indoor mode
-  - outdoor mode
-  - read mode
-  - ask mode
-  - in-hand mode
-  - settings
-- add shared theme and accessibility-safe UI defaults
-- add app-level dependency injection or service registration
-
-### 2. Create Android and iOS native bridge placeholders
-
-Subtasks:
-
-- create one bridge module for camera
-- create one bridge module for audio and haptics
-- create one bridge module for battery and thermal signals
-- create one bridge module for file download
-- create one bridge module for local AI runtime integration
-- define method-channel or FFI contract names clearly
-
-### 3. Wire local config consumption from backend contracts
-
-Subtasks:
-
-- create config models matching `GET /app-config`
-- create manifest models matching `GET /model-manifest`
-- add a config fetch service
-- add caching for last successful config and manifest
-- add safe fallback values if the backend is unavailable
-
-### 4. Stand up the backend locally
-
-Subtasks:
-
-- create local virtual environment
-- install requirements
-- run the FastAPI backend locally
-- verify all current endpoints return valid responses
-- add example `.env` file with placeholder values
-
-### 5. Freeze the first-release feature list
-
-Subtasks:
-
-- mark features as:
-  - must have
-  - should have
-  - optional
-- confirm which modes are demo-critical
-- remove any advanced feature that does not support the final demo or grading goal
-
-### 6. Pick and lock test devices
-
-Subtasks:
-
-- choose at least one Android phone
-- choose at least one iPhone
-- document RAM, storage, OS version, and chipset if possible
-- use those devices as the baseline for smoothness decisions
-
-### 7. Run baseline measurements
-
-Subtasks:
-
-- measure camera preview smoothness
-- measure CPU and memory usage during a simple preview session
-- measure thermal rise after a short camera session
-- note battery drain trend during repeated use
-- write down acceptable target thresholds
+- create the stuff finder mode entry in the app mode list
+- connect the live camera preview to the object detection pipeline
+- define the target object selection flow
+- create detector input and output models for labels, confidence, box, direction, and distance estimate
+- integrate the first local YOLO/LiteRT detector path or a temporary detector adapter
+- filter detections to the selected target object
+- add directional feedback such as left, right, center, near, and far
+- add haptic feedback for target proximity
+- add cooldown rules so the same target is not spoken every frame
+- show minimal visual overlay for debug and sighted testing
+- log detection latency and selected target events
+- test the feature on at least one Android phone and one iPhone if available
 
 Deliverables:
 
-- mobile app skeleton
-- backend running locally
-- routing and config models locked
-- benchmark note with test devices
+- stuff finder screen or mode
+- working shared object detection adapter
+- spoken and haptic target guidance
+- first latency baseline
 
-## Phase 2: Real-Time Runtime Path
+## Phase 2: What's In My Hand
 
-Goal: get the core camera and mode system alive early.
+Goal: implement the special in-hand recognition feature while keeping it behind the same object detection interface.
 
-### 1. Integrate camera preview with throttled frame sampling
+Module: `Object Detection`
 
-Subtasks:
+### Task List
 
-- connect native camera preview to the app screen
-- create frame sampler logic
-- make sampler configurable by mode
-- ensure preview remains smooth while frames are sampled
-- log effective sample rate
-
-### 2. Add `ModeManager`
-
-Subtasks:
-
-- create mode enum and current-mode store
-- add enter and exit handlers for each mode
-- ensure exiting one mode stops its workers cleanly
-- ensure only one heavy mode can be active at a time
-- add debug logging for mode transitions
-
-### 3. Add `FeedbackEngine` skeleton
-
-Subtasks:
-
-- create feedback event model
-- create priority queue structure
-- support speech events and haptic events
-- allow high-priority interruption
-- add basic deduplication key support
-
-### 4. Add local detector interface
-
-Subtasks:
-
-- create common detector input/output models
-- define async detector lifecycle:
-  - load
-  - infer
-  - unload
-- create one placeholder implementation for testing
-- expose latency logging on each inference call
-
-### 5. Add OCR mode entry flow
-
-Subtasks:
-
-- create read mode UI state
-- connect capture button or trigger action
-- route captured image into OCR pipeline placeholder
-- display and speak placeholder OCR output
-
-### 6. Deploy backend skeleton
-
-Subtasks:
-
-- create Cloud Run service
-- set environment variables
-- deploy the FastAPI app
-- verify health endpoint remotely
-- verify app-config and manifest endpoints remotely
-
-### 7. Connect the in-hand proxy shape
-
-Subtasks:
-
-- confirm request format expected by your existing server
-- confirm response keys returned by the server
-- adapt `POST /in-hand/detect` proxy if needed
-- test success case and failure case
-
-### 8. Define battery and thermal thresholds
-
-Subtasks:
-
-- choose low-battery threshold
-- choose thermal-degrade threshold
-- place thresholds in backend config
-- make app read thresholds on startup
+- create the in-hand mode entry and camera capture flow
+- guide the user to place the object in frame using speech or haptics
+- capture a still image or short burst for analysis
+- connect the app to `POST /in-hand/detect`
+- adapt request and response models to the existing remote in-hand server
+- normalize remote results into the shared object detection result model
+- speak the best result with confidence-aware wording
+- handle no object, multiple objects, timeout, and backend unavailable states
+- prevent upload from blocking the camera UI
+- add retry and cancel behavior
+- log round-trip latency and failure reason
+- keep a future `LocalInHandProvider` interface ready for later migration
 
 Deliverables:
 
-- camera loop working
-- mode isolation working
-- backend reachable from app
-- in-hand proxy contract confirmed
+- in-hand mode end-to-end
+- remote provider hidden behind a common interface
+- safe failure messages when the server is unavailable
 
-## Phase 3: Local CV And OCR Core
+## Phase 3: Lost Item Finder And Saved Items
 
-Goal: make local assistance features usable on-device.
+Goal: let users save personal items and find them later using the object detection module plus local storage.
 
-### 1. Integrate first local CV model
+Module: `Object Detection`
 
-Subtasks:
+### Task List
 
-- choose first detector to prioritize
-- prepare model file and metadata
-- add native runtime loading path
-- connect inference output to shared detector result model
-- surface bounding or label results to the app
-- measure latency on real device
-
-### 2. Add result deduplication and cooldown logic
-
-Subtasks:
-
-- create repeated-result suppression rules
-- define cooldown window per result type
-- suppress duplicate speech across adjacent frames
-- keep danger results exempt or lightly throttled
-
-### 3. Integrate OCR using platform-native stack
-
-Subtasks:
-
-- connect Android OCR path
-- connect iPhone OCR path
-- normalize OCR output into one shared model
-- handle Arabic and English text safely
-- log OCR latency and output size
-
-### 4. Make read mode capture and speak text
-
-Subtasks:
-
-- connect OCR result to speech output
-- split long text into readable chunks
-- add stop, repeat, and cancel behavior
-- ensure speech does not freeze the UI
-
-### 5. Add thermal and battery controller hooks
-
-Subtasks:
-
-- read battery level from native side
-- read thermal state from native side
-- expose these signals to runtime controllers
-- lower frame rate when thresholds are crossed
-- disable nonessential overlays when needed
-
-### 6. Add event logging for performance inspection
-
-Subtasks:
-
-- log mode changes
-- log inference start and end times
-- log OCR duration
-- log feedback queue events
-- log thermal downgrade events
-
-### 7. Tune frame rate by mode
-
-Subtasks:
-
-- choose high-sample rate for navigation mode
-- choose lower-sample rate for read mode
-- verify each mode still feels responsive
-- record final chosen values
+- create saved item data model with name, label, reference image path, created date, and last found date
+- add local storage for saved item records and reference images
+- build the save-item capture flow
+- allow the user to name an item by voice or text input
+- create the lost item finder mode
+- load saved item targets into the object detection pipeline
+- match detections against saved item labels or reference metadata
+- speak item direction and proximity
+- update item log when an item is found
+- add delete and rename behavior for saved items
+- protect saved item images with local-only storage rules
+- test with common personal objects in cluttered indoor scenes
 
 Deliverables:
 
-- first local CV feature on device
-- OCR read mode working
-- battery and thermal hooks active
+- saved item registry
+- lost item finder mode
+- local item log
 
-## Phase 4: Cloud LLM And In-Hand End-To-End
+## Phase 4: Obstacle Avoidance And Indoor Navigation
 
-Goal: complete the connected cloud features without hurting smoothness.
+Goal: make the safety-critical indoor movement features local, fast, and prioritized.
 
-### 1. Integrate `POST /llm/generate`
+Module: `Object Detection`
 
-Subtasks:
+### Task List
 
-- create app-side LLM client
-- create request and response models
-- add timeout handling
-- add cancellation support
-- add retry policy for safe failure cases
-
-### 2. Connect Ask flow to cloud `Gemma 4 E4B`
-
-Subtasks:
-
-- create ask mode UI
-- define prompt-building logic
-- add support for plain text question flow
-- add support for OCR-context question flow
-- display and speak answer result
-
-### 3. Add routing preference setting
-
-Subtasks:
-
-- add settings options:
-  - auto
-  - prefer cloud
-  - prefer local
-- persist the setting locally
-- make router read the setting before each LLM task
-
-### 4. Connect in-hand mode end-to-end
-
-Subtasks:
-
-- create in-hand mode UI
-- capture image or short burst for upload
-- call `POST /in-hand/detect`
-- parse result
-- speak result
-- handle no-result and timeout states
-
-### 5. Keep cloud tasks non-blocking
-
-Subtasks:
-
-- run all LLM requests async
-- run all in-hand requests async
-- prevent network calls from blocking camera preview
-- show progress states without freezing controls
+- define obstacle classes such as chair, table, door, stairs, wall edge, and person
+- define danger zones in the camera frame
+- estimate rough distance or proximity level from bounding box size and position
+- create obstacle alert rules for near, center, and moving hazards
+- add indoor navigation mode
+- detect key indoor navigation objects such as doors, stairs, elevators, and clear path cues
+- route obstacle alerts through the highest feedback priority after danger mode
+- add haptic patterns for immediate obstacles
+- suppress low-priority object labels while obstacle avoidance is active
+- tune sample rate for smooth real-time detection
+- test in low light and cluttered indoor scenes
+- document target latency for obstacle warnings
 
 Deliverables:
 
-- ask flow working with cloud model
-- in-hand feature working phone to server
-- network tasks do not block UI
+- obstacle avoidance mode
+- indoor navigation cues
+- priority safety feedback
 
-## Phase 5: Local Model Install And Offline Fallback
+## Phase 5: Outdoor Detection, Outdoor Finder, And Traffic Lights
 
-Goal: make the optional on-device LLM path real and reliable.
+Goal: complete outdoor object detection features used for street and public-space assistance.
 
-### 1. Add device capability assessment
+Module: `Object Detection`
 
-Subtasks:
+### Task List
 
-- inspect free storage
-- estimate RAM class
-- detect acceleration availability if exposed
-- record thermal and performance benchmark results
-- map device to:
-  - high
-  - medium
-  - low
-
-### 2. Show eligible local model options
-
-Subtasks:
-
-- read device tier
-- read backend model manifest
-- filter eligible models for platform and tier
-- show installable options in settings
-- hide or warn on unsupported installs
-
-### 3. Implement model download flow
-
-Subtasks:
-
-- add Android `DownloadManager` integration
-- add Android `WorkManager` coordination if needed
-- add iPhone background download integration
-- create progress reporting
-- add pause or resume support if feasible
-
-### 4. Verify checksum and write local registry metadata
-
-Subtasks:
-
-- compute SHA-256 after download
-- compare with manifest checksum
-- move verified file to final storage
-- write registry record with:
-  - model id
-  - path
-  - tokenizer path if needed
-  - checksum
-  - install timestamp
-  - usability state
-
-### 5. Add warmup benchmark after install
-
-Subtasks:
-
-- load model once
-- run one short prompt
-- measure load time
-- measure generation latency
-- mark model usable or unsupported
-
-### 6. Implement automatic routing fallback
-
-Subtasks:
-
-- detect internet availability at request time
-- use cloud when online and allowed
-- use local when offline and installed
-- return offline-no-llm when neither path exists
-- retry locally if cloud fails and local is available
-- cache last known local model availability
+- create outdoor mode with object detection settings separate from indoor mode
+- define outdoor obstacle classes such as car, bicycle, motorcycle, pole, curb, barrier, and person
+- add traffic light status detection with red, yellow, green, and unknown states
+- create outdoor object finder targets such as ATM, bench, trash can, bus stop, and entrance
+- prioritize traffic and obstacle feedback over general object labels
+- add directional audio for outdoor object locations
+- lower speech verbosity to avoid overload in busy scenes
+- add confidence thresholds per outdoor class
+- tune frame sampling for outdoor scenes
+- test in bright light, night light, and moving-camera conditions
+- log outdoor detection latency and false alerts
+- verify mode switching between indoor and outdoor detection
 
 Deliverables:
 
-- optional local model install flow
-- automatic offline fallback working
-- local model availability cached
+- outdoor object detection
+- traffic light status feedback
+- outdoor object finder
 
-## Phase 6: Smoothness, Battery, And Thermal Optimization
+## Phase 6: OCR Reading Core
 
-Goal: make the system feel polished and safe to demo.
+Goal: build the shared OCR pipeline and the main text reading experiences.
 
-### 1. Measure hot-path latency in each mode
+Module: `OCR`
 
-Subtasks:
+### Task List
 
-- measure camera-to-detection latency
-- measure OCR request-to-speech latency
-- measure ask flow total response time
-- measure in-hand round-trip time
-- compare numbers across Android and iPhone
-
-### 2. Reduce unnecessary overlays
-
-Subtasks:
-
-- remove overlays not needed for the visually impaired workflow
-- disable debug overlays outside debug mode
-- keep only essential state indicators
-
-### 3. Unload inactive heavy models
-
-Subtasks:
-
-- detect mode exit
-- unload model resources
-- release memory where possible
-- confirm no stale model stays active
-
-### 4. Shorten local prompt context
-
-Subtasks:
-
-- keep only relevant OCR text
-- keep only relevant object labels
-- trim repeated history
-- verify answers still remain useful
-
-### 5. Add degrade rules
-
-Subtasks:
-
-- lower frame sampling on low battery
-- lower frame sampling on thermal pressure
-- reduce speech verbosity if necessary
-- disable optional visuals in degraded state
-
-### 6. Ensure local LLM never competes with live safety mode
-
-Subtasks:
-
-- pause or block local LLM start while hot safety mode is active
-- cancel or postpone local LLM if danger mode starts
-- document this behavior in code and logs
-
-### 7. Tune feedback cooldown windows
-
-Subtasks:
-
-- inspect repeated warning patterns
-- adjust cooldown by event type
-- keep danger cues urgent
-- reduce noise for repeated object labels
+- create OCR input and output models for text blocks, language, confidence, bounding boxes, and reading order
+- integrate platform OCR using Google ML Kit, EasyOCR, or the chosen native path
+- normalize Arabic and English output into one text model
+- support right-to-left reading order for Arabic
+- create document reader mode
+- create quick text scanner mode
+- create outdoor reader mode for shop names, billboards, and street signs
+- add smart framing guidance when text is not centered or too far away
+- split long OCR text into speech-friendly chunks
+- add stop, repeat, skip, and cancel controls
+- log OCR latency and text length
+- test printed documents, labels, menus, books, and outdoor signs
 
 Deliverables:
 
-- tuned runtime behavior
-- improved battery and thermal handling
-- smoother feedback behavior
+- shared OCR pipeline
+- document reader
+- quick text scanner
+- outdoor reader
 
-## Phase 7: Stabilization And Demo Hardening
+## Phase 7: Currency, Brand, Privacy, Danger Words, And QA
 
-Goal: remove demo risk and freeze the build.
+Goal: add the specialized OCR-based features that make the app useful in real daily tasks.
 
-### 1. Run end-to-end test matrix
+Module: `OCR`
 
-Subtasks:
+### Task List
 
-- test indoor mode
-- test outdoor mode
-- test read mode
-- test ask mode
-- test in-hand mode
-- test mode switching repeatedly
-
-### 2. Test offline and fallback scenarios
-
-Subtasks:
-
-- test airplane mode with no local model
-- test airplane mode with local model installed
-- test cloud available then lost mid-session
-- test local installed but marked unsupported
-
-### 3. Test long-session stability
-
-Subtasks:
-
-- run long camera sessions
-- monitor memory growth
-- monitor thermal rise
-- monitor feedback spam behavior
-
-### 4. Test difficult inputs
-
-Subtasks:
-
-- low light OCR
-- cluttered scene OCR
-- noisy scene object detection
-- in-hand timeout and failure paths
-
-### 5. Fix only release-critical issues
-
-Subtasks:
-
-- remove crashes
-- remove freezes
-- remove wrong routing behavior
-- remove broken fallbacks
-- avoid risky refactors late in the cycle
-
-### 6. Prepare demo and submission assets
-
-Subtasks:
-
-- write demo script
-- prepare backup offline demo path
-- capture screenshots
-- export architecture diagrams
-- prepare deployment env vars
-- confirm backend health before demo
+- implement currency reader for supported banknotes and denominations
+- decide whether currency recognition uses OCR, image classification, or a hybrid local model
+- speak currency value clearly and avoid repeated announcements
+- implement brand detector for product labels and packaging text
+- add brand confidence thresholds and unknown-brand handling
+- implement privacy mode to detect sensitive text without speaking it aloud
+- define sensitive categories such as phone numbers, addresses, IDs, payment cards, and personal names where possible
+- implement danger word alerts for words such as danger, caution, wet floor, emergency, exit, and Arabic equivalents
+- route danger words to the safety alert priority queue
+- create QA mode using OCR text as context
+- connect QA mode to the selected LMM route
+- trim OCR context before sending to the model
+- test Arabic and English documents with questions
 
 Deliverables:
 
-- release candidate build
-- demo-ready flow
-- final known-issues list
+- currency reader
+- brand detector
+- privacy mode
+- danger word alerts
+- OCR-based QA mode
+
+## Phase 8: Feedback, Safety, Controls, And Runtime Integration
+
+Goal: integrate supporting services into the two AI modules and make the app feel safe, clear, and controlled.
+
+Modules: `Object Detection` and `OCR`
+
+### Task List
+
+- implement `ModeManager` so only one heavy mode runs at a time
+- stop camera, OCR, detector, upload, or LMM workers when leaving a mode
+- implement `FeedbackEngine` with speech, haptics, priority, interruption, and cooldown
+- define priority order: danger, obstacle, navigation cue, OCR result, LMM answer, general label
+- add voice command UI for listening state and command parsing
+- support commands such as switch mode, stop, repeat, scan, call emergency, and privacy mode
+- add visual feedback UI for live camera preview, bounding boxes, text highlights, current mode, and danger alert popup
+- implement danger mode activation by voice command, gesture, or shake
+- add emergency auto call and location sharing flow
+- implement directional audio cues
+- add battery monitor and thermal monitor hooks
+- downshift frame sampling during low battery or thermal pressure
+- unload inactive heavy models
+- add event logging for mode changes, feedback events, inference latency, OCR latency, and thermal downgrade
+- test repeated mode switching and long camera sessions
+
+Deliverables:
+
+- integrated feedback and interaction service
+- safety and alert system
+- mode controller
+- battery and thermal downgrade behavior
+
+## Phase 9: Backend And Storage
+
+Goal: finish the backend, configuration, local persistence, and release hardening that support the two AI modules.
+
+Modules: supporting services for `Object Detection` and `OCR`
+
+### Task List
+
+- keep FastAPI as the thin backend service
+- verify `GET /health`
+- verify `GET /app-config`
+- verify `GET /model-manifest`
+- verify `POST /in-hand/detect`
+- add or verify cloud LMM endpoint for OCR QA and visual questions if used
+- store backend URLs and feature flags in app config
+- include battery, thermal, model, and routing thresholds in app config
+- add local cache for last successful config and model manifest
+- create SQLite or local database schema for settings, saved items, item logs, emergency contacts, model registry, and privacy preferences
+- store saved item reference images in protected local app storage
+- store offline AI model files in a managed local model directory
+- verify checksum before marking downloaded models usable
+- add backend timeout, retry, and offline failure behavior
+- ensure local object detection and OCR still work when the backend is unavailable
+- add privacy rules for images sent to the backend
+- prepare deployment environment variables
+- deploy backend to the selected hosting target
+- test backend from a real phone network
+- write final known-issues list and demo script
+
+Deliverables:
+
+- deployed backend
+- local storage schema and persistence
+- config and manifest cache
+- safe offline behavior
+- demo-ready release candidate
 
 ## Daily Checklist
 
-Every day:
+Every working day:
 
-1. test on at least one real phone
-2. check UI smoothness after new changes
-3. verify no heavy mode remains active after switching
-4. watch logs for repeated feedback spam
-5. measure one latency or battery metric
-
-## Weekly Milestones
-
-- `Milestone 1`: mobile and backend foundations are alive
-- `Milestone 2`: local CV and OCR work on phone
-- `Milestone 3`: cloud LLM, in-hand service, and local model install work
-- `Milestone 4`: performance tuning, fallback hardening, and demo prep complete
+1. test at least one feature on a real phone
+2. verify camera preview stays smooth
+3. verify only one heavy mode remains active
+4. check speech and haptic feedback priority
+5. watch logs for repeated feedback spam
+6. record one latency, battery, or thermal observation
+7. confirm object detection and OCR still use their shared module interfaces
 
 ## Scope Protection Rules
 
-To finish in time, do not add new major features after the cloud and in-hand paths are working.
+The release should stay focused on the two-module architecture.
 
-If the team slips:
+Keep:
 
-- keep local safety CV
-- keep OCR read mode
-- keep cloud Ask flow
-- keep in-hand server mode
-- treat advanced polish and extra detectors as optional
+- object detection module
+- OCR module
+- feedback and safety integration
+- backend and storage needed by those modules
+
+Avoid adding separate modules for features that can be integrated into object detection or OCR. For example, safety alerts, smart framing, privacy mode, voice commands, and storage are supporting services, not standalone AI modules.
+
+If time slips, protect these demo-critical features first:
+
+- stuff finder
+- what's in my hand
+- obstacle avoidance
+- document reader
+- quick text scanner
+- currency reader
+- danger mode and emergency contact
+- backend health and in-hand endpoint
 
 ## Recommended Ownership Split
 
-- `Person 1`
-  - Flutter shell
-  - settings
-  - routing UX
-  - accessibility flow
-- `Person 2`
-  - camera loop
-  - native bridges
-  - downloads
-  - battery and thermal hooks
-- `Person 3`
-  - local CV
-  - OCR
-  - feedback engine
-- `Person 4`
-  - backend
-  - Gemma cloud route
-  - in-hand integration
-  - deployment
+- `Person 1`: object detection features, finder modes, traffic lights, obstacle avoidance
+- `Person 2`: OCR features, document reader, quick scanner, currency, brand, privacy, QA
+- `Person 3`: feedback, voice commands, haptics, safety, mode manager, battery and thermal hooks
+- `Person 4`: backend, storage, model manifest, config, deployment, integration testing
