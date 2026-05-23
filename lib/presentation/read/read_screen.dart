@@ -47,7 +47,6 @@ class _ReadScreenState extends State<ReadScreen> {
       final services = AppScope.of(context);
       _ocr = OcrController(
         ocrBridge: services.ocrBridge,
-        audioHapticsBridge: services.audioHapticsBridge,
       )..addListener(_onOcrChange);
       _ocrReady = true;
     }
