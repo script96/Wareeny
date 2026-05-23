@@ -2,8 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import 'package:wareny/core/theme/app_colors.dart';
-import 'package:wareny/core/theme/app_spacing.dart';
+import 'package:wareeny/core/theme/app_colors.dart';
+import 'package:wareeny/core/theme/app_spacing.dart';
 
 /// Vertical column of glassmorphism icon action buttons on the camera's right edge.
 class CameraSideActions extends StatelessWidget {

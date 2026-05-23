@@ -6,4 +6,6 @@ class NativeBridgeChannels {
   static const batteryThermal = 'com.wareeny.bridge/battery_thermal';
   static const fileDownload = 'com.wareeny.bridge/file_download';
   static const localAiRuntime = 'com.wareeny.bridge/local_ai_runtime';
+  // Reserved for future Arabic OCR native bridge (iOS Vision / Android cloud ML Kit)
+  static const ocr = 'com.wareeny.bridge/ocr';
 }

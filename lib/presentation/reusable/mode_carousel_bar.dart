@@ -15,20 +15,23 @@ class ModeCarouselBar extends StatelessWidget {
     required this.previous,
     required this.current,
     required this.next,
+    this.onPreviousTap,
+    this.onNextTap,
     super.key,
   });
 
   final AppMode previous;
   final AppMode current;
   final AppMode next;
+  final VoidCallback? onPreviousTap;
+  final VoidCallback? onNextTap;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       label:
           'Current mode ${current.label}. Previous ${previous.label}. Next ${next.label}.',
-      hint:
-          'Swipe with two fingers left or right on the camera feed to change mode.',
+      hint: 'Tap left or right pill to switch modes.',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32),
         child: BackdropFilter(
@@ -46,11 +49,11 @@ class ModeCarouselBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _SideModePill(mode: previous),
+                _SideModePill(mode: previous, onTap: onPreviousTap),
                 const SizedBox(width: AppSpacing.xs),
                 _ActiveModePill(mode: current),
                 const SizedBox(width: AppSpacing.xs),
-                _SideModePill(mode: next),
+                _SideModePill(mode: next, onTap: onNextTap),
               ],
             ),
           ),
@@ -61,32 +64,44 @@ class ModeCarouselBar extends StatelessWidget {
 }
 
 class _SideModePill extends StatelessWidget {
-  const _SideModePill({required this.mode});
+  const _SideModePill({required this.mode, this.onTap});
 
   final AppMode mode;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 76,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(mode.icon, color: Colors.white38, size: 18),
-          const SizedBox(height: 3),
-          Text(
-            mode.label.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white38,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
+    return Semantics(
+      button: onTap != null,
+      label: onTap != null ? 'Switch to ${mode.label}' : mode.label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: SizedBox(
+          width: 76,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                mode.icon,
+                color: onTap != null ? Colors.white60 : Colors.white38,
+                size: 18,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                mode.label.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: onTap != null ? Colors.white60 : Colors.white38,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

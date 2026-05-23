@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:wareny/core/theme/app_colors.dart';
+import 'package:wareeny/core/theme/app_colors.dart';
 
 /// A pulsing animated green dot with "LIVE" label.
 class LiveIndicator extends StatefulWidget {

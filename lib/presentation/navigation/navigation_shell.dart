@@ -3,6 +3,7 @@ import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
+import 'package:wareeny/presentation/read/read_screen.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
@@ -34,6 +35,17 @@ class _NavigationShellState extends State<NavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    if (_currentMode == AppMode.read) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: ReadScreen(
+          previousMode: _previousMode,
+          nextMode: _nextMode,
+          onModeSelect: _selectMode,
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: TwoFingerSwipeDetector(
@@ -59,6 +71,8 @@ class _NavigationShellState extends State<NavigationShell> {
                 previousMode: _previousMode,
                 currentMode: _currentMode,
                 nextMode: _nextMode,
+                onPreviousTap: _selectPreviousMode,
+                onNextTap: _selectNextMode,
               ),
             ],
           ),
@@ -131,11 +145,15 @@ class _BottomModeMenu extends StatelessWidget {
     required this.previousMode,
     required this.currentMode,
     required this.nextMode,
+    required this.onPreviousTap,
+    required this.onNextTap,
   });
 
   final AppMode previousMode;
   final AppMode currentMode;
   final AppMode nextMode;
+  final VoidCallback onPreviousTap;
+  final VoidCallback onNextTap;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +168,8 @@ class _BottomModeMenu extends StatelessWidget {
             previous: previousMode,
             current: currentMode,
             next: nextMode,
+            onPreviousTap: onPreviousTap,
+            onNextTap: onNextTap,
           ),
         ),
       ),
