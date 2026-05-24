@@ -3,6 +3,7 @@ import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
 import 'package:wareeny/shared/bridges/battery_thermal_bridge.dart';
 import 'package:wareeny/shared/bridges/camera_bridge.dart';
 import 'package:wareeny/shared/bridges/file_download_bridge.dart';
+import 'package:wareeny/shared/bridges/indoor_navigation_bridge.dart';
 import 'package:wareeny/shared/bridges/local_ai_runtime_bridge.dart';
 
 class ServiceRegistry {
@@ -12,6 +13,7 @@ class ServiceRegistry {
     required this.audioHapticsBridge,
     required this.batteryThermalBridge,
     required this.fileDownloadBridge,
+    required this.indoorNavigationBridge,
     required this.localAiRuntimeBridge,
   });
 
@@ -20,6 +22,7 @@ class ServiceRegistry {
   final AudioHapticsBridge audioHapticsBridge;
   final BatteryThermalBridge batteryThermalBridge;
   final FileDownloadBridge fileDownloadBridge;
+  final IndoorNavigationBridge indoorNavigationBridge;
   final LocalAiRuntimeBridge localAiRuntimeBridge;
 
   factory ServiceRegistry.create(AppConfig config) {
@@ -29,6 +32,7 @@ class ServiceRegistry {
       audioHapticsBridge: const AudioHapticsBridge(),
       batteryThermalBridge: const BatteryThermalBridge(),
       fileDownloadBridge: const FileDownloadBridge(),
+      indoorNavigationBridge: const IndoorNavigationBridge(),
       localAiRuntimeBridge: const LocalAiRuntimeBridge(),
     );
   }

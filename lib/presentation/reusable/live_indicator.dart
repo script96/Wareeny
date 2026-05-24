@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:wareny/core/theme/app_colors.dart';
+import 'package:wareeny/core/theme/app_colors.dart';
 
 /// A pulsing animated green dot with "LIVE" label.
 class LiveIndicator extends StatefulWidget {
@@ -23,9 +23,10 @@ class _LiveIndicatorState extends State<LiveIndicator>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _pulse = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 0.4,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -41,10 +42,8 @@ class _LiveIndicatorState extends State<LiveIndicator>
       children: [
         AnimatedBuilder(
           animation: _pulse,
-          builder: (context, child) => Opacity(
-            opacity: _pulse.value,
-            child: child,
-          ),
+          builder: (context, child) =>
+              Opacity(opacity: _pulse.value, child: child),
           child: Container(
             width: 8,
             height: 8,

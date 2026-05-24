@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
 enum AppMode {
-  home('Home', Icons.home_outlined),
-  indoor('Indoor', Icons.apartment_outlined),
-  outdoor('Outdoor', Icons.explore_outlined),
-  read('Read', Icons.menu_book_outlined),
-  ask('Ask', Icons.question_answer_outlined),
-  inHand('In-hand', Icons.back_hand_outlined),
-  settings('Settings', Icons.settings_outlined);
+  home('Home', 'الرئيسية', Icons.home_outlined),
+  indoor('Indoor', 'التنقل داخل البيت', Icons.apartment_outlined),
+  outdoor('Outdoor', 'التنقل بره البيت', Icons.explore_outlined),
+  read('Read', 'قراءة النصوص', Icons.menu_book_outlined),
+  ask('Ask', 'اسأل', Icons.question_answer_outlined),
+  inHand('In-hand', 'الحاجات اللي في إيدك', Icons.back_hand_outlined),
+  settings('Settings', 'الإعدادات', Icons.settings_outlined);
 
-  const AppMode(this.label, this.icon);
+  const AppMode(this.label, this.arabicLabel, this.icon);
 
   final String label;
+  final String arabicLabel;
   final IconData icon;
 }

@@ -34,6 +34,11 @@ android {
     }
 }
 
+dependencies {
+    implementation("com.google.ai.edge.litert:litert:2.1.0")
+    testImplementation("junit:junit:4.13.2")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

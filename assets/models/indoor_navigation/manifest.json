@@ -1,0 +1,14 @@
+{
+  "modelId": "indoor-navigation-yolov8n-bootstrap",
+  "version": "0.1.0",
+  "modelPath": "assets/models/indoor_navigation/model.tflite",
+  "labelsPath": "assets/models/indoor_navigation/labels.txt",
+  "inputSize": 640,
+  "quantization": "float32",
+  "confidenceThreshold": 0.35,
+  "nmsThreshold": 0.45,
+  "sampleFps": 8,
+  "supportedFeatures": ["objects"],
+  "futureFeatures": ["walls", "floor", "doors", "stairs", "walkable_mask"],
+  "notes": "Temporary YOLOv8n bootstrap model. Replace with a fine-tuned indoor model later without changing Flutter speech logic."
+}

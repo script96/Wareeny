@@ -1,0 +1,25 @@
+PODS:
+  - Flutter (1.0.0)
+  - TensorFlowLiteC (2.17.0):
+    - TensorFlowLiteC/Core (= 2.17.0)
+  - TensorFlowLiteC/Core (2.17.0)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - TensorFlowLiteC (~> 2.17.0)
+
+SPEC REPOS:
+  trunk:
+    - TensorFlowLiteC
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  TensorFlowLiteC: eac6d689a8d391d1b202dc59e3d9165ba64aaf73
+
+PODFILE CHECKSUM: 473277d90cd52b27e47d0ceedea9ac0ab4d6930c
+
+COCOAPODS: 1.16.2
