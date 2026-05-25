@@ -15,7 +15,7 @@ void main() {
 
     expect(find.text('HOME'), findsOneWidget);
     expect(find.text('SETTINGS'), findsOneWidget);
-    expect(find.text('INDOOR'), findsOneWidget);
+    expect(find.text('STUFF FINDER'), findsOneWidget);
   });
 
   testWidgets('switches modes with a two finger swipe', (
@@ -36,7 +36,7 @@ void main() {
     await secondFinger.moveBy(const Offset(-90, 0));
     await tester.pump();
 
-    expect(find.text('OUTDOOR'), findsOneWidget);
+    expect(find.text('INDOOR'), findsOneWidget);
     expect(find.text('SETTINGS'), findsNothing);
   });
 }

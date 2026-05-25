@@ -7,6 +7,7 @@ import 'package:wareny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareny/presentation/stuff_finder/stuff_finder_screen.dart';
 
 class NavigationShell extends StatefulWidget {
   const NavigationShell({super.key});
@@ -45,8 +46,7 @@ class _NavigationShellState extends State<NavigationShell> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Full-screen camera feed
-              const CameraFeedView(),
+              _ModeBody(currentMode: _currentMode),
 
               // Top HUD bar
               _TopOverlay(currentMode: _currentMode),
@@ -88,6 +88,20 @@ class _NavigationShellState extends State<NavigationShell> {
 }
 
 // ── Overlay widgets ──────────────────────────────────────────────────────────
+
+class _ModeBody extends StatelessWidget {
+  const _ModeBody({required this.currentMode});
+
+  final AppMode currentMode;
+
+  @override
+  Widget build(BuildContext context) {
+    return switch (currentMode) {
+      AppMode.stuffFinder => const StuffFinderScreen(),
+      _ => const CameraFeedView(),
+    };
+  }
+}
 
 class _TopOverlay extends StatelessWidget {
   const _TopOverlay({required this.currentMode});

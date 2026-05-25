@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 enum AppMode {
   home('Home', Icons.home_outlined),
+  stuffFinder('Stuff Finder', Icons.search_outlined),
   indoor('Indoor', Icons.apartment_outlined),
   outdoor('Outdoor', Icons.explore_outlined),
   read('Read', Icons.menu_book_outlined),

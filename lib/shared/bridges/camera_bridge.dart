@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 import 'package:wareny/shared/bridges/native_bridge_channels.dart';
 
-enum CameraRuntimeMode { indoor, outdoor, read, ask, inHand }
+enum CameraRuntimeMode { stuffFinder, indoor, outdoor, read, ask, inHand }
 
 class CameraBridge {
   const CameraBridge()

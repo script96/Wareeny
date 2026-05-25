@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import 'package:wareny/presentation/reusable/camera_status_view.dart';
 
 class CameraFeedView extends StatefulWidget {
-  const CameraFeedView({super.key});
+  const CameraFeedView({this.onImage, super.key});
+
+  final ValueChanged<CameraImage>? onImage;
 
   @override
   State<CameraFeedView> createState() => _CameraFeedViewState();
@@ -22,8 +26,30 @@ class _CameraFeedViewState extends State<CameraFeedView> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _disposeController();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant CameraFeedView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
+
+    if (oldWidget.onImage == null && widget.onImage != null) {
+      unawaited(
+        _startImageStream(controller).catchError((Object error) {
+          if (mounted) {
+            setState(() => _error = error);
+          }
+        }),
+      );
+    } else if (oldWidget.onImage != null && widget.onImage == null) {
+      unawaited(_stopImageStream(controller).catchError((_) {}));
+    }
   }
 
   @override
@@ -84,10 +110,57 @@ class _CameraFeedViewState extends State<CameraFeedView> {
       }
 
       setState(() => _controller = controller);
+
+      if (widget.onImage != null) {
+        await _startImageStream(controller);
+      }
     } catch (error) {
       if (mounted) {
         setState(() => _error = error);
       }
+    }
+  }
+
+  Future<void> _startImageStream(CameraController controller) async {
+    if (controller.value.isStreamingImages) {
+      return;
+    }
+
+    await controller.startImageStream((image) {
+      widget.onImage?.call(image);
+    });
+  }
+
+  Future<void> _stopImageStream(CameraController controller) async {
+    if (!controller.value.isStreamingImages) {
+      return;
+    }
+
+    await controller.stopImageStream();
+  }
+
+  void _disposeController() {
+    final controller = _controller;
+    if (controller == null) {
+      return;
+    }
+
+    unawaited(_disposeControllerAsync(controller));
+  }
+
+  Future<void> _disposeControllerAsync(CameraController controller) async {
+    try {
+      if (controller.value.isStreamingImages) {
+        await _stopImageStream(controller);
+      }
+    } catch (_) {
+      // Best-effort cleanup while the widget is leaving the tree.
+    }
+
+    try {
+      await controller.dispose();
+    } catch (_) {
+      // Best-effort cleanup while the widget is leaving the tree.
     }
   }
 }
