@@ -78,13 +78,15 @@ class _ReadScreenState extends State<ReadScreen> {
           (AppMode.values.indexOf(AppMode.read) + 1) % AppMode.values.length),
       onSwipeRight: () => widget.onModeSelect(
           (AppMode.values.indexOf(AppMode.read) - 1) % AppMode.values.length),
-      child: GestureDetector(
-        onTap: _handleTap,
-        child: Stack(
+      child: Stack(
           fit: StackFit.expand,
           children: [
-            _buildCameraLayer(),
-            OcrFramingOverlay(cue: _ocr.framingCue),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _handleTap,
+              child: _buildCameraLayer(),
+            ),
+            IgnorePointer(child: OcrFramingOverlay(cue: _ocr.framingCue)),
             if (_ocr.subMode == OcrReadingMode.scan &&
                 _ocr.lastResult != null &&
                 !_ocr.lastResult!.isEmpty)
@@ -92,7 +94,9 @@ class _ReadScreenState extends State<ReadScreen> {
                 left: 24,
                 right: 24,
                 bottom: 120,
-                child: ScanResultView(text: _ocr.lastResult!.fullText),
+                child: IgnorePointer(
+                  child: ScanResultView(text: _ocr.lastResult!.fullText),
+                ),
               ),
             _TopHud(subMode: _ocr.subMode, onToggle: _ocr.toggleSubMode),
             const _RightActions(),
@@ -111,7 +115,6 @@ class _ReadScreenState extends State<ReadScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -169,10 +172,9 @@ class _ReadScreenState extends State<ReadScreen> {
   Future<void> _handleTap() async {
     final cam = _camera;
     if (cam == null || !cam.value.isInitialized || _ocr.isCapturing) return;
-    final size = MediaQuery.of(context).size;
     final file = await cam.takePicture();
     if (_ocr.subMode == OcrReadingMode.scan) {
-      await _ocr.scan(file.path, size);
+      await _ocr.scan(file.path);
       if (mounted) {
         SemanticsService.sendAnnouncement(
           View.of(context),
@@ -181,7 +183,7 @@ class _ReadScreenState extends State<ReadScreen> {
         );
       }
     } else {
-      await _ocr.startReading(file.path, size);
+      await _ocr.startReading(file.path);
     }
   }
 }

@@ -208,6 +208,8 @@ Deliverables:
 
 ## Phase 6: OCR Reading Core
 
+**Status: Complete**
+
 Goal: build the shared OCR pipeline and the main text reading experiences.
 
 Module: `OCR`
@@ -233,6 +235,14 @@ Deliverables:
 - document reader
 - quick text scanner
 - outdoor reader
+
+### Notes
+
+- Outdoor reader and Arabic OCR deferred — SCAN mode covers signs for now; Arabic needs a separate ML Kit script path (Phase 9)
+- Added rule-based OCR noise filtering before TTS: drops blocks with >50% non-alphanumeric chars or duplicates, strips isolated symbols and separator runs (`---`, `===`)
+- ML Kit returns `null` confidence mapped to `0.0` — added `> 0.0` guard so "blurry" cue doesn't fire on every scan
+- `offCenter` framing cue removed — ML Kit bounding boxes are in image pixels, not logical points; caused constant false positives; needs image dimensions in `OcrResult` to fix properly
+- Moved tap-to-capture handler to wrap camera layer only; wrapped visual overlays in `IgnorePointer` — otherwise every button tap triggered OCR
 
 ## Phase 7: Currency, Brand, Privacy, Danger Words, And QA
 

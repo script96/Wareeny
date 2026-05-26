@@ -1,5 +1,3 @@
-import 'dart:ui' show Size;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -44,16 +42,17 @@ class OcrController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> scan(String imagePath, Size frameSize) async {
+  Future<void> scan(String imagePath) async {
     if (isCapturing) return;
     isCapturing = true;
     framingCue = OcrFramingCue.none;
     notifyListeners();
 
     try {
-      final result = await _ocr.recognizeFromFile(imagePath);
+      final raw = await _ocr.recognizeFromFile(imagePath);
+      final result = _service.processResult(raw);
       lastResult = result;
-      final cue = _service.framingCue(result, frameSize);
+      final cue = _service.framingCue(result);
       framingCue = cue;
 
       if (cue != OcrFramingCue.none) {
@@ -71,15 +70,16 @@ class OcrController extends ChangeNotifier {
     }
   }
 
-  Future<void> startReading(String imagePath, Size frameSize) async {
+  Future<void> startReading(String imagePath) async {
     if (isCapturing) return;
     isCapturing = true;
     notifyListeners();
 
     try {
-      final result = await _ocr.recognizeFromFile(imagePath);
+      final raw = await _ocr.recognizeFromFile(imagePath);
+      final result = _service.processResult(raw);
       lastResult = result;
-      final cue = _service.framingCue(result, frameSize);
+      final cue = _service.framingCue(result);
       framingCue = cue;
 
       if (cue != OcrFramingCue.none) {
