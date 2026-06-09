@@ -1,0 +1,178 @@
+import 'package:flutter/material.dart';
+
+import 'package:wareeny/presentation/luma/luma_models.dart';
+
+const lumaModes = <LumaModeDefinition>[
+  LumaModeDefinition(
+    kind: LumaModeKind.stuffFinder,
+    title: 'Stuff Finder',
+    description: 'Find objects around you.',
+    category: LumaModeCategory.objectDetection,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.search_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.whatsInMyHand,
+    title: "What's In My Hand",
+    description: 'Identify an object you are holding.',
+    category: LumaModeCategory.objectDetection,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.back_hand_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.savedItemFinder,
+    title: 'Saved Item Finder',
+    description: 'Find personal items you saved before.',
+    category: LumaModeCategory.objectDetection,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.bookmark_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.obstacleAvoidance,
+    title: 'Obstacle Avoidance',
+    description: 'Warn about nearby hazards.',
+    category: LumaModeCategory.safety,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.warning_amber_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.indoorNavigation,
+    title: 'Indoor Navigation',
+    description: 'Guide through indoor places.',
+    category: LumaModeCategory.objectDetection,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.stairs_rounded,
+    supportedEnvironments: {LumaEnvironment.indoor},
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.outdoorDetection,
+    title: 'Outdoor Detection',
+    description: 'Detect objects in outdoor spaces.',
+    category: LumaModeCategory.objectDetection,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.travel_explore_rounded,
+    supportedEnvironments: {LumaEnvironment.outdoor},
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.outdoorObjectFinder,
+    title: 'Outdoor Object Finder',
+    description: 'Find outdoor targets like ATM, bench, bus stop, entrance.',
+    category: LumaModeCategory.objectDetection,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.place_rounded,
+    supportedEnvironments: {LumaEnvironment.outdoor},
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.trafficLightStatus,
+    title: 'Traffic Light Status',
+    description: 'Detect red, yellow, green, or unknown traffic light state.',
+    category: LumaModeCategory.safety,
+    screenType: ActiveScreenType.objectDetection,
+    icon: Icons.traffic_rounded,
+    supportedEnvironments: {LumaEnvironment.outdoor},
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.documentReader,
+    title: 'Document Reader',
+    description: 'Read papers, books, documents, and menus.',
+    category: LumaModeCategory.ocr,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.menu_book_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.quickTextScanner,
+    title: 'Quick Text Scanner',
+    description: 'Quickly scan visible text.',
+    category: LumaModeCategory.ocr,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.document_scanner_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.outdoorReader,
+    title: 'Outdoor Reader',
+    description: 'Read signs, shop names, and billboards.',
+    category: LumaModeCategory.ocr,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.storefront_rounded,
+    supportedEnvironments: {LumaEnvironment.outdoor},
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.currencyReader,
+    title: 'Currency Reader',
+    description: 'Identify supported banknotes.',
+    category: LumaModeCategory.ocr,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.payments_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.brandDetector,
+    title: 'Brand Detector',
+    description: 'Recognize product labels and packaging text.',
+    category: LumaModeCategory.ocr,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.local_offer_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.privacyMode,
+    title: 'Privacy Mode',
+    description: 'Detect sensitive text before reading aloud.',
+    category: LumaModeCategory.support,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.privacy_tip_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.dangerWordAlerts,
+    title: 'Danger Word Alerts',
+    description: 'Warn when danger words are detected.',
+    category: LumaModeCategory.safety,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.gpp_maybe_rounded,
+  ),
+  LumaModeDefinition(
+    kind: LumaModeKind.qaMode,
+    title: 'QA Mode',
+    description: 'Ask questions about detected text.',
+    category: LumaModeCategory.support,
+    screenType: ActiveScreenType.reading,
+    icon: Icons.quiz_rounded,
+  ),
+];
+
+const suggestedCommands = <SuggestedCommand>[
+  SuggestedCommand(label: 'Find my keys', modeKind: LumaModeKind.stuffFinder),
+  SuggestedCommand(
+    label: 'Read this',
+    modeKind: LumaModeKind.quickTextScanner,
+  ),
+  SuggestedCommand(
+    label: "What's in my hand?",
+    modeKind: LumaModeKind.whatsInMyHand,
+  ),
+  SuggestedCommand(
+    label: 'Obstacle mode',
+    modeKind: LumaModeKind.obstacleAvoidance,
+  ),
+  SuggestedCommand(
+    label: 'Traffic light',
+    modeKind: LumaModeKind.trafficLightStatus,
+    environment: LumaEnvironment.outdoor,
+  ),
+  SuggestedCommand(label: 'Call emergency', opensDanger: true),
+];
+
+final mockSavedItems = <SavedItemEntry>[
+  SavedItemEntry(
+    name: 'My black wallet',
+    label: 'wallet',
+    referenceImagePath: '/mock/storage/items/wallet.jpg',
+    createdDate: DateTime(2026, 6, 1),
+    lastFoundDate: DateTime(2026, 6, 8),
+  ),
+  SavedItemEntry(
+    name: 'Blue water bottle',
+    label: 'bottle',
+    referenceImagePath: '/mock/storage/items/bottle.jpg',
+    createdDate: DateTime(2026, 6, 2),
+    lastFoundDate: DateTime(2026, 6, 7),
+  ),
+];

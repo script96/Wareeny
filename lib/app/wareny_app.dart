@@ -14,8 +14,9 @@ class WareenyApp extends StatelessWidget {
     return MaterialApp(
       title: config.appName,
       debugShowCheckedModeBanner: config.enableDiagnostics,
-      theme: AppTheme.light,
+      theme: AppTheme.dark,
       darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.dark,
       home: const NavigationShell(),
     );
   }

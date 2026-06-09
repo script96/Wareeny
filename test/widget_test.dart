@@ -1,24 +1,24 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:wareny/app/wareny_app.dart';
-import 'package:wareny/core/config/app_config.dart';
-import 'package:wareny/core/di/app_scope.dart';
-import 'package:wareny/core/di/service_registry.dart';
+import 'package:wareeny/app/wareny_app.dart';
+import 'package:wareeny/core/config/app_config.dart';
+import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/di/service_registry.dart';
 
 void main() {
-  testWidgets('shows the camera mode shell', (WidgetTester tester) async {
+  testWidgets('shows the Luma intro screen', (WidgetTester tester) async {
     final services = ServiceRegistry.create(AppConfig.dev());
 
     await tester.pumpWidget(
       AppScope(services: services, child: const WareenyApp()),
     );
 
-    expect(find.text('HOME'), findsOneWidget);
-    expect(find.text('SETTINGS'), findsOneWidget);
-    expect(find.text('INDOOR'), findsOneWidget);
+    expect(find.text('Luma'), findsOneWidget);
+    expect(find.text('Your voice of sight'), findsOneWidget);
+    expect(find.text('Start'), findsOneWidget);
   });
 
-  testWidgets('switches modes with a two finger swipe', (
+  testWidgets('opens the main shell after starting', (
     WidgetTester tester,
   ) async {
     final services = ServiceRegistry.create(AppConfig.dev());
@@ -27,16 +27,13 @@ void main() {
       AppScope(services: services, child: const WareenyApp()),
     );
 
-    final firstFinger = await tester.createGesture(pointer: 1);
-    final secondFinger = await tester.createGesture(pointer: 2);
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
 
-    await firstFinger.down(const Offset(300, 300));
-    await secondFinger.down(const Offset(300, 360));
-    await firstFinger.moveBy(const Offset(-90, 0));
-    await secondFinger.moveBy(const Offset(-90, 0));
-    await tester.pump();
-
-    expect(find.text('OUTDOOR'), findsOneWidget);
-    expect(find.text('SETTINGS'), findsNothing);
+    expect(find.text('Hold to Speak'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Modes'), findsOneWidget);
+    expect(find.text('Saved Items'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
   });
 }
