@@ -164,7 +164,7 @@ class DetectionFeedbackController {
   }
 
   String _phraseFor(DetectionResult target) {
-    final label = TargetLabels.displayNameFor(target.label);
+    final label = TargetLabels.stuffFinderDisplayNameFor(target.label);
     final direction = switch (target.direction) {
       ObjectDirection.left => 'on your left',
       ObjectDirection.center => 'centered',

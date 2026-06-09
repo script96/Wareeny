@@ -1,0 +1,10 @@
+cell phone
+wallet
+keys
+cup
+bottle
+laptop
+book
+remote
+backpack
+handbag

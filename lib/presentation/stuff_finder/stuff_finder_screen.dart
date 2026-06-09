@@ -138,6 +138,7 @@ class _StuffFinderScreenState extends State<StuffFinderScreen> {
   Future<void> _selectTarget() async {
     final selected = await TargetSelectorSheet.show(
       context,
+      options: TargetLabels.supportedStuffFinder,
       selectedLabel: _pipeline.targetLabel,
     );
 
@@ -169,7 +170,7 @@ class _TargetStatusBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedName = targetLabel == null
         ? 'No target selected'
-        : TargetLabels.displayNameFor(targetLabel!);
+        : TargetLabels.stuffFinderDisplayNameFor(targetLabel!);
     final confidence = currentTarget == null
         ? null
         : '${(currentTarget!.confidence * 100).round()}%';

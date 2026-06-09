@@ -33,6 +33,12 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Stuff Finder training artifacts
+/training/stuff_finder/downloads/
+/training/stuff_finder/datasets/processed/
+/training/stuff_finder/exports/
+/training/stuff_finder/scripts/__pycache__/
+
 # Symbolication related
 app.*.symbols
 

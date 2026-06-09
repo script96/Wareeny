@@ -7,6 +7,7 @@ import 'package:wareny/core/detection/detection_config.dart';
 import 'package:wareny/core/detection/detection_frame.dart';
 import 'package:wareny/core/detection/detection_result.dart';
 import 'package:wareny/core/detection/object_detector.dart';
+import 'package:wareny/core/detection/target_labels.dart';
 
 typedef DetectionClock = DateTime Function();
 
@@ -133,10 +134,12 @@ class DetectionPipeline extends ChangeNotifier {
       return null;
     }
 
+    final selectedTarget = TargetLabels.stuffFinderByIdOrDetectorLabel(label);
     final normalizedLabel = label.toLowerCase();
     final candidates = frame.detections.where((detection) {
-      return detection.label.toLowerCase() == normalizedLabel &&
-          detection.confidence >= _config.confidenceThreshold;
+      final matches = selectedTarget?.matchesDetectorLabel(detection.label) ??
+          detection.label.toLowerCase() == normalizedLabel;
+      return matches && detection.confidence >= _config.confidenceThreshold;
     }).toList();
 
     if (candidates.isEmpty) {
@@ -144,7 +147,18 @@ class DetectionPipeline extends ChangeNotifier {
     }
 
     candidates.sort((a, b) => b.confidence.compareTo(a.confidence));
-    return candidates.first;
+    final best = candidates.first;
+    if (selectedTarget == null ||
+        best.label.toLowerCase() == selectedTarget.label.toLowerCase()) {
+      return best;
+    }
+
+    return DetectionResult.fromNormalizedBox(
+      label: selectedTarget.label,
+      confidence: best.confidence,
+      boundingBox: best.boundingBox,
+      timestampMs: best.timestampMs,
+    );
   }
 
   bool _canEmit(DetectionResult result) {

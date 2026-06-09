@@ -5,12 +5,18 @@ import 'package:wareny/core/detection/target_labels.dart';
 import 'package:wareny/core/theme/app_spacing.dart';
 
 class TargetSelectorSheet extends StatefulWidget {
-  const TargetSelectorSheet({this.selectedLabel, super.key});
+  const TargetSelectorSheet({
+    this.options = TargetLabels.common,
+    this.selectedLabel,
+    super.key,
+  });
 
+  final List<TargetLabel> options;
   final String? selectedLabel;
 
   static Future<TargetLabel?> show(
     BuildContext context, {
+    List<TargetLabel> options = TargetLabels.common,
     String? selectedLabel,
   }) {
     return showModalBottomSheet<TargetLabel>(
@@ -18,7 +24,10 @@ class TargetSelectorSheet extends StatefulWidget {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
-        return TargetSelectorSheet(selectedLabel: selectedLabel);
+        return TargetSelectorSheet(
+          options: options,
+          selectedLabel: selectedLabel,
+        );
       },
     );
   }
@@ -129,10 +138,10 @@ class _TargetSelectorSheetState extends State<TargetSelectorSheet> {
   List<TargetLabel> get _filteredLabels {
     final query = _query.trim().toLowerCase();
     if (query.isEmpty) {
-      return TargetLabels.common;
+      return widget.options;
     }
 
-    return TargetLabels.common
+    return widget.options
         .where((item) {
           return item.displayName.toLowerCase().contains(query) ||
               item.label.toLowerCase().contains(query);

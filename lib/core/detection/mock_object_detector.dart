@@ -14,7 +14,7 @@ class MockObjectDetector implements ObjectDetector {
     math.Random? random,
     this.simulatedLatency = const Duration(milliseconds: 50),
   }) : assert(labels == null || labels.isNotEmpty),
-       _labels = labels ?? TargetLabels.labels,
+       _labels = labels ?? TargetLabels.supportedStuffFinderDetectorLabels,
        _random = random ?? math.Random();
 
   final List<String> _labels;
