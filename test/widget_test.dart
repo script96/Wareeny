@@ -6,14 +6,14 @@ import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/di/service_registry.dart';
 
 void main() {
-  testWidgets('shows the Luma intro screen', (WidgetTester tester) async {
+  testWidgets('shows the Wareeny intro screen', (WidgetTester tester) async {
     final services = ServiceRegistry.create(AppConfig.dev());
 
     await tester.pumpWidget(
       AppScope(services: services, child: const WareenyApp()),
     );
 
-    expect(find.text('Luma'), findsOneWidget);
+    expect(find.text('Wareeny'), findsOneWidget);
     expect(find.text('Your voice of sight'), findsOneWidget);
     expect(find.text('Start'), findsOneWidget);
   });

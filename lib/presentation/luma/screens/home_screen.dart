@@ -26,7 +26,7 @@ class HomeScreen extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         const SectionHeader(
-          title: 'Luma',
+          title: 'Wareeny',
           subtitle: 'Voice-first support with simple, safe actions.',
         ),
         const SizedBox(height: AppSpacing.md),

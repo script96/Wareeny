@@ -45,7 +45,7 @@ class AppConfig {
   factory AppConfig.dev() {
     return const AppConfig(
       environment: AppEnvironment.dev,
-      appName: 'Luma Dev',
+      appName: 'Wareeny Dev',
       apiBaseUrl: String.fromEnvironment(
         'API_BASE_URL',
         defaultValue: 'http://localhost:8000',
@@ -68,7 +68,7 @@ class AppConfig {
   factory AppConfig.prod() {
     return const AppConfig(
       environment: AppEnvironment.prod,
-      appName: 'Luma',
+      appName: 'Wareeny',
       apiBaseUrl: String.fromEnvironment(
         'API_BASE_URL',
         defaultValue: 'https://api.wareeny.app',

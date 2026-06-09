@@ -1,7 +1,8 @@
 class LumaStrings {
   const LumaStrings._();
 
-  static const appName = 'Luma';
+  static const appName = 'Wareeny';
+  static const assistantName = 'Luma';
   static const tagline = 'Your voice of sight';
   static const introMessage =
       "I'm Luma. I help you understand what's around you using speech, camera assistance, and haptic feedback.";
@@ -19,7 +20,7 @@ class LumaStrings {
   static const privateInfoTitle = 'Private information detected';
   static const privateInfoMessage =
       'This may contain private information. Luma will not read it aloud unless you confirm.';
-  static const chooseEnvironmentTitle = 'Where are you using Luma?';
+  static const chooseEnvironmentTitle = 'Where are you using Wareeny?';
   static const chooseEnvironmentNote =
       'Choose manually for better safety and accuracy.';
   static const english = 'English';
