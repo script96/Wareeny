@@ -2,8 +2,7 @@ import 'package:wareny/core/config/app_config.dart';
 import 'package:wareny/core/detection/detection_config.dart';
 import 'package:wareny/core/detection/detection_feedback_controller.dart';
 import 'package:wareny/core/detection/detection_pipeline.dart';
-import 'package:wareny/core/detection/mock_object_detector.dart';
-import 'package:wareny/core/detection/target_labels.dart';
+import 'package:wareny/core/detection/yolo_object_detector.dart';
 import 'package:wareny/core/tts/tts_service.dart';
 import 'package:wareny/shared/bridges/audio_haptics_bridge.dart';
 import 'package:wareny/shared/bridges/battery_thermal_bridge.dart';
@@ -39,9 +38,7 @@ class ServiceRegistry {
     const audioHapticsBridge = AudioHapticsBridge();
     final ttsService = TtsService();
     final detectionPipeline = DetectionPipeline(
-      detector: MockObjectDetector(
-        labels: TargetLabels.supportedStuffFinderDetectorLabels,
-      ),
+      detector: YoloObjectDetector(),
       config: detectionConfig,
       enableDiagnostics: config.enableDiagnostics,
     );

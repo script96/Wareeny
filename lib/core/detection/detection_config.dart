@@ -2,7 +2,7 @@ import 'package:wareny/core/detection/detection_result.dart';
 
 class DetectionConfig {
   const DetectionConfig({
-    this.frameSampleInterval = 3,
+    this.frameSampleInterval = 1,
     this.confidenceThreshold = 0.45,
     this.cooldownDuration = const Duration(seconds: 2),
     this.nearHapticInterval = const Duration(milliseconds: 400),

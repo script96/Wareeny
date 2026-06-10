@@ -33,7 +33,10 @@ class MockObjectDetector implements ObjectDetector {
   }
 
   @override
-  Future<DetectionFrame> detect(CameraImage image) async {
+  Future<DetectionFrame> detect(
+    CameraImage image, {
+    int rotationDegrees = 0,
+  }) async {
     if (!_isReady) {
       throw StateError('MockObjectDetector must be initialized before detect.');
     }

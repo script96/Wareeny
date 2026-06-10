@@ -33,6 +33,8 @@ class DetectionPipeline extends ChangeNotifier {
   String? _targetLabel;
   String? _lastAnnouncementKey;
   DateTime? _lastAnnouncementAt;
+  Future<void>? _initializationFuture;
+  Object? _initializationError;
   var _frameCounter = 0;
   var _isRunning = false;
   var _isProcessing = false;
@@ -44,14 +46,36 @@ class DetectionPipeline extends ChangeNotifier {
   String? get targetLabel => _targetLabel;
   bool get isRunning => _isRunning;
   bool get isReady => _detector.isReady;
+  bool get isInitializing => _initializationFuture != null;
+  Object? get initializationError => _initializationError;
   Stream<DetectionResult> get targetResults => _targetController.stream;
 
-  Future<void> initialize() async {
+  Future<void> initialize() {
     if (_detector.isReady) {
-      return;
+      return Future<void>.value();
     }
-    await _detector.initialize();
+    final activeInitialization = _initializationFuture;
+    if (activeInitialization != null) {
+      return activeInitialization;
+    }
+
+    final initialization = _initializeDetector();
+    _initializationFuture = initialization;
     _notify();
+    return initialization;
+  }
+
+  Future<void> _initializeDetector() async {
+    _initializationError = null;
+    try {
+      await _detector.initialize();
+    } catch (error) {
+      _initializationError = error;
+      rethrow;
+    } finally {
+      _initializationFuture = null;
+      _notify();
+    }
   }
 
   void start() {
@@ -85,7 +109,10 @@ class DetectionPipeline extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> processFrame(CameraImage image) async {
+  Future<void> processFrame(
+    CameraImage image, {
+    int rotationDegrees = 0,
+  }) async {
     if (!_isRunning || !_detector.isReady || _targetLabel == null) {
       return;
     }
@@ -98,7 +125,10 @@ class DetectionPipeline extends ChangeNotifier {
     _isProcessing = true;
 
     try {
-      final frame = await _detector.detect(image);
+      final frame = await _detector.detect(
+        image,
+        rotationDegrees: rotationDegrees,
+      );
       if (!_isRunning) {
         return;
       }
@@ -137,7 +167,8 @@ class DetectionPipeline extends ChangeNotifier {
     final selectedTarget = TargetLabels.stuffFinderByIdOrDetectorLabel(label);
     final normalizedLabel = label.toLowerCase();
     final candidates = frame.detections.where((detection) {
-      final matches = selectedTarget?.matchesDetectorLabel(detection.label) ??
+      final matches =
+          selectedTarget?.matchesDetectorLabel(detection.label) ??
           detection.label.toLowerCase() == normalizedLabel;
       return matches && detection.confidence >= _config.confidenceThreshold;
     }).toList();
@@ -158,6 +189,7 @@ class DetectionPipeline extends ChangeNotifier {
       confidence: best.confidence,
       boundingBox: best.boundingBox,
       timestampMs: best.timestampMs,
+      frameSize: best.frameSize,
     );
   }
 

@@ -9,6 +9,20 @@ import 'package:wareny/core/detection/detection_result.dart';
 import 'package:wareny/core/detection/object_detector.dart';
 
 void main() {
+  test('does not invoke detector until a target is selected', () async {
+    final detector = _QueueDetector([_frame(1)]);
+    final pipeline = DetectionPipeline(detector: detector);
+
+    await pipeline.initialize();
+    pipeline.start();
+    await pipeline.processFrame(_FakeCameraImage());
+
+    expect(detector.detectCalls, 0);
+    expect(pipeline.currentTarget, isNull);
+
+    pipeline.dispose();
+  });
+
   test('filters by target label and confidence', () async {
     final detector = _QueueDetector([
       DetectionFrame(
@@ -36,6 +50,35 @@ void main() {
 
     pipeline.dispose();
   });
+
+  test(
+    'never exposes detections for objects other than the selected target',
+    () async {
+      final detector = _QueueDetector([
+        DetectionFrame(
+          detections: [
+            _detection(label: 'book', confidence: 0.99),
+            _detection(label: 'bottle', confidence: 0.95),
+          ],
+          latencyMs: 12,
+          frameIndex: 1,
+        ),
+      ]);
+      final pipeline = DetectionPipeline(
+        detector: detector,
+        config: const DetectionConfig(frameSampleInterval: 1),
+      );
+
+      await pipeline.initialize();
+      pipeline.setTargetLabel('cup');
+      pipeline.start();
+      await pipeline.processFrame(_FakeCameraImage());
+
+      expect(pipeline.currentTarget, isNull);
+
+      pipeline.dispose();
+    },
+  );
 
   test('suppresses same label and direction within cooldown', () async {
     var now = DateTime(2026);
@@ -95,6 +138,7 @@ class _QueueDetector implements ObjectDetector {
 
   final List<DetectionFrame> frames;
   var _isReady = false;
+  var detectCalls = 0;
 
   @override
   bool get isReady => _isReady;
@@ -105,7 +149,11 @@ class _QueueDetector implements ObjectDetector {
   }
 
   @override
-  Future<DetectionFrame> detect(CameraImage image) async {
+  Future<DetectionFrame> detect(
+    CameraImage image, {
+    int rotationDegrees = 0,
+  }) async {
+    detectCalls += 1;
     return frames.removeAt(0);
   }
 

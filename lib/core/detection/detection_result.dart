@@ -13,6 +13,7 @@ class DetectionResult {
     required this.direction,
     required this.proximity,
     required this.timestampMs,
+    this.frameSize,
   });
 
   final String label;
@@ -21,6 +22,7 @@ class DetectionResult {
   final ObjectDirection direction;
   final ObjectProximity proximity;
   final int timestampMs;
+  final Size? frameSize;
 
   factory DetectionResult.fromRawBox({
     required String label,
@@ -47,6 +49,7 @@ class DetectionResult {
         math.max(top, bottom),
       ),
       timestampMs: timestampMs,
+      frameSize: frameSize,
     );
   }
 
@@ -55,6 +58,7 @@ class DetectionResult {
     required double confidence,
     required Rect boundingBox,
     required int timestampMs,
+    Size? frameSize,
   }) {
     final normalizedBox = _clampBox(boundingBox);
 
@@ -65,6 +69,7 @@ class DetectionResult {
       direction: directionForBox(normalizedBox),
       proximity: proximityForBox(normalizedBox),
       timestampMs: timestampMs,
+      frameSize: frameSize,
     );
   }
 

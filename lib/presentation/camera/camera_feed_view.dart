@@ -1,14 +1,22 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:wareny/presentation/reusable/camera_status_view.dart';
 
+class CameraFrame {
+  const CameraFrame({required this.image, required this.rotationDegrees});
+
+  final CameraImage image;
+  final int rotationDegrees;
+}
+
 class CameraFeedView extends StatefulWidget {
   const CameraFeedView({this.onImage, super.key});
 
-  final ValueChanged<CameraImage>? onImage;
+  final ValueChanged<CameraFrame>? onImage;
 
   @override
   State<CameraFeedView> createState() => _CameraFeedViewState();
@@ -98,8 +106,11 @@ class _CameraFeedViewState extends State<CameraFeedView> {
       );
       final controller = CameraController(
         camera,
-        ResolutionPreset.high,
+        ResolutionPreset.medium,
         enableAudio: false,
+        imageFormatGroup: defaultTargetPlatform == TargetPlatform.iOS
+            ? ImageFormatGroup.bgra8888
+            : ImageFormatGroup.yuv420,
       );
 
       await controller.initialize();
@@ -127,7 +138,12 @@ class _CameraFeedViewState extends State<CameraFeedView> {
     }
 
     await controller.startImageStream((image) {
-      widget.onImage?.call(image);
+      widget.onImage?.call(
+        CameraFrame(
+          image: image,
+          rotationDegrees: controller.description.sensorOrientation,
+        ),
+      );
     });
   }
 

@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   camera: ^0.12.0+1
   flutter_tts: ^4.2.5
+  tflite_flutter: ^0.12.1
 
 dev_dependencies:
   flutter_test:
@@ -62,10 +63,6 @@ flutter:
   assets:
     - assets/models/stuff_finder/yolov8n_coco_float16.tflite
     - assets/models/stuff_finder/coco_labels.txt
-    - assets/models/stuff_finder/stuff_finder_bootstrap_n_partial_float16.tflite
-    - assets/models/stuff_finder/stuff_finder_bootstrap_labels.txt
-    - assets/models/stuff_finder/stuff_finder_v2_float16.tflite
-    - assets/models/stuff_finder/stuff_finder_v2_labels.txt
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -37,6 +37,7 @@ class DetectionFeedbackController {
   Duration? _activeHapticInterval;
   String? _lastPhrase;
   DateTime? _lastSpokenAt;
+  var _hadTarget = false;
   var _isActive = false;
 
   void start() {
@@ -67,18 +68,26 @@ class DetectionFeedbackController {
     }
 
     final target = _pipeline.currentTarget;
-    _scheduleLostTargetStop();
-
     if (target == null) {
+      if (_hadTarget) {
+        _hadTarget = false;
+        _scheduleLostTargetStop();
+      }
       return;
     }
 
+    _hadTarget = true;
+    _lostTargetTimer?.cancel();
+    _lostTargetTimer = null;
     _maybeSpeak(target);
     _ensureHaptics(target.proximity);
   }
 
   void _maybeSpeak(DetectionResult target) {
-    final phrase = _phraseFor(target);
+    final phrase = _selectedTargetPhrase();
+    if (phrase == null) {
+      return;
+    }
     final now = _clock();
     final lastSpokenAt = _lastSpokenAt;
 
@@ -123,6 +132,7 @@ class DetectionFeedbackController {
     _activeHapticInterval = null;
     _lastPhrase = null;
     _lastSpokenAt = null;
+    _hadTarget = false;
 
     if (stopSpeech) {
       unawaited(_safeTtsCall(_ttsService.stop));
@@ -163,19 +173,11 @@ class DetectionFeedbackController {
     }
   }
 
-  String _phraseFor(DetectionResult target) {
-    final label = TargetLabels.stuffFinderDisplayNameFor(target.label);
-    final direction = switch (target.direction) {
-      ObjectDirection.left => 'on your left',
-      ObjectDirection.center => 'centered',
-      ObjectDirection.right => 'on your right',
-    };
-    final proximity = switch (target.proximity) {
-      ObjectProximity.near => 'nearby',
-      ObjectProximity.mid => 'in the middle distance',
-      ObjectProximity.far => 'far away',
-    };
-
-    return '$label, $direction, $proximity';
+  String? _selectedTargetPhrase() {
+    final selectedLabel = _pipeline.targetLabel;
+    if (selectedLabel == null) {
+      return null;
+    }
+    return TargetLabels.stuffFinderDisplayNameFor(selectedLabel);
   }
 }

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
 
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -62,7 +61,7 @@ class _StuffFinderScreenState extends State<StuffFinderScreen> {
           fit: StackFit.expand,
           children: [
             CameraFeedView(onImage: _handleCameraImage),
-            if (_services.config.enableDiagnostics && currentTarget != null)
+            if (currentTarget != null)
               CustomPaint(
                 painter: _DetectionBoxPainter(detection: currentTarget),
               ),
@@ -73,6 +72,9 @@ class _StuffFinderScreenState extends State<StuffFinderScreen> {
               child: _TargetStatusBar(
                 targetLabel: _pipeline.targetLabel,
                 currentTarget: currentTarget,
+                isDetectorReady: _pipeline.isReady,
+                isDetectorLoading: _pipeline.isInitializing,
+                detectorError: _pipeline.initializationError,
               ),
             ),
             Positioned(
@@ -102,10 +104,6 @@ class _StuffFinderScreenState extends State<StuffFinderScreen> {
 
   Future<void> _startStuffFinder() async {
     try {
-      await _pipeline.initialize();
-      if (!mounted) {
-        return;
-      }
       _pipeline.start();
       _services.detectionFeedbackController.start();
       unawaited(_setNativeCameraMode());
@@ -131,8 +129,13 @@ class _StuffFinderScreenState extends State<StuffFinderScreen> {
     }
   }
 
-  void _handleCameraImage(CameraImage image) {
-    unawaited(_pipeline.processFrame(image));
+  void _handleCameraImage(CameraFrame frame) {
+    unawaited(
+      _pipeline.processFrame(
+        frame.image,
+        rotationDegrees: frame.rotationDegrees,
+      ),
+    );
   }
 
   Future<void> _selectTarget() async {
@@ -147,6 +150,25 @@ class _StuffFinderScreenState extends State<StuffFinderScreen> {
     }
 
     _pipeline.setTargetLabel(selected.label);
+    try {
+      await _pipeline.initialize();
+    } catch (error, stackTrace) {
+      if (_services.config.enableDiagnostics) {
+        debugPrint('YOLO detector failed to initialize: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      if (mounted && MediaQuery.supportsAnnounceOf(context)) {
+        SemanticsService.sendAnnouncement(
+          View.of(context),
+          'Object detector unavailable',
+          TextDirection.ltr,
+        );
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
     if (MediaQuery.supportsAnnounceOf(context)) {
       SemanticsService.sendAnnouncement(
         View.of(context),
@@ -161,10 +183,16 @@ class _TargetStatusBar extends StatelessWidget {
   const _TargetStatusBar({
     required this.targetLabel,
     required this.currentTarget,
+    required this.isDetectorReady,
+    required this.isDetectorLoading,
+    required this.detectorError,
   });
 
   final String? targetLabel;
   final DetectionResult? currentTarget;
+  final bool isDetectorReady;
+  final bool isDetectorLoading;
+  final Object? detectorError;
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +283,15 @@ class _TargetStatusBar extends StatelessWidget {
     if (targetLabel == null) {
       return 'Select an object';
     }
+    if (isDetectorLoading) {
+      return 'Loading object detector';
+    }
+    if (detectorError != null) {
+      return 'Object detector unavailable';
+    }
+    if (!isDetectorReady) {
+      return 'Waiting for detector';
+    }
     if (target == null) {
       return 'Searching';
     }
@@ -282,11 +319,18 @@ class _DetectionBoxPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final box = detection.boundingBox;
+    final frameSize = detection.frameSize;
+    final destination = frameSize == null
+        ? Offset.zero & size
+        : Alignment.center.inscribe(
+            applyBoxFit(BoxFit.cover, frameSize, size).destination,
+            Offset.zero & size,
+          );
     final rect = Rect.fromLTRB(
-      box.left * size.width,
-      box.top * size.height,
-      box.right * size.width,
-      box.bottom * size.height,
+      destination.left + box.left * destination.width,
+      destination.top + box.top * destination.height,
+      destination.left + box.right * destination.width,
+      destination.top + box.bottom * destination.height,
     );
     final paint = Paint()
       ..color = AppColors.electricGreen
