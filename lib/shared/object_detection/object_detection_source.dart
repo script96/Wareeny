@@ -66,6 +66,9 @@ class UltralyticsYoloDetectionSource
     implements YoloStreamingObjectDetectionSource {
   UltralyticsYoloDetectionSource();
 
+  static const androidModelPath = 'assets/models/yolov8n_int8.tflite';
+  static const iosModelPath = 'assets/models/yolov8n.mlpackage.zip';
+
   final StreamController<ObjectDetectionFrame> _frames =
       StreamController<ObjectDetectionFrame>.broadcast();
 
@@ -76,9 +79,7 @@ class UltralyticsYoloDetectionSource
   String get displayName => 'YOLOv8n';
 
   @override
-  String get modelPath => Platform.isIOS
-      ? 'assets/models/yolov8n.mlpackage.zip'
-      : 'assets/models/yolov8n_int8.tflite';
+  String get modelPath => Platform.isIOS ? iosModelPath : androidModelPath;
 
   @override
   Stream<ObjectDetectionFrame> get frames => _frames.stream;

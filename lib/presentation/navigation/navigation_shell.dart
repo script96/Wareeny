@@ -9,6 +9,7 @@ import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareeny/presentation/stuff_finder/stuff_finder_screen.dart';
 
 class NavigationShell extends StatefulWidget {
   const NavigationShell({super.key});
@@ -51,6 +52,18 @@ class _NavigationShellState extends State<NavigationShell> {
       return Scaffold(
         backgroundColor: Colors.black,
         body: NavigationScreen(
+          previousMode: _previousMode,
+          nextMode: _nextMode,
+          onPrevious: _selectPreviousMode,
+          onNext: _selectNextMode,
+        ),
+      );
+    }
+
+    if (_currentMode == AppMode.stuffFinder) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: StuffFinderScreen(
           previousMode: _previousMode,
           nextMode: _nextMode,
           onPrevious: _selectPreviousMode,
@@ -144,11 +157,7 @@ class _RightSideOverlay extends StatelessWidget {
       right: 16,
       top: 0,
       bottom: 0,
-      child: Center(
-        child: SafeArea(
-          child: const CameraSideActions(),
-        ),
-      ),
+      child: Center(child: SafeArea(child: const CameraSideActions())),
     );
   }
 }

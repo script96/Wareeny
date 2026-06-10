@@ -5,6 +5,7 @@ enum AppMode {
   indoor('Indoor', Icons.apartment_outlined),
   outdoor('Outdoor', Icons.explore_outlined),
   navigation('Navigation', Icons.assistant_navigation),
+  stuffFinder('Stuff Finder', Icons.search_outlined),
   read('Read', Icons.menu_book_outlined),
   ask('Ask', Icons.question_answer_outlined),
   inHand('In-hand', Icons.back_hand_outlined),

@@ -3,6 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 void main() {
+  test('uses the bundled YOLOv8n platform model assets', () {
+    expect(
+      UltralyticsYoloDetectionSource.androidModelPath,
+      'assets/models/yolov8n_int8.tflite',
+    );
+    expect(
+      UltralyticsYoloDetectionSource.iosModelPath,
+      'assets/models/yolov8n.mlpackage.zip',
+    );
+  });
+
   test('maps normalized YOLO detections into source-frame pixels', () async {
     final source = UltralyticsYoloDetectionSource();
     await source.start(mode: 'navigation');
