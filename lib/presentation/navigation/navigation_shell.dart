@@ -3,6 +3,7 @@ import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
+import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
 import 'package:wareeny/presentation/read/read_screen.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
@@ -42,6 +43,18 @@ class _NavigationShellState extends State<NavigationShell> {
           previousMode: _previousMode,
           nextMode: _nextMode,
           onModeSelect: _selectMode,
+        ),
+      );
+    }
+
+    if (_currentMode == AppMode.navigation) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: NavigationScreen(
+          previousMode: _previousMode,
+          nextMode: _nextMode,
+          onPrevious: _selectPreviousMode,
+          onNext: _selectNextMode,
         ),
       );
     }

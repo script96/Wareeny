@@ -28,7 +28,9 @@ class OcrService {
 
     // ML Kit often returns null confidence (maps to 0.0) — only flag blurry
     // when we have real signal (> 0) and it's below threshold.
-    if (avgConfidence > 0.0 && avgConfidence < 0.45) return OcrFramingCue.blurry;
+    if (avgConfidence > 0.0 && avgConfidence < 0.45) {
+      return OcrFramingCue.blurry;
+    }
 
     return OcrFramingCue.none;
   }

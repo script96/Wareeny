@@ -1,0 +1,314 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
+import 'package:wareeny/shared/navigation/navigation_feedback.dart';
+import 'package:wareeny/shared/navigation/navigation_models.dart';
+import 'package:wareeny/shared/navigation/navigation_risk_engine.dart';
+import 'package:wareeny/shared/object_detection/detection_coordinate_mapper.dart';
+import 'package:wareeny/shared/object_detection/detection_models.dart';
+import 'package:wareeny/shared/object_detection/object_detection_source.dart';
+
+typedef NavigationClock = DateTime Function();
+
+class NavigationController extends ChangeNotifier {
+  factory NavigationController({
+    required ObjectDetectionSource detectionSource,
+    required NavigationFeedback feedback,
+    NavigationRiskEngine engine = const NavigationRiskEngine(),
+    DetectionCoordinateMapper coordinateMapper =
+        const DetectionCoordinateMapper(),
+    NavigationClock? clock,
+    bool diagnosticsEnabled = false,
+  }) {
+    return NavigationController._(
+      detectionSource,
+      feedback,
+      engine,
+      coordinateMapper,
+      clock ?? DateTime.now,
+      diagnosticsEnabled,
+    );
+  }
+
+  NavigationController._(
+    this._detectionSource,
+    this._feedback,
+    this._engine,
+    this._coordinateMapper,
+    this._clock,
+    this.diagnosticsEnabled,
+  );
+
+  final ObjectDetectionSource _detectionSource;
+  final NavigationFeedback _feedback;
+  final NavigationRiskEngine _engine;
+  final DetectionCoordinateMapper _coordinateMapper;
+  final NavigationClock _clock;
+  final bool diagnosticsEnabled;
+
+  static const dangerConfirmation = Duration(milliseconds: 250);
+  static const cautionConfirmation = Duration(milliseconds: 500);
+  static const dangerSpeechCooldown = Duration(seconds: 4);
+  static const cautionSpeechCooldown = Duration(seconds: 7);
+  static const dangerHapticCooldown = Duration(milliseconds: 450);
+  static const cautionHapticCooldown = Duration(milliseconds: 900);
+  static const lowLightConfirmation = Duration(seconds: 1);
+  static const lowLightSpeechCooldown = Duration(seconds: 10);
+  static const pathClearSpeechCooldown = Duration(seconds: 12);
+
+  StreamSubscription<ObjectDetectionFrame>? _subscription;
+  final Map<String, DateTime> _lastSpeechAt = {};
+  String? _pendingFingerprint;
+  DateTime? _pendingSince;
+  DateTime? _lastHapticAt;
+  DateTime? _lowLightSince;
+  DateTime? _lastLowLightSpeechAt;
+  DateTime? _lastPathClearSpeechAt;
+  int _consecutiveClearFrames = 0;
+  bool _started = false;
+
+  UprightDetectionFrame? latestFrame;
+  NavigationAssessment assessment = const NavigationAssessment(
+    objects: [],
+    selected: null,
+  );
+  String latestMessage = '';
+  String detectorStatus = 'Starting detector';
+  String cooldownStatus = 'No feedback yet';
+
+  NavigationPath get path => _engine.path;
+
+  Future<void> start() async {
+    if (_started) return;
+    _started = true;
+    _subscription = _detectionSource.frames.listen(
+      processFrame,
+      onError: _onDetectorError,
+    );
+
+    try {
+      await _detectionSource.start(mode: 'navigation');
+      detectorStatus = '${_detectionSource.displayName} active';
+    } on MissingPluginException {
+      detectorStatus = 'Object detector plugin is not installed';
+    } on PlatformException catch (error) {
+      detectorStatus = 'Detector unavailable: ${error.code}';
+    } catch (error) {
+      detectorStatus = 'Detector unavailable: $error';
+    }
+    _log('path polygon=${path.polygon}');
+    notifyListeners();
+  }
+
+  Future<void> stop() async {
+    if (!_started) return;
+    _started = false;
+    await _subscription?.cancel();
+    _subscription = null;
+    try {
+      await _detectionSource.stop();
+    } on MissingPluginException {
+      // The temporary detector adapter is optional until native YOLO is wired.
+    } on PlatformException {
+      // The native runtime may already be stopped during lifecycle teardown.
+    }
+    await _feedback.stopSpeech();
+    _resetPending();
+  }
+
+  void processFrame(ObjectDetectionFrame rawFrame) {
+    final frame = _coordinateMapper.orient(rawFrame);
+    final nextAssessment = _engine.assess(frame);
+    latestFrame = frame;
+    assessment = nextAssessment;
+    detectorStatus = '${_detectionSource.displayName} active';
+
+    _log(
+      'frame=${rawFrame.frameId} size=${rawFrame.sourceSize} '
+      'rotation=${rawFrame.rotationDegrees} mirrored=${rawFrame.mirrored} '
+      'detections=${rawFrame.detections.length}',
+    );
+    for (final item in nextAssessment.objects) {
+      _log(
+        'raw=${item.detection.source.label} '
+        'confidence=${item.detection.source.confidence.toStringAsFixed(2)} '
+        'box=${item.detection.source.boundingBox} '
+        'upright=${item.detection.normalizedBox} '
+        'overlap=${item.overlapRatio.toStringAsFixed(2)} '
+        'inside=${item.insidePath} risk=${item.risk.name} '
+        'ignored=${item.ignoreReason ?? false}',
+      );
+    }
+
+    if (rawFrame.isLowLight && nextAssessment.selected == null) {
+      _handleLowLight();
+    } else {
+      _lowLightSince = null;
+      _handleCandidate(nextAssessment.selected);
+    }
+    notifyListeners();
+  }
+
+  void _handleCandidate(NavigationObjectRisk? candidate) {
+    if (candidate == null) {
+      _resetPending();
+      _consecutiveClearFrames++;
+      cooldownStatus = 'No obstacle in path';
+      _announcePathClear();
+      return;
+    }
+    _consecutiveClearFrames = 0;
+
+    final now = _clock();
+    if (_pendingFingerprint != candidate.fingerprint) {
+      _pendingFingerprint = candidate.fingerprint;
+      _pendingSince = now;
+      cooldownStatus = 'Confirming ${candidate.risk.name}';
+      _log('selected=${candidate.fingerprint}; waiting for stability');
+      return;
+    }
+
+    final stableFor = now.difference(_pendingSince!);
+    final required = candidate.risk == NavigationRisk.danger
+        ? dangerConfirmation
+        : cautionConfirmation;
+    if (stableFor < required) {
+      cooldownStatus =
+          'Confirming ${candidate.risk.name} '
+          '(${stableFor.inMilliseconds}/${required.inMilliseconds} ms)';
+      return;
+    }
+
+    unawaited(_triggerFeedback(candidate, now));
+  }
+
+  Future<void> _triggerFeedback(
+    NavigationObjectRisk candidate,
+    DateTime now,
+  ) async {
+    final danger = candidate.risk == NavigationRisk.danger;
+    final hapticCooldown = danger
+        ? dangerHapticCooldown
+        : cautionHapticCooldown;
+    final speechCooldown = danger
+        ? dangerSpeechCooldown
+        : cautionSpeechCooldown;
+
+    if (_lastHapticAt == null ||
+        now.difference(_lastHapticAt!) >= hapticCooldown) {
+      _lastHapticAt = now;
+      _log('haptic=${candidate.risk.name}; reason=stable path obstacle');
+      try {
+        if (danger) {
+          await _feedback.playDangerHaptic();
+        } else {
+          await _feedback.playCautionHaptic();
+        }
+      } catch (error) {
+        _log('haptic failed: $error');
+      }
+    } else {
+      _log('haptic blocked by cooldown');
+    }
+
+    final lastSpeech = _lastSpeechAt[candidate.fingerprint];
+    if (lastSpeech != null && now.difference(lastSpeech) < speechCooldown) {
+      final remaining = speechCooldown - now.difference(lastSpeech);
+      cooldownStatus = 'Speech cooldown ${remaining.inMilliseconds} ms';
+      _log('speech blocked by cooldown for ${candidate.fingerprint}');
+      return;
+    }
+
+    final message = _messageFor(candidate);
+    _lastSpeechAt[candidate.fingerprint] = now;
+    latestMessage = message;
+    cooldownStatus = 'Spoke ${candidate.risk.name} warning';
+    _log('tts="$message"; reason=${candidate.fingerprint}');
+    notifyListeners();
+    try {
+      await _feedback.speak(message);
+    } catch (error) {
+      _log('speech failed: $error');
+    }
+  }
+
+  void _announcePathClear() {
+    // Wait for a few consecutive clear frames to confirm the path is truly clear.
+    if (_consecutiveClearFrames < 10) return;
+    final now = _clock();
+    if (_lastPathClearSpeechAt != null &&
+        now.difference(_lastPathClearSpeechAt!) < pathClearSpeechCooldown) {
+      cooldownStatus = 'Path-clear speech cooldown active';
+      return;
+    }
+    _lastPathClearSpeechAt = now;
+    latestMessage = 'كمّل، الطريق فاضي';
+    cooldownStatus = 'Spoke path-clear';
+    _log('tts="$latestMessage"; reason=path clear');
+    notifyListeners();
+    unawaited(
+      _feedback.speak(latestMessage).catchError((Object error) {
+        _log('path-clear speech failed: $error');
+      }),
+    );
+  }
+
+  void _handleLowLight() {
+    final now = _clock();
+    _lowLightSince ??= now;
+    if (now.difference(_lowLightSince!) < lowLightConfirmation) {
+      cooldownStatus = 'Confirming low light';
+      return;
+    }
+    if (_lastLowLightSpeechAt != null &&
+        now.difference(_lastLowLightSpeechAt!) < lowLightSpeechCooldown) {
+      cooldownStatus = 'Low-light speech cooldown active';
+      return;
+    }
+    _lastLowLightSpeechAt = now;
+    latestMessage = 'الرؤية مش واضحة';
+    cooldownStatus = 'Spoke low-light warning';
+    _log('tts="$latestMessage"; reason=low light signal');
+    unawaited(
+      _feedback.speak(latestMessage).catchError((Object error) {
+        _log('low-light speech failed: $error');
+      }),
+    );
+  }
+
+  String _messageFor(NavigationObjectRisk candidate) {
+    if (candidate.isBottomDanger || candidate.area >= 0.18) {
+      return 'وقف، في عائق قريب قدامك';
+    }
+    return switch (candidate.zone) {
+      NavigationZone.left => 'امشي يمين',
+      NavigationZone.right => 'امشي شمال',
+      NavigationZone.center => 'وقف، في عائق قدامك',
+    };
+  }
+
+  void _onDetectorError(Object error, StackTrace stackTrace) {
+    detectorStatus = 'Detector stream error: $error';
+    _log('$detectorStatus\n$stackTrace');
+    notifyListeners();
+  }
+
+  void _resetPending() {
+    _pendingFingerprint = null;
+    _pendingSince = null;
+  }
+
+  void _log(String message) {
+    if (diagnosticsEnabled) {
+      debugPrint('[Navigation] $message');
+    }
+  }
+
+  @override
+  void dispose() {
+    unawaited(stop());
+    super.dispose();
+  }
+}

@@ -44,14 +44,12 @@ class OcrBridge {
 
     final lang = _detectLanguage(text);
     final rect = block.boundingBox;
-    final boundingBox = rect != null
-        ? Rect.fromLTRB(
-            rect.left.toDouble(),
-            rect.top.toDouble(),
-            rect.right.toDouble(),
-            rect.bottom.toDouble(),
-          )
-        : Rect.zero;
+    final boundingBox = Rect.fromLTRB(
+      rect.left.toDouble(),
+      rect.top.toDouble(),
+      rect.right.toDouble(),
+      rect.bottom.toDouble(),
+    );
 
     return OcrTextBlock(
       text: text,

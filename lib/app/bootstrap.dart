@@ -11,5 +11,8 @@ Future<void> bootstrap() async {
   final config = AppConfig.fromEnvironment();
   final services = ServiceRegistry.create(config);
 
+  // Eagerly initialize TTS for Arabic speech.
+  await services.audioHapticsBridge.init();
+
   runApp(AppScope(services: services, child: const WareenyApp()));
 }

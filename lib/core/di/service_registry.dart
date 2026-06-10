@@ -5,6 +5,7 @@ import 'package:wareeny/shared/bridges/camera_bridge.dart';
 import 'package:wareeny/shared/bridges/file_download_bridge.dart';
 import 'package:wareeny/shared/bridges/local_ai_runtime_bridge.dart';
 import 'package:wareeny/shared/bridges/ocr_bridge.dart';
+import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 class ServiceRegistry {
   ServiceRegistry({
@@ -15,6 +16,7 @@ class ServiceRegistry {
     required this.fileDownloadBridge,
     required this.localAiRuntimeBridge,
     required this.ocrBridge,
+    required this.objectDetectionSource,
   });
 
   final AppConfig config;
@@ -24,16 +26,18 @@ class ServiceRegistry {
   final FileDownloadBridge fileDownloadBridge;
   final LocalAiRuntimeBridge localAiRuntimeBridge;
   final OcrBridge ocrBridge;
+  final ObjectDetectionSource objectDetectionSource;
 
   factory ServiceRegistry.create(AppConfig config) {
     return ServiceRegistry(
       config: config,
       cameraBridge: const CameraBridge(),
-      audioHapticsBridge: const AudioHapticsBridge(),
+      audioHapticsBridge: AudioHapticsBridge(),
       batteryThermalBridge: const BatteryThermalBridge(),
       fileDownloadBridge: const FileDownloadBridge(),
       localAiRuntimeBridge: const LocalAiRuntimeBridge(),
       ocrBridge: OcrBridge(),
+      objectDetectionSource: UltralyticsYoloDetectionSource(),
     );
   }
 }
