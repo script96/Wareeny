@@ -27,7 +27,7 @@ void main() {
       now = now.add(const Duration(milliseconds: 300));
       controller.processFrame(frame);
       await _flushAsync();
-      expect(feedback.spoken, ['خلي بالك، في عائق قدامك']);
+      expect(feedback.spoken, ['وقف، في عائق قدامك']);
       expect(feedback.dangerHaptics, 1);
 
       now = now.add(const Duration(seconds: 1));

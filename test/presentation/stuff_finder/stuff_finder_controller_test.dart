@@ -42,6 +42,29 @@ void main() {
     expect(controller.status, '1 match found');
   });
 
+  test('speaks when searching starts and when target is found', () async {
+    final source = _FakeDetectionSource();
+    final feedback = _FakeStuffFinderFeedback();
+    final controller = StuffFinderController(
+      detectionSource: source,
+      feedback: feedback,
+    );
+
+    await controller.selectTarget('chair');
+    controller.processFrame(
+      _frame([
+        const ObjectDetection(
+          label: 'chair',
+          confidence: 0.87,
+          boundingBox: Rect.fromLTWH(100, 120, 200, 220),
+        ),
+      ]),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(feedback.spoken, ['Searching for chair', 'Found chair']);
+  });
+
   test(
     'changing the target clears old matches and filters future frames',
     () async {
@@ -123,4 +146,16 @@ class _FakeDetectionSource implements ObjectDetectionSource {
 
   @override
   Future<void> stop() async {}
+}
+
+class _FakeStuffFinderFeedback implements StuffFinderFeedback {
+  final List<String> spoken = [];
+
+  @override
+  Future<void> speak(String message) async {
+    spoken.add(message);
+  }
+
+  @override
+  Future<void> stopSpeech() async {}
 }

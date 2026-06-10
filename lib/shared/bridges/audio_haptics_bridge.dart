@@ -14,6 +14,7 @@ class AudioHapticsBridge {
   final MethodChannel _channel;
   final FlutterTts _tts;
   bool _ttsReady = false;
+  String _arabicLanguage = 'ar';
 
   static const playHapticMethod = 'haptics.play';
 
@@ -27,14 +28,13 @@ class AudioHapticsBridge {
       debugPrint('[TTS] available languages: $available');
 
       if (available.any((l) => l.contains('ar-EG'))) {
-        await _tts.setLanguage('ar-EG');
+        _arabicLanguage = 'ar-EG';
       } else if (available.any((l) => l.startsWith('ar'))) {
-        final arabic = available.firstWhere((l) => l.startsWith('ar'));
-        await _tts.setLanguage(arabic);
+        _arabicLanguage = available.firstWhere((l) => l.startsWith('ar'));
       } else {
-        // Force ar even if not listed — the engine may still support it.
-        await _tts.setLanguage('ar');
+        _arabicLanguage = 'ar';
       }
+      await _tts.setLanguage(_arabicLanguage);
 
       await _tts.setVolume(1.0);
       await _tts.setSpeechRate(0.45);
@@ -47,10 +47,15 @@ class AudioHapticsBridge {
     }
   }
 
-  Future<void> speak(String text, {bool interrupt = true}) async {
+  Future<void> speak(
+    String text, {
+    bool interrupt = true,
+    String? languageCode,
+  }) async {
     if (!_ttsReady) await init();
     try {
       if (interrupt) await _tts.stop();
+      await _tts.setLanguage(languageCode ?? _arabicLanguage);
       final result = await _tts.speak(text);
       debugPrint('[TTS] speak result=$result text="$text"');
     } catch (error) {
@@ -81,4 +86,3 @@ class AudioHapticsBridge {
     }
   }
 }
-

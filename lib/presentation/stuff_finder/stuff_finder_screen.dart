@@ -56,10 +56,13 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_initialized) return;
-    final source = AppScope.of(context).objectDetectionSource;
+    final services = AppScope.of(context);
+    final source = services.objectDetectionSource;
     _detectionSource = source;
-    _finder = StuffFinderController(detectionSource: source)
-      ..addListener(_onFinderChanged);
+    _finder = StuffFinderController(
+      detectionSource: source,
+      feedback: BridgeStuffFinderFeedback(services.audioHapticsBridge),
+    )..addListener(_onFinderChanged);
     _initialized = true;
   }
 
