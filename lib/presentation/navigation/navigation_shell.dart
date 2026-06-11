@@ -4,8 +4,10 @@ import 'package:flutter/semantics.dart';
 import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
+import 'package:wareeny/presentation/emergency/emergency_overlay.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
+import 'package:wareeny/presentation/onboarding/emergency_onboarding_screen.dart';
 import 'package:wareeny/presentation/read/read_screen.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
@@ -34,14 +36,40 @@ class _NavigationShellState extends State<NavigationShell> {
     super.initState();
     // Speak a greeting in the user's persisted language on first launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final scope = AppScope.of(context);
       final l10n = AppLocalizations.of(context);
-      final tts = AppScope.of(context).audioHapticsBridge;
+      final tts = scope.audioHapticsBridge;
       tts.speak(
         l10n.appGreeting,
         languageCode: widget.settings.locale.languageCode,
         speechRate: widget.settings.speechRate,
       );
+
+      // Arm the emergency controller and wire overlay callback.
+      final emergency = scope.emergencyController;
+      emergency.onCountdownStarted = () {
+        if (!mounted) return;
+        showEmergencyOverlay(context, emergency);
+      };
+      emergency.arm();
+
+      // Show onboarding on very first launch.
+      if (!widget.settings.hasSeenEmergencyOnboarding) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            fullscreenDialog: true,
+            builder: (_) =>
+                EmergencyOnboardingScreen(settings: widget.settings),
+          ),
+        );
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    AppScope.of(context).emergencyController.disarm();
+    super.dispose();
   }
 
   AppMode get _currentMode => _modes[_selectedIndex];

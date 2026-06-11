@@ -7,6 +7,7 @@ import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareeny/presentation/settings/emergency_contacts_screen.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -82,6 +83,13 @@ class SettingsScreen extends StatelessWidget {
                     // ── Haptic Feedback ───────────────────────────────────
                     _GlassCard(
                       child: _HapticsToggle(settings: settings, l10n: l10n),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // ── Emergency Contacts ────────────────────────────────
+                    _EmergencyContactsTile(
+                      settings: settings,
+                      isArabic: settings.isArabic,
                     ),
 
                     const SizedBox(height: AppSpacing.xl),
@@ -265,7 +273,8 @@ class _LanguageSelector extends StatelessWidget {
             active: !settings.isArabic,
             onTap: () {
               settings.setLocale(const Locale('en'));
-              SemanticsService.announce(
+              SemanticsService.sendAnnouncement(
+                View.of(context),
                 'English selected',
                 TextDirection.ltr,
               );
@@ -277,7 +286,8 @@ class _LanguageSelector extends StatelessWidget {
             active: settings.isArabic,
             onTap: () {
               settings.setLocale(const Locale('ar'));
-              SemanticsService.announce(
+              SemanticsService.sendAnnouncement(
+                View.of(context),
                 'تم اختيار العربية',
                 TextDirection.rtl,
               );
@@ -427,12 +437,118 @@ class _HapticsToggle extends StatelessWidget {
           Switch(
             value: settings.hapticsEnabled,
             onChanged: (val) => settings.setHapticsEnabled(val),
-            activeColor: AppColors.electricGreen,
+            activeThumbColor: AppColors.electricGreen,
             activeTrackColor: AppColors.electricGreenDim,
             inactiveThumbColor: Colors.white38,
             inactiveTrackColor: AppColors.glassBorder,
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Emergency Contacts Tile ─────────────────────────────────────────────────
+
+class _EmergencyContactsTile extends StatelessWidget {
+  const _EmergencyContactsTile({
+    required this.settings,
+    required this.isArabic,
+  });
+
+  final SettingsController settings;
+  final bool isArabic;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = settings.emergencyContacts.length;
+    final label =
+        isArabic ? 'جهات الطوارئ' : 'Emergency Contacts';
+    final subtitle = count == 0
+        ? (isArabic ? 'لم يتم الإعداد' : 'Not set up')
+        : isArabic
+            ? '$count جهة اتصال مُضافة'
+            : '$count contact${count > 1 ? 's' : ''} saved';
+
+    return Semantics(
+      button: true,
+      label: '$label — $subtitle',
+      child: GestureDetector(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                EmergencyContactsScreen(settings: settings),
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.red.withAlpha(25),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: Colors.red.withAlpha(80)),
+              ),
+              child: Row(
+                children: [
+                  // Icon.
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withAlpha(40),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.sos_rounded,
+                      color: Colors.redAccent,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  // Labels.
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.8,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: count == 0
+                                ? Colors.red.withAlpha(150)
+                                : Colors.white54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.redAccent,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

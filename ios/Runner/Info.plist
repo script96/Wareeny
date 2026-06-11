@@ -28,6 +28,10 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Wareeny uses the camera to provide live mode-based visual assistance.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Wareeny shares your location with emergency contacts when you trigger SOS mode.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Wareeny shares your location with emergency contacts when you trigger SOS mode.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
