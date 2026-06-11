@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:wareeny/core/config/app_config.dart';
 import 'package:wareeny/core/di/app_scope.dart';
@@ -8,19 +9,23 @@ import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_screen.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('opens the COCO target menu from Stuff Finder', (tester) async {
-    final services = ServiceRegistry.create(AppConfig.dev());
+    final services = await ServiceRegistry.createAsync(AppConfig.dev());
 
     await tester.pumpWidget(
       AppScope(
         services: services,
-        child: const MaterialApp(
+        child: MaterialApp(
           home: Scaffold(
             body: StuffFinderScreen(
               previousMode: AppMode.navigation,
               nextMode: AppMode.read,
               onPrevious: _noop,
               onNext: _noop,
+              onModeSelect: _noopIndex,
+              settings: services.settings,
             ),
           ),
         ),
@@ -39,3 +44,5 @@ void main() {
 }
 
 void _noop() {}
+
+void _noopIndex(int _) {}
