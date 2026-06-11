@@ -11,7 +11,9 @@ import 'package:wareeny/presentation/stuff_finder/stuff_finder_screen.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('opens the COCO target menu from Stuff Finder', (tester) async {
+  testWidgets('opens common objects followed by the COCO target menu', (
+    tester,
+  ) async {
     final services = await ServiceRegistry.createAsync(AppConfig.dev());
 
     await tester.pumpWidget(
@@ -38,8 +40,23 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('What do you want to find?'), findsOneWidget);
-    expect(find.text('Search 80 COCO objects'), findsOneWidget);
-    expect(find.text('Person'), findsOneWidget);
+    expect(find.text('Search 83 objects'), findsOneWidget);
+    expect(find.text('Wallet'), findsOneWidget);
+    expect(find.text('Glasses'), findsOneWidget);
+    expect(find.text('Keys'), findsOneWidget);
+    expect(find.text('Bottle'), findsOneWidget);
+    expect(find.text('Custom Stuff Finder model'), findsNWidgets(3));
+    expect(find.text('Everyday COCO object'), findsWidgets);
+
+    await tester.enterText(find.byType(TextField), 'bottles');
+    await tester.pump();
+    expect(find.text('Bottle'), findsOneWidget);
+    expect(find.text('Wallet'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'smartphone');
+    await tester.pump();
+    expect(find.text('Cell Phone'), findsOneWidget);
+    expect(find.text('Bottle'), findsNothing);
   });
 }
 

@@ -244,7 +244,7 @@ class _NavigationScreenState extends State<NavigationScreen>
     }
 
     return YOLOView(
-      modelPath: source.modelPath,
+      modelPath: source.modelPathForMode('navigation'),
       task: YOLOTask.detect,
       controller: _yoloController,
       cameraResolution: '720p',

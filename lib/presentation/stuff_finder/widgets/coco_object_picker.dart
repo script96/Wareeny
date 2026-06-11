@@ -14,12 +14,25 @@ class CocoObjectPicker extends StatefulWidget {
 }
 
 class _CocoObjectPickerState extends State<CocoObjectPicker> {
+  static const _searchAliases = <String, List<String>>{
+    'bottle': ['bottel', 'bottles', 'water bottle'],
+    'cell phone': ['phone', 'mobile', 'mobile phone', 'smartphone'],
+    'remote': ['remotes', 'controller', 'tv remote'],
+    'backpack': ['bag', 'school bag'],
+    'handbag': ['bag', 'purse'],
+    'refrigerator': ['fridge'],
+    'couch': ['sofa'],
+    'tv': ['television'],
+    'hair drier': ['hair dryer'],
+    'dining table': ['table'],
+  };
+
   var _query = '';
 
   @override
   Widget build(BuildContext context) {
-    final filteredClasses = cocoClasses
-        .where((label) => label.contains(_query.trim().toLowerCase()))
+    final filteredClasses = stuffFinderClasses
+        .where((label) => _matchesQuery(label, _query))
         .toList(growable: false);
 
     return SafeArea(
@@ -55,7 +68,7 @@ class _CocoObjectPickerState extends State<CocoObjectPicker> {
               onChanged: (value) => setState(() => _query = value),
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Search 80 COCO objects',
+                hintText: 'Search ${stuffFinderClasses.length} objects',
                 hintStyle: const TextStyle(color: Colors.white54),
                 prefixIcon: const Icon(Icons.search, color: Colors.white70),
                 filled: true,
@@ -83,6 +96,14 @@ class _CocoObjectPickerState extends State<CocoObjectPicker> {
                         _titleCase(label),
                         style: const TextStyle(color: Colors.white),
                       ),
+                      subtitle: Text(
+                        isCustomStuffFinderClass(label)
+                            ? 'Custom Stuff Finder model'
+                            : isPopularStuffFinderClass(label)
+                            ? 'Everyday COCO object'
+                            : 'COCO object',
+                        style: const TextStyle(color: Colors.white54),
+                      ),
                       trailing: selected
                           ? const Icon(
                               Icons.check_circle,
@@ -109,5 +130,19 @@ class _CocoObjectPickerState extends State<CocoObjectPicker> {
         .split(' ')
         .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
         .join(' ');
+  }
+
+  bool _matchesQuery(String label, String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return true;
+    if (label.contains(normalizedQuery)) return true;
+    if (normalizedQuery.endsWith('s') &&
+        label == normalizedQuery.substring(0, normalizedQuery.length - 1)) {
+      return true;
+    }
+    return _searchAliases[label]?.any(
+          (alias) => alias.contains(normalizedQuery),
+        ) ??
+        false;
   }
 }

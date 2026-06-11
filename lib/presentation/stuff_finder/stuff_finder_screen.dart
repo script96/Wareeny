@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -17,6 +18,7 @@ import 'package:wareeny/presentation/reusable/camera_status_view.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareeny/presentation/stuff_finder/coco_classes.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_controller.dart';
 import 'package:wareeny/presentation/stuff_finder/widgets/coco_object_picker.dart';
 import 'package:wareeny/presentation/stuff_finder/widgets/stuff_finder_overlay.dart';
@@ -188,10 +190,10 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
       );
     }
     if (_modelError != null) {
-      return const CameraStatusView(
-        icon: Icons.videocam_off_outlined,
-        title: 'YOLOv8n unavailable',
-        message: 'The object detection model could not be loaded.',
+      return CameraStatusView(
+        icon: Icons.error_outline,
+        title: 'Stuff Finder model unavailable',
+        message: 'Choose another object or try again. $_modelError',
       );
     }
     final source = _detectionSource;
@@ -203,14 +205,20 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
       );
     }
 
+    final useCustomModel = isCustomStuffFinderClass(finder.selectedTarget!);
+    final modelPath = source.modelPathForMode(
+      'stuff_finder',
+      useCustomModel: useCustomModel,
+    );
+
     return YOLOView(
-      modelPath: source.modelPath,
+      modelPath: modelPath,
       task: YOLOTask.detect,
       controller: _yoloController,
       cameraResolution: '720p',
       confidenceThreshold: 0.45,
       iouThreshold: 0.45,
-      useGpu: true,
+      useGpu: !(useCustomModel && Platform.isAndroid),
       lensFacing: LensFacing.back,
       streamingConfig: const YOLOStreamingConfig(
         includeDetections: true,
@@ -226,7 +234,11 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
           setState(() => _modelError = null);
         }
       },
-      onModelError: (error, _, _) {
+      onModelError: (error, failedPath, _) {
+        debugPrint(
+          '[StuffFinder] Failed to load $failedPath for '
+          '${finder.selectedTarget}: $error',
+        );
         if (mounted) setState(() => _modelError = error);
       },
     );
