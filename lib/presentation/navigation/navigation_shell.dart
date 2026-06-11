@@ -7,6 +7,7 @@ import 'package:wareeny/presentation/camera/camera_feed_view.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
 import 'package:wareeny/presentation/read/read_screen.dart';
+import 'package:wareeny/presentation/scan/scan_screen.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
@@ -72,6 +73,18 @@ class _NavigationShellState extends State<NavigationShell> {
       return Scaffold(
         backgroundColor: Colors.black,
         body: ReadScreen(
+          previousMode: _previousMode,
+          nextMode: _nextMode,
+          onModeSelect: _selectMode,
+          settings: widget.settings,
+        ),
+      );
+    }
+
+    if (_currentMode == AppMode.scan) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: ScanScreen(
           previousMode: _previousMode,
           nextMode: _nextMode,
           onModeSelect: _selectMode,
