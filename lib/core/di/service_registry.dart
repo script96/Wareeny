@@ -1,4 +1,5 @@
 import 'package:wareeny/core/config/app_config.dart';
+import 'package:wareeny/presentation/settings/settings_controller.dart';
 import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
 import 'package:wareeny/shared/bridges/battery_thermal_bridge.dart';
 import 'package:wareeny/shared/bridges/camera_bridge.dart';
@@ -10,6 +11,7 @@ import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 class ServiceRegistry {
   ServiceRegistry({
     required this.config,
+    required this.settings,
     required this.cameraBridge,
     required this.audioHapticsBridge,
     required this.batteryThermalBridge,
@@ -20,6 +22,7 @@ class ServiceRegistry {
   });
 
   final AppConfig config;
+  final SettingsController settings;
   final CameraBridge cameraBridge;
   final AudioHapticsBridge audioHapticsBridge;
   final BatteryThermalBridge batteryThermalBridge;
@@ -28,9 +31,13 @@ class ServiceRegistry {
   final OcrBridge ocrBridge;
   final ObjectDetectionSource objectDetectionSource;
 
-  factory ServiceRegistry.create(AppConfig config) {
+  /// Use [ServiceRegistry.createAsync] during bootstrap instead of this factory,
+  /// because [SettingsController] must be loaded from SharedPreferences first.
+  static Future<ServiceRegistry> createAsync(AppConfig config) async {
+    final settings = await SettingsController.load();
     return ServiceRegistry(
       config: config,
+      settings: settings,
       cameraBridge: const CameraBridge(),
       audioHapticsBridge: AudioHapticsBridge(),
       batteryThermalBridge: const BatteryThermalBridge(),

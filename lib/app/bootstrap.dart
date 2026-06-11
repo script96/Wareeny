@@ -9,10 +9,11 @@ Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final config = AppConfig.fromEnvironment();
-  final services = ServiceRegistry.create(config);
+  final services = await ServiceRegistry.createAsync(config);
 
   // Eagerly initialize TTS for Arabic speech.
   await services.audioHapticsBridge.init();
 
-  runApp(AppScope(services: services, child: const WareenyApp()));
+  runApp(AppScope(services: services, child: WareenyApp(settings: services.settings)));
 }
+

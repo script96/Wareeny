@@ -62,7 +62,14 @@ class _TwoFingerSwipeDetectorState extends State<TwoFingerSwipeDetector> {
     // Check which axis has the stronger movement and exceeds the threshold
     if (deltaX.abs() >= _swipeThreshold && deltaX.abs() > deltaY.abs()) {
       _hasTriggered = true;
-      deltaX.isNegative ? widget.onSwipeLeft() : widget.onSwipeRight();
+      // In RTL layouts Flutter already mirrors the Directionality so we mirror
+      // left/right callbacks to keep "swipe towards start = previous" natural.
+      final isRtl = Directionality.of(context) == TextDirection.rtl;
+      if (deltaX.isNegative) {
+        isRtl ? widget.onSwipeRight() : widget.onSwipeLeft();
+      } else {
+        isRtl ? widget.onSwipeLeft() : widget.onSwipeRight();
+      }
     } else if (deltaY.abs() >= _swipeThreshold && deltaY.abs() > deltaX.abs()) {
       final onSwipeUp = widget.onSwipeUp;
       final onSwipeDown = widget.onSwipeDown;

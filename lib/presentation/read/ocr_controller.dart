@@ -1,20 +1,21 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 
+import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
 import 'package:wareeny/shared/bridges/ocr_bridge.dart';
 import 'package:wareeny/shared/ocr/ocr_models.dart';
 import 'package:wareeny/shared/ocr/ocr_service.dart';
 
 class OcrController extends ChangeNotifier {
-  OcrController({required OcrBridge ocrBridge})
-    : _ocr = ocrBridge,
-      _service = OcrService() {
-    _initTts();
-  }
+  OcrController({
+    required OcrBridge ocrBridge,
+    required AudioHapticsBridge audioHapticsBridge,
+  }) : _ocr = ocrBridge,
+       _audioHaptics = audioHapticsBridge,
+       _service = OcrService();
 
   final OcrBridge _ocr;
+  final AudioHapticsBridge _audioHaptics;
   final OcrService _service;
-  final FlutterTts _tts = FlutterTts();
 
   OcrReadingMode subMode = OcrReadingMode.document;
   bool isCapturing = false;
@@ -27,12 +28,7 @@ class OcrController extends ChangeNotifier {
 
   bool get isReadingActive => _readingActive;
 
-  Future<void> _initTts() async {
-    await _tts.setVolume(1.0);
-    await _tts.setSpeechRate(0.5);
-    await _tts.setPitch(1.0);
-    _tts.setCompletionHandler(_onChunkComplete);
-  }
+  // Centralized TTS is configured inside AudioHapticsBridge
 
   void cycleSubMode() {
     cancelReading();
@@ -129,19 +125,19 @@ class OcrController extends ChangeNotifier {
   }
 
   void stopReading() {
-    _tts.stop();
+    _audioHaptics.stopSpeech();
     _readingActive = false;
     notifyListeners();
   }
 
   void repeatChunk() {
     if (_chunks.isEmpty) return;
-    _tts.stop();
+    _audioHaptics.stopSpeech();
     _speakChunk();
   }
 
   void skipChunk() {
-    _tts.stop();
+    _audioHaptics.stopSpeech();
     if (_chunkIndex + 1 < _chunks.length) {
       _chunkIndex++;
       notifyListeners();
@@ -152,7 +148,7 @@ class OcrController extends ChangeNotifier {
   }
 
   void cancelReading() {
-    _tts.stop();
+    _audioHaptics.stopSpeech();
     _readingActive = false;
     _chunks = [];
     _chunkIndex = 0;
@@ -182,8 +178,12 @@ class OcrController extends ChangeNotifier {
 
   Future<void> _speak(String text, OcrLanguage language) async {
     final lang = language == OcrLanguage.arabic ? 'ar-EG' : 'en-US';
-    await _tts.setLanguage(lang);
-    await _tts.speak(text);
+    await _audioHaptics.speak(
+      text,
+      languageCode: lang,
+      speechRate: 0.5,
+      onComplete: _onChunkComplete,
+    );
   }
 
   void _finishReading() {
@@ -196,7 +196,7 @@ class OcrController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _tts.stop();
+    _audioHaptics.stopSpeech();
     super.dispose();
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
@@ -16,6 +17,7 @@ import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareeny/presentation/settings/settings_controller.dart';
 import 'package:wareeny/shared/ocr/ocr_models.dart';
 
 class ReadScreen extends StatefulWidget {
@@ -23,12 +25,14 @@ class ReadScreen extends StatefulWidget {
     required this.previousMode,
     required this.nextMode,
     required this.onModeSelect,
+    required this.settings,
     super.key,
   });
 
   final AppMode previousMode;
   final AppMode nextMode;
   final void Function(int index) onModeSelect;
+  final SettingsController settings;
 
   @override
   State<ReadScreen> createState() => _ReadScreenState();
@@ -47,6 +51,7 @@ class _ReadScreenState extends State<ReadScreen> {
       final services = AppScope.of(context);
       _ocr = OcrController(
         ocrBridge: services.ocrBridge,
+        audioHapticsBridge: services.audioHapticsBridge,
       )..addListener(_onOcrChange);
       _ocrReady = true;
     }
@@ -72,18 +77,20 @@ class _ReadScreenState extends State<ReadScreen> {
   void _onOcrChange() => setState(() {});
 
   void _cycleOcrSubModeForward() {
+    final l10n = AppLocalizations.of(context);
     _ocr.cycleSubMode();
     SemanticsService.announce(
-      '${_ocr.subMode.label} active',
-      TextDirection.ltr,
+      l10n.activeMode(_ocr.subMode.labelFor(l10n)),
+      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
     );
   }
 
   void _cycleOcrSubModeBackward() {
+    final l10n = AppLocalizations.of(context);
     _ocr.cycleSubModePrevious();
     SemanticsService.announce(
-      '${_ocr.subMode.label} active',
-      TextDirection.ltr,
+      l10n.activeMode(_ocr.subMode.labelFor(l10n)),
+      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
     );
   }
 
@@ -242,9 +249,10 @@ class _OcrSubModeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Semantics(
-      label: 'OCR mode selector. Current: ${subMode.label}.',
-      hint: 'Tap a mode to switch.',
+      label: '${l10n.ocrSelectorHint} ${l10n.activeMode(subMode.labelFor(l10n))}',
+      hint: l10n.subModeSwipeHint,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
@@ -296,10 +304,11 @@ class _OcrModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Semantics(
       button: true,
       selected: active,
-      label: mode.label,
+      label: mode.labelFor(l10n),
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
@@ -325,7 +334,7 @@ class _OcrModePill extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                mode.label.toUpperCase(),
+                mode.labelFor(l10n).toUpperCase(),
                 style: TextStyle(
                   color: active ? AppColors.electricGreen : Colors.white54,
                   fontSize: 10,

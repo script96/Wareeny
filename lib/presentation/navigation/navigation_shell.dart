@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
+import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
@@ -9,10 +10,14 @@ import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareeny/presentation/settings/settings_controller.dart';
+import 'package:wareeny/presentation/settings/settings_screen.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_screen.dart';
 
 class NavigationShell extends StatefulWidget {
-  const NavigationShell({super.key});
+  const NavigationShell({required this.settings, super.key});
+
+  final SettingsController settings;
 
   @override
   State<NavigationShell> createState() => _NavigationShellState();
@@ -37,6 +42,13 @@ class _NavigationShellState extends State<NavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    // Settings mode: full-screen settings hub (no camera)
+    if (_currentMode == AppMode.settings) {
+      return SettingsScreen(settings: widget.settings);
+    }
+
     if (_currentMode == AppMode.read) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -44,6 +56,7 @@ class _NavigationShellState extends State<NavigationShell> {
           previousMode: _previousMode,
           nextMode: _nextMode,
           onModeSelect: _selectMode,
+          settings: widget.settings,
         ),
       );
     }
@@ -56,6 +69,7 @@ class _NavigationShellState extends State<NavigationShell> {
           nextMode: _nextMode,
           onPrevious: _selectPreviousMode,
           onNext: _selectNextMode,
+          settings: widget.settings,
         ),
       );
     }
@@ -78,21 +92,14 @@ class _NavigationShellState extends State<NavigationShell> {
         onSwipeLeft: _selectNextMode,
         onSwipeRight: _selectPreviousMode,
         child: Semantics(
-          label: '${_currentMode.label} mode camera feed',
-          hint: 'Swipe with two fingers left or right to switch modes.',
+          label: l10n.activeModeNamed(_currentMode.labelFor(l10n)),
+          hint: l10n.swipeHint,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Full-screen camera feed
               const CameraFeedView(),
-
-              // Top HUD bar
               _TopOverlay(currentMode: _currentMode),
-
-              // Right side action buttons
               const _RightSideOverlay(),
-
-              // Bottom mode selector
               _BottomModeMenu(
                 previousMode: _previousMode,
                 currentMode: _currentMode,
@@ -117,17 +124,18 @@ class _NavigationShellState extends State<NavigationShell> {
 
   void _selectMode(int index) {
     setState(() => _selectedIndex = index);
+    final l10n = AppLocalizations.of(context);
     if (MediaQuery.supportsAnnounceOf(context)) {
       SemanticsService.sendAnnouncement(
         View.of(context),
-        _currentMode.label,
-        TextDirection.ltr,
+        l10n.activeModeNamed(_currentMode.labelFor(l10n)),
+        widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
       );
     }
   }
 }
 
-// ── Overlay widgets ──────────────────────────────────────────────────────────
+// ── Overlay widgets ───────────────────────────────────────────────────────────
 
 class _TopOverlay extends StatelessWidget {
   const _TopOverlay({required this.currentMode});

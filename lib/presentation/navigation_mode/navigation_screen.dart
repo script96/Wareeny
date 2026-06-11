@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
@@ -18,18 +19,24 @@ import 'package:wareeny/presentation/reusable/camera_status_view.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
+import 'package:wareeny/presentation/settings/settings_controller.dart';
 import 'package:wareeny/shared/navigation/navigation_feedback.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 /// Sub-modes available inside the Navigation screen.
 enum NavigationSubMode {
-  indoor('Indoor', Icons.apartment_outlined),
-  outdoor('Outdoor', Icons.explore_outlined);
+  indoor,
+  outdoor;
 
-  const NavigationSubMode(this.label, this.icon);
+  IconData get icon => switch (this) {
+    NavigationSubMode.indoor => Icons.apartment_outlined,
+    NavigationSubMode.outdoor => Icons.explore_outlined,
+  };
 
-  final String label;
-  final IconData icon;
+  String labelFor(AppLocalizations l10n) => switch (this) {
+    NavigationSubMode.indoor => l10n.navIndoor,
+    NavigationSubMode.outdoor => l10n.navOutdoor,
+  };
 }
 
 class NavigationScreen extends StatefulWidget {
@@ -38,6 +45,7 @@ class NavigationScreen extends StatefulWidget {
     required this.nextMode,
     required this.onPrevious,
     required this.onNext,
+    required this.settings,
     super.key,
   });
 
@@ -45,6 +53,7 @@ class NavigationScreen extends StatefulWidget {
   final AppMode nextMode;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
+  final SettingsController settings;
 
   @override
   State<NavigationScreen> createState() => _NavigationScreenState();
@@ -266,13 +275,16 @@ class _NavigationScreenState extends State<NavigationScreen>
   }
 
   void _cycleNavigationSubMode() {
+    final l10n = AppLocalizations.of(context);
     final nextMode = _navSubMode == NavigationSubMode.indoor
         ? NavigationSubMode.outdoor
         : NavigationSubMode.indoor;
     setState(() => _navSubMode = nextMode);
     SemanticsService.announce(
-      '${nextMode.label} navigation active',
-      TextDirection.ltr,
+      widget.settings.isArabic
+          ? '${nextMode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
+          : l10n.activeMode(nextMode.labelFor(l10n)),
+      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
     );
   }
 }
@@ -287,9 +299,10 @@ class _NavSubModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Semantics(
-      label: 'Navigation type. Current: ${subMode.label}.',
-      hint: 'Tap to switch between Indoor and Outdoor navigation.',
+      label: l10n.navTypeSelectorHint,
+      hint: l10n.subModeSwipeHint,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
@@ -313,7 +326,7 @@ class _NavSubModeToggle extends StatelessWidget {
                   child: Semantics(
                     button: true,
                     selected: active,
-                    label: mode.label,
+                    label: mode.labelFor(l10n),
                     child: GestureDetector(
                       onTap: () => onSelect(mode),
                       child: AnimatedContainer(
@@ -344,7 +357,7 @@ class _NavSubModeToggle extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              mode.label.toUpperCase(),
+                              mode.labelFor(l10n).toUpperCase(),
                               style: TextStyle(
                                 color: active
                                     ? AppColors.electricGreen

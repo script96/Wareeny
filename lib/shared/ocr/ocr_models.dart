@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'package:wareeny/core/localization/app_localizations.dart';
+
 enum OcrReadingMode {
   document('Document Reader', Icons.article_outlined),
   currency('Currency Reader', Icons.payments_outlined),
@@ -10,8 +12,19 @@ enum OcrReadingMode {
 
   const OcrReadingMode(this.label, this.icon);
 
+  /// Hardcoded English label — use [labelFor] for localized display.
   final String label;
   final IconData icon;
+
+  /// Returns the localized display label for this OCR sub-mode.
+  String labelFor(AppLocalizations l10n) {
+    return switch (this) {
+      OcrReadingMode.document => l10n.ocrDocument,
+      OcrReadingMode.currency => l10n.ocrCurrency,
+      OcrReadingMode.brand => l10n.ocrBrand,
+      OcrReadingMode.qa => l10n.ocrQa,
+    };
+  }
 }
 
 enum OcrLanguage { arabic, latin, mixed }
