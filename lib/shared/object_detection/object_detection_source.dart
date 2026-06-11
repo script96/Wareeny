@@ -20,6 +20,8 @@ abstract interface class YoloStreamingObjectDetectionSource
     implements ObjectDetectionSource {
   String get modelPath;
 
+  String modelPathForMode(String mode, {bool useCustomModel = false});
+
   void processStreamingData(Map<String, dynamic> data);
 }
 
@@ -66,8 +68,13 @@ class UltralyticsYoloDetectionSource
     implements YoloStreamingObjectDetectionSource {
   UltralyticsYoloDetectionSource();
 
-  static const androidModelPath = 'assets/models/yolov8n_int8.tflite';
-  static const iosModelPath = 'assets/models/yolov8n.mlpackage.zip';
+  static const navigationAndroidModelPath = 'assets/models/yolov8n_int8.tflite';
+  static const navigationIosModelPath = 'assets/models/yolov8n.mlpackage.zip';
+  static const stuffFinderAndroidModelPath =
+      'assets/models/stuff_finder_yolov8n_int8.tflite';
+  static const stuffFinderIosModelPath =
+      'assets/models/stuff_finder_yolov8n_int8.mlpackage.zip';
+  static const stuffFinderModelPath = stuffFinderAndroidModelPath;
 
   final StreamController<ObjectDetectionFrame> _frames =
       StreamController<ObjectDetectionFrame>.broadcast();
@@ -79,7 +86,18 @@ class UltralyticsYoloDetectionSource
   String get displayName => 'YOLOv8n';
 
   @override
-  String get modelPath => Platform.isIOS ? iosModelPath : androidModelPath;
+  String get modelPath =>
+      Platform.isIOS ? navigationIosModelPath : navigationAndroidModelPath;
+
+  @override
+  String modelPathForMode(String mode, {bool useCustomModel = false}) {
+    if (mode == 'stuff_finder' && useCustomModel) {
+      return Platform.isIOS
+          ? stuffFinderIosModelPath
+          : stuffFinderAndroidModelPath;
+    }
+    return modelPath;
+  }
 
   @override
   Stream<ObjectDetectionFrame> get frames => _frames.stream;
