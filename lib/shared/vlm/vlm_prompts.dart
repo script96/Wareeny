@@ -24,27 +24,27 @@ class VlmPrompts {
       '"the image shows" or "I see", never enumerate everything in view, and do '
       'not mention that you are an AI.';
 
-  // scan — v2 (Scan mode). One capture → one spoken answer. Merges the old SCAN
-  // sub-mode with the planned in-hand / currency / brand tasks: the model decides
-  // what the thing is and answers in the right shape. Money gets a total + a
-  // breakdown and an embedded EGP cheat-sheet; products are read off the
-  // packaging text, never guessed from logo memory.
+  // scan — v3 (Scan mode). One capture → one spoken answer. Two fixes over v2:
+  // (1) money gate up front — v2's long money branch dominated the prompt and
+  // made the model report money in frames with none; now money is only in play
+  // when a banknote or coin is actually visible. (2) Denomination is read from
+  // the large printed numeral only — v2's colour/mosque cheat-sheet was
+  // unverified and pushed the model to guess; the printed numeral (Western and
+  // Eastern-Arabic digits) is the one reliable signal, so we lean on that alone.
   static const _scan =
       '$_spine\n\n'
       'Task: the user pointed the camera at something and wants to know what it '
-      'is. Answer in one or two short spoken sentences, choosing the right shape:\n'
-      '- Money: state the TOTAL in Egyptian pounds first, then the breakdown if '
-      'there is more than one note, like "250 pounds: a 200 and a 50". Read the '
-      'large printed denomination numerals on each note and confirm against these '
-      'Egyptian notes: 200 — olive-green paper, Qani-Bay Mosque, Seated Scribe on '
-      'back; 100 — olive/khaki paper, Sultan Hassan Mosque, Sphinx on back; 50 — '
-      'red-brown paper, Abu Hurayba Mosque, Temple of Edfu on back; 20 — shiny '
-      'blue-green POLYMER with a clear window, Mohamed Ali Mosque (old paper 20 is '
-      'green, Muhammad Ali Mosque, war chariot on back); 10 — gray-green POLYMER '
-      'with a clear window, Al-Fattah Al-Aleem Mosque (old paper 10 is dark red, '
-      'Al-Rifai Mosque, Khafre statue on back); 5 — teal-blue paper, Ibn Tulun '
-      'Mosque. If a note\'s value is not certain, say which one you are unsure '
-      'about instead of guessing.\n'
+      'is. Most things the camera sees are NOT money — only treat the subject as '
+      'money when a banknote or coin is clearly visible in the frame; otherwise '
+      'it is one of the other shapes below. Answer in one or two short spoken '
+      'sentences, choosing the right shape:\n'
+      '- Money (only if a note or coin is actually visible): identify each note '
+      'by the large denomination numeral printed on it. It appears in Western '
+      'digits and in Eastern-Arabic digits (٥ = 5, ١٠ = 10, ٢٠ = 20, ٥٠ = 50, '
+      '١٠٠ = 100, ٢٠٠ = 200); Egyptian pound notes are 5, 10, 20, 50, 100, or '
+      '200. State the TOTAL in Egyptian pounds first, then the breakdown if there '
+      'is more than one note, like "250 pounds: a 200 and a 50". If a numeral is '
+      'not legible, say which note you cannot read instead of guessing.\n'
       '- A packaged product: read the text printed on the packaging and say the '
       'brand and product name, the variant or flavour, and the size if printed. '
       'Go by the printed words, not by what the logo or colours remind you of.\n'

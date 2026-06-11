@@ -179,8 +179,11 @@ class _ScanScreenState extends State<ScanScreen> {
         orElse: () => cameras.first,
       );
       final controller = CameraController(
+        // Scan must read small printed digits (banknote denomination numerals);
+        // a sharper frame makes them legible. veryHigh over max to stay within
+        // device/encoder support.
         camera,
-        ResolutionPreset.high,
+        ResolutionPreset.veryHigh,
         enableAudio: false,
       );
       await controller.initialize();
