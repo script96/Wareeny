@@ -8,15 +8,14 @@ import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
-import 'package:wareeny/presentation/read/ocr_controller.dart';
+import 'package:wareeny/presentation/read/vlm_read_controller.dart';
 import 'package:wareeny/presentation/read/widgets/ocr_controls_bar.dart';
-import 'package:wareeny/presentation/read/widgets/ocr_framing_overlay.dart';
+import 'package:wareeny/presentation/read/widgets/reading_status_pill.dart';
 import 'package:wareeny/presentation/read/widgets/scan_result_view.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
-import 'package:wareeny/shared/ocr/ocr_models.dart';
 
 class ReadScreen extends StatefulWidget {
   const ReadScreen({
@@ -36,19 +35,20 @@ class ReadScreen extends StatefulWidget {
 
 class _ReadScreenState extends State<ReadScreen> {
   CameraController? _camera;
-  late final OcrController _ocr;
-  bool _ocrReady = false;
+  late final VlmReadController _read;
+  bool _readReady = false;
   Object? _cameraError;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_ocrReady) {
+    if (!_readReady) {
       final services = AppScope.of(context);
-      _ocr = OcrController(
-        ocrBridge: services.ocrBridge,
-      )..addListener(_onOcrChange);
-      _ocrReady = true;
+      _read = VlmReadController(
+        assistant: services.vlmAssistant,
+        audioHaptics: services.audioHapticsBridge,
+      )..addListener(_onReadChange);
+      _readReady = true;
     }
   }
 
@@ -60,16 +60,16 @@ class _ReadScreenState extends State<ReadScreen> {
 
   @override
   void dispose() {
-    if (_ocrReady) {
-      _ocr
-        ..removeListener(_onOcrChange)
+    if (_readReady) {
+      _read
+        ..removeListener(_onReadChange)
         ..dispose();
     }
     _camera?.dispose();
     super.dispose();
   }
 
-  void _onOcrChange() => setState(() {});
+  void _onReadChange() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -79,42 +79,41 @@ class _ReadScreenState extends State<ReadScreen> {
       onSwipeRight: () => widget.onModeSelect(
           (AppMode.values.indexOf(AppMode.read) - 1) % AppMode.values.length),
       child: Stack(
-          fit: StackFit.expand,
-          children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _handleTap,
-              child: _buildCameraLayer(),
-            ),
-            IgnorePointer(child: OcrFramingOverlay(cue: _ocr.framingCue)),
-            if (_ocr.subMode == OcrReadingMode.scan &&
-                _ocr.lastResult != null &&
-                !_ocr.lastResult!.isEmpty)
-              Positioned(
-                left: 24,
-                right: 24,
-                bottom: 120,
-                child: IgnorePointer(
-                  child: ScanResultView(text: _ocr.lastResult!.fullText),
-                ),
-              ),
-            _TopHud(subMode: _ocr.subMode, onToggle: _ocr.toggleSubMode),
-            const _RightActions(),
-            _BottomArea(
-              ocr: _ocr,
-              previousMode: widget.previousMode,
-              nextMode: widget.nextMode,
-              onPreviousTap: () => widget.onModeSelect(
-                (AppMode.values.indexOf(AppMode.read) - 1) %
-                    AppMode.values.length,
-              ),
-              onNextTap: () => widget.onModeSelect(
-                (AppMode.values.indexOf(AppMode.read) + 1) %
-                    AppMode.values.length,
+        fit: StackFit.expand,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _handleTap,
+            child: _buildCameraLayer(),
+          ),
+          if (_read.isThinking)
+            const IgnorePointer(child: ReadingStatusPill(label: 'Reading…')),
+          if (_read.subMode == ReadSubMode.scan && _read.streamedText.isNotEmpty)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 120,
+              child: IgnorePointer(
+                child: ScanResultView(text: _read.streamedText),
               ),
             ),
-          ],
-        ),
+          _TopHud(subMode: _read.subMode, onToggle: _read.toggleSubMode),
+          const _RightActions(),
+          _BottomArea(
+            read: _read,
+            previousMode: widget.previousMode,
+            nextMode: widget.nextMode,
+            onPreviousTap: () => widget.onModeSelect(
+              (AppMode.values.indexOf(AppMode.read) - 1) %
+                  AppMode.values.length,
+            ),
+            onNextTap: () => widget.onModeSelect(
+              (AppMode.values.indexOf(AppMode.read) + 1) %
+                  AppMode.values.length,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -171,10 +170,10 @@ class _ReadScreenState extends State<ReadScreen> {
 
   Future<void> _handleTap() async {
     final cam = _camera;
-    if (cam == null || !cam.value.isInitialized || _ocr.isCapturing) return;
+    if (cam == null || !cam.value.isInitialized || _read.isThinking) return;
     final file = await cam.takePicture();
-    if (_ocr.subMode == OcrReadingMode.scan) {
-      await _ocr.scan(file.path);
+    if (_read.subMode == ReadSubMode.scan) {
+      await _read.scan(file.path);
       if (mounted) {
         SemanticsService.sendAnnouncement(
           View.of(context),
@@ -183,7 +182,7 @@ class _ReadScreenState extends State<ReadScreen> {
         );
       }
     } else {
-      await _ocr.startReading(file.path);
+      await _read.startReading(file.path);
     }
   }
 }
@@ -193,7 +192,7 @@ class _ReadScreenState extends State<ReadScreen> {
 class _TopHud extends StatelessWidget {
   const _TopHud({required this.subMode, required this.onToggle});
 
-  final OcrReadingMode subMode;
+  final ReadSubMode subMode;
   final VoidCallback onToggle;
 
   @override
@@ -219,14 +218,14 @@ class _TopHud extends StatelessWidget {
 class _SubModeToggle extends StatelessWidget {
   const _SubModeToggle({required this.subMode, required this.onToggle});
 
-  final OcrReadingMode subMode;
+  final ReadSubMode subMode;
   final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Switch to ${subMode == OcrReadingMode.scan ? "Read" : "Scan"} mode',
+      label: 'Switch to ${subMode == ReadSubMode.scan ? "Read" : "Scan"} mode',
       child: GestureDetector(
         onTap: onToggle,
         child: ClipRRect(
@@ -248,12 +247,12 @@ class _SubModeToggle extends StatelessWidget {
                 children: [
                   _Pill(
                     label: 'SCAN',
-                    active: subMode == OcrReadingMode.scan,
+                    active: subMode == ReadSubMode.scan,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   _Pill(
                     label: 'READ',
-                    active: subMode == OcrReadingMode.read,
+                    active: subMode == ReadSubMode.read,
                   ),
                 ],
               ),
@@ -317,14 +316,14 @@ class _RightActions extends StatelessWidget {
 
 class _BottomArea extends StatelessWidget {
   const _BottomArea({
-    required this.ocr,
+    required this.read,
     required this.previousMode,
     required this.nextMode,
     required this.onPreviousTap,
     required this.onNextTap,
   });
 
-  final OcrController ocr;
+  final VlmReadController read;
   final AppMode previousMode;
   final AppMode nextMode;
   final VoidCallback onPreviousTap;
@@ -339,12 +338,12 @@ class _BottomArea extends StatelessWidget {
       child: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Center(
-          child: ocr.isReadingActive
+          child: read.isReadingActive
               ? OcrControlsBar(
-                  onStop: ocr.stopReading,
-                  onRepeat: ocr.repeatChunk,
-                  onSkip: ocr.skipChunk,
-                  onCancel: ocr.cancelReading,
+                  onStop: read.stopReading,
+                  onRepeat: read.repeatChunk,
+                  onSkip: read.skipChunk,
+                  onCancel: read.cancel,
                 )
               : ModeCarouselBar(
                   previous: previousMode,

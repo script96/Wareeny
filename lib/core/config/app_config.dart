@@ -52,7 +52,7 @@ class AppConfig {
       ),
       cloudModelId: String.fromEnvironment(
         'CLOUD_MODEL_ID',
-        defaultValue: 'gemma-4-e4b-dev',
+        defaultValue: 'gemma4:e4b',
       ),
       localModelRegistryName: String.fromEnvironment(
         'LOCAL_MODEL_REGISTRY',
@@ -75,7 +75,7 @@ class AppConfig {
       ),
       cloudModelId: String.fromEnvironment(
         'CLOUD_MODEL_ID',
-        defaultValue: 'gemma-4-e4b',
+        defaultValue: 'gemma4:e4b',
       ),
       localModelRegistryName: String.fromEnvironment(
         'LOCAL_MODEL_REGISTRY',

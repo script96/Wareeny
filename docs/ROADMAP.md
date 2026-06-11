@@ -11,7 +11,7 @@ Wareeny runs on three tiers:
 
 - `Tier 1 — Realtime local CV`: obstacle, traffic light, danger-word/sign alerts, and the finder
   features. Frame-rate, worker-thread, never blocks the UI, never calls the VLM.
-- `Tier 2 — On-device VLM`: `Gemma 3n E4B` via MediaPipe LLM Inference. Reading, in-hand, currency,
+- `Tier 2 — On-device VLM`: `Gemma 4` via MediaPipe LLM Inference. Reading, in-hand, currency,
   brand. Private and offline-capable. Image + task prompt → natural spoken answer.
 - `Tier 3 — Cloud VLM`: hosted Gemma (same family). Scene Q&A, heavier reasoning, and the fallback
   for Tier 2.
