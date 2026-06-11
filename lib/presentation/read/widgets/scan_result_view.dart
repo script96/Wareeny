@@ -44,21 +44,27 @@ class _ScanResultViewState extends State<ScanResultView>
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
           child: Container(
+            constraints: const BoxConstraints(maxHeight: 250),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.darkSurface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: AppColors.electricGreen, width: 1),
             ),
-            child: Text(
-              widget.text,
-              textDirection: _isArabic(widget.text)
-                  ? TextDirection.rtl
-                  : TextDirection.ltr,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                height: 1.5,
+            child: SingleChildScrollView(
+              child: Semantics(
+                label: widget.text,
+                child: Text(
+                  widget.text,
+                  textDirection: _isArabic(widget.text)
+                      ? TextDirection.rtl
+                      : TextDirection.ltr,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.5,
+                  ),
+                ),
               ),
             ),
           ),

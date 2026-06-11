@@ -45,6 +45,7 @@ class NavigationScreen extends StatefulWidget {
     required this.nextMode,
     required this.onPrevious,
     required this.onNext,
+    required this.onModeSelect,
     required this.settings,
     super.key,
   });
@@ -53,6 +54,7 @@ class NavigationScreen extends StatefulWidget {
   final AppMode nextMode;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
+  final void Function(int) onModeSelect;
   final SettingsController settings;
 
   @override
@@ -123,87 +125,103 @@ class _NavigationScreenState extends State<NavigationScreen>
       return const ColoredBox(color: Colors.black);
     }
 
+    final l10n = AppLocalizations.of(context);
+    final modeActions = AppMode.navigation.getModeSwitchActions(
+      l10n: l10n,
+      settings: widget.settings,
+      onModeSelect: widget.onModeSelect,
+    );
+
+    final toggleSubModeLabel = widget.settings.isArabic
+        ? 'تبديل نوع التنقل'
+        : 'Toggle Navigation Type';
+    modeActions[CustomSemanticsAction(label: toggleSubModeLabel)] = _cycleNavigationSubMode;
+
     return TwoFingerSwipeDetector(
       onSwipeLeft: widget.onNext,
       onSwipeRight: widget.onPrevious,
       onSwipeUp: _cycleNavigationSubMode,
       onSwipeDown: _cycleNavigationSubMode,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          _buildCamera(),
-          IgnorePointer(
-            child: NavigationOverlay(
-              path: navigation.path,
-              frame: navigation.latestFrame,
-              assessment: navigation.assessment,
-              showDebug: _debugEnabled,
-              logProjection: _debugEnabled,
-            ),
-          ),
-          Positioned(
-            top: 0,
-            left: 16,
-            right: 16,
-            child: SafeArea(
-              minimum: const EdgeInsets.only(top: 12),
-              child: Column(
-                children: [
-                  const CameraTopBar(currentMode: AppMode.navigation),
-                  const SizedBox(height: AppSpacing.sm),
-                  _NavSubModeToggle(
-                    subMode: _navSubMode,
-                    onSelect: (mode) {
-                      setState(() => _navSubMode = mode);
-                      final l10n = AppLocalizations.of(context);
-                      SemanticsService.announce(
-                        widget.settings.isArabic
-                            ? '${mode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
-                            : l10n.activeMode(mode.labelFor(l10n)),
-                        widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                      );
-                    },
-                  ),
-                ],
+      child: Semantics(
+        label: l10n.activeModeNamed(AppMode.navigation.labelFor(l10n)),
+        customSemanticsActions: modeActions,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildCamera(),
+            IgnorePointer(
+              child: NavigationOverlay(
+                path: navigation.path,
+                frame: navigation.latestFrame,
+                assessment: navigation.assessment,
+                showDebug: _debugEnabled,
+                logProjection: _debugEnabled,
               ),
             ),
-          ),
-          Positioned(
-            top: 84,
-            left: 16,
-            child: SafeArea(
-              child: NavigationDebugPanel(
-                controller: navigation,
-                enabled: _debugEnabled,
-                onToggle: () {
-                  setState(() => _debugEnabled = !_debugEnabled);
-                },
-              ),
-            ),
-          ),
-          const Positioned(
-            right: 16,
-            top: 0,
-            bottom: 0,
-            child: Center(child: SafeArea(child: CameraSideActions())),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 24,
-            child: SafeArea(
-              child: Center(
-                child: ModeCarouselBar(
-                  previous: widget.previousMode,
-                  current: AppMode.navigation,
-                  next: widget.nextMode,
-                  onPreviousTap: widget.onPrevious,
-                  onNextTap: widget.onNext,
+            Positioned(
+              top: 0,
+              left: 16,
+              right: 16,
+              child: SafeArea(
+                minimum: const EdgeInsets.only(top: 12),
+                child: Column(
+                  children: [
+                    const CameraTopBar(currentMode: AppMode.navigation),
+                    const SizedBox(height: AppSpacing.sm),
+                    _NavSubModeToggle(
+                      subMode: _navSubMode,
+                      onSelect: (mode) {
+                        setState(() => _navSubMode = mode);
+                        final l10n = AppLocalizations.of(context);
+                        SemanticsService.announce(
+                          widget.settings.isArabic
+                              ? '${mode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
+                              : l10n.activeMode(mode.labelFor(l10n)),
+                          widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              top: 84,
+              left: 16,
+              child: SafeArea(
+                child: NavigationDebugPanel(
+                  controller: navigation,
+                  enabled: _debugEnabled,
+                  onToggle: () {
+                    setState(() => _debugEnabled = !_debugEnabled);
+                  },
+                ),
+              ),
+            ),
+            const Positioned(
+              right: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(child: SafeArea(child: CameraSideActions())),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: SafeArea(
+                child: Center(
+                  child: ModeCarouselBar(
+                    previous: widget.previousMode,
+                    current: AppMode.navigation,
+                    next: widget.nextMode,
+                    onPreviousTap: widget.onPrevious,
+                    onNextTap: widget.onNext,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

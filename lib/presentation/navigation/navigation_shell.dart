@@ -101,6 +101,8 @@ class _NavigationShellState extends State<NavigationShell> {
           nextMode: _nextMode,
           onPrevious: _selectPreviousMode,
           onNext: _selectNextMode,
+          onModeSelect: _selectMode,
+          settings: widget.settings,
         ),
       );
     }

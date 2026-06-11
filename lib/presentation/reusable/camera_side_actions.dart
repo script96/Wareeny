@@ -56,33 +56,37 @@ class _GlassIconButtonState extends State<_GlassIconButton> {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: widget.tooltip,
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _pressed = true),
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          widget.onTap();
-        },
-        onTapCancel: () => setState(() => _pressed = false),
-        child: AnimatedScale(
-          scale: _pressed ? 0.88 : 1.0,
-          duration: const Duration(milliseconds: 100),
-          child: ClipOval(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.glassWhite,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.glassBorder, width: 1),
-                ),
-                child: Icon(
-                  widget.icon,
-                  color: Colors.white.withValues(alpha: 0.85),
-                  size: 20,
+    return Semantics(
+      button: true,
+      label: widget.tooltip,
+      child: Tooltip(
+        message: widget.tooltip,
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) {
+            setState(() => _pressed = false);
+            widget.onTap();
+          },
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: _pressed ? 0.88 : 1.0,
+            duration: const Duration(milliseconds: 100),
+            child: ClipOval(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.glassWhite,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.glassBorder, width: 1),
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    color: Colors.white.withValues(alpha: 0.85),
+                    size: 20,
+                  ),
                 ),
               ),
             ),

@@ -96,6 +96,20 @@ class _ReadScreenState extends State<ReadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final isScreenReaderActive = MediaQuery.maybeOf(context)?.accessibleNavigation ?? false;
+
+    final modeActions = AppMode.read.getModeSwitchActions(
+      l10n: l10n,
+      settings: widget.settings,
+      onModeSelect: widget.onModeSelect,
+    );
+
+    final changeSubModeLabel = widget.settings.isArabic
+        ? 'تغيير وضع القراءة'
+        : 'Change Reading Mode';
+    modeActions[CustomSemanticsAction(label: changeSubModeLabel)] = _cycleOcrSubModeForward;
+
     return TwoFingerSwipeDetector(
       onSwipeLeft: () => widget.onModeSelect(
           (AppMode.values.indexOf(AppMode.read) + 1) % AppMode.values.length),
@@ -103,16 +117,23 @@ class _ReadScreenState extends State<ReadScreen> {
           (AppMode.values.indexOf(AppMode.read) - 1) % AppMode.values.length),
       onSwipeUp: _cycleOcrSubModeForward,
       onSwipeDown: _cycleOcrSubModeBackward,
-      child: Stack(
+      child: Semantics(
+        label: l10n.activeModeNamed(AppMode.read.labelFor(l10n)),
+        customSemanticsActions: modeActions,
+        child: Stack(
           fit: StackFit.expand,
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _handleTap,
-              child: _buildCameraLayer(),
+            Semantics(
+              button: true,
+              label: l10n.tapToCaptureHint,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _handleTap,
+                child: _buildCameraLayer(),
+              ),
             ),
             IgnorePointer(child: OcrFramingOverlay(cue: _ocr.framingCue)),
-              if (_ocr.subMode == OcrReadingMode.document &&
+            if (_ocr.subMode == OcrReadingMode.document &&
                 _ocr.lastResult != null &&
                 !_ocr.lastResult!.isEmpty)
               Positioned(
@@ -120,6 +141,7 @@ class _ReadScreenState extends State<ReadScreen> {
                 right: 24,
                 bottom: 120,
                 child: IgnorePointer(
+                  ignoring: !isScreenReaderActive,
                   child: ScanResultView(text: _ocr.lastResult!.fullText),
                 ),
               ),
@@ -140,6 +162,7 @@ class _ReadScreenState extends State<ReadScreen> {
             ),
           ],
         ),
+      ),
     );
   }
 

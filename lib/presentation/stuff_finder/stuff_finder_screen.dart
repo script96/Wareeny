@@ -24,6 +24,8 @@ class StuffFinderScreen extends StatefulWidget {
     required this.nextMode,
     required this.onPrevious,
     required this.onNext,
+    required this.onModeSelect,
+    required this.settings,
     super.key,
   });
 
@@ -31,6 +33,8 @@ class StuffFinderScreen extends StatefulWidget {
   final AppMode nextMode;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
+  final void Function(int) onModeSelect;
+  final SettingsController settings;
 
   @override
   State<StuffFinderScreen> createState() => _StuffFinderScreenState();
@@ -93,64 +97,80 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
     final finder = _finder;
     if (finder == null) return const ColoredBox(color: Colors.black);
 
+    final l10n = AppLocalizations.of(context);
+    final modeActions = AppMode.stuffFinder.getModeSwitchActions(
+      l10n: l10n,
+      settings: widget.settings,
+      onModeSelect: widget.onModeSelect,
+    );
+
+    final pickTargetLabel = widget.settings.isArabic
+        ? 'اختر الشيء للبحث عنه'
+        : 'Choose object to find';
+    modeActions[CustomSemanticsAction(label: pickTargetLabel)] = _pickTarget;
+
     return TwoFingerSwipeDetector(
       onSwipeLeft: widget.onNext,
       onSwipeRight: widget.onPrevious,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          _buildCamera(finder),
-          IgnorePointer(child: StuffFinderOverlay(frame: finder.latestFrame)),
-          Positioned(
-            top: 0,
-            left: 16,
-            right: 16,
-            child: SafeArea(
-              minimum: const EdgeInsets.only(top: 12),
-              child: const CameraTopBar(currentMode: AppMode.stuffFinder),
-            ),
-          ),
-          Positioned(
-            top: 84,
-            left: 16,
-            right: 16,
-            child: SafeArea(
-              child: Center(
-                child: _TargetButton(finder: finder, onTap: _pickTarget),
+      child: Semantics(
+        label: l10n.activeModeNamed(AppMode.stuffFinder.labelFor(l10n)),
+        customSemanticsActions: modeActions,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildCamera(finder),
+            IgnorePointer(child: StuffFinderOverlay(frame: finder.latestFrame)),
+            Positioned(
+              top: 0,
+              left: 16,
+              right: 16,
+              child: SafeArea(
+                minimum: const EdgeInsets.only(top: 12),
+                child: const CameraTopBar(currentMode: AppMode.stuffFinder),
               ),
             ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 112,
-            child: SafeArea(
-              child: Center(child: _StatusChip(finder: finder)),
-            ),
-          ),
-          const Positioned(
-            right: 16,
-            top: 0,
-            bottom: 0,
-            child: Center(child: SafeArea(child: CameraSideActions())),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 24,
-            child: SafeArea(
-              child: Center(
-                child: ModeCarouselBar(
-                  previous: widget.previousMode,
-                  current: AppMode.stuffFinder,
-                  next: widget.nextMode,
-                  onPreviousTap: widget.onPrevious,
-                  onNextTap: widget.onNext,
+            Positioned(
+              top: 84,
+              left: 16,
+              right: 16,
+              child: SafeArea(
+                child: Center(
+                  child: _TargetButton(finder: finder, onTap: _pickTarget),
                 ),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 112,
+              child: SafeArea(
+                child: Center(child: _StatusChip(finder: finder)),
+              ),
+            ),
+            const Positioned(
+              right: 16,
+              top: 0,
+              bottom: 0,
+              child: Center(child: SafeArea(child: CameraSideActions())),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: SafeArea(
+                child: Center(
+                  child: ModeCarouselBar(
+                    previous: widget.previousMode,
+                    current: AppMode.stuffFinder,
+                    next: widget.nextMode,
+                    onPreviousTap: widget.onPrevious,
+                    onNextTap: widget.onNext,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -295,21 +315,25 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white24),
-      ),
-      child: Text(
-        finder.status,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
+    return Semantics(
+      liveRegion: true,
+      label: finder.status,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white24),
+        ),
+        child: Text(
+          finder.status,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

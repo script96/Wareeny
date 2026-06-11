@@ -30,6 +30,11 @@ class _TwoFingerSwipeDetectorState extends State<TwoFingerSwipeDetector> {
 
   @override
   Widget build(BuildContext context) {
+    final isScreenReaderActive = MediaQuery.maybeOf(context)?.accessibleNavigation ?? false;
+    if (isScreenReaderActive) {
+      return widget.child;
+    }
+
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: _handlePointerDown,
