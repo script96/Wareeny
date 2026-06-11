@@ -6,77 +6,105 @@ import 'package:flutter/semantics.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
+import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({required this.settings, super.key});
+  const SettingsScreen({
+    required this.settings,
+    required this.onClose,
+    super.key,
+  });
 
   final SettingsController settings;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.lg,
-          ),
-          child: AnimatedBuilder(
-            animation: settings,
-            builder: (context, _) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ── Header ─────────────────────────────────────────────
-                  _SettingsHeader(title: l10n.settingsTitle),
-                  const SizedBox(height: AppSpacing.xl),
+    return TwoFingerSwipeDetector(
+      onSwipeLeft: onClose,
+      onSwipeRight: onClose,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.lg,
+            ),
+            child: AnimatedBuilder(
+              animation: settings,
+              builder: (context, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Header with back button ──────────────────────────
+                    _SettingsHeader(title: l10n.settingsTitle, onClose: onClose),
+                    const SizedBox(height: AppSpacing.xl),
 
-                  // ── Language ───────────────────────────────────────────
-                  _GlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SectionLabel(
-                          icon: Icons.language_outlined,
-                          label: l10n.settingsLanguage,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        _LanguageSelector(
-                          settings: settings,
-                          l10n: l10n,
-                        ),
-                      ],
+                    // ── Language ─────────────────────────────────────────
+                    _GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionLabel(
+                            icon: Icons.language_outlined,
+                            label: l10n.settingsLanguage,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          _LanguageSelector(
+                            settings: settings,
+                            l10n: l10n,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.md),
 
-                  // ── Speech Rate ────────────────────────────────────────
-                  _GlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SectionLabel(
-                          icon: Icons.record_voice_over_outlined,
-                          label: l10n.settingsSpeechRate,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        _SpeechRateSlider(settings: settings, l10n: l10n),
-                      ],
+                    // ── Speech Rate ───────────────────────────────────────
+                    _GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionLabel(
+                            icon: Icons.record_voice_over_outlined,
+                            label: l10n.settingsSpeechRate,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          _SpeechRateSlider(settings: settings, l10n: l10n),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.md),
 
-                  // ── Haptic Feedback ────────────────────────────────────
-                  _GlassCard(
-                    child: _HapticsToggle(settings: settings, l10n: l10n),
-                  ),
-                ],
-              );
-            },
+                    // ── Haptic Feedback ───────────────────────────────────
+                    _GlassCard(
+                      child: _HapticsToggle(settings: settings, l10n: l10n),
+                    ),
+
+                    const SizedBox(height: AppSpacing.xl),
+
+                    // ── Exit hint ─────────────────────────────────────────
+                    Semantics(
+                      label: l10n.settingsExitHint,
+                      child: Center(
+                        child: Text(
+                          l10n.settingsExitHint,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white24,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -87,48 +115,76 @@ class SettingsScreen extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _SettingsHeader extends StatelessWidget {
-  const _SettingsHeader({required this.title});
+  const _SettingsHeader({required this.title, required this.onClose});
 
   final String title;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final l10n = AppLocalizations.of(context);
+    return Row(
       children: [
-        RichText(
-          text: TextSpan(
-            children: [
-              const TextSpan(
-                text: 'WARE',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
-                ),
+        // Back button
+        Semantics(
+          button: true,
+          label: l10n.settingsBack,
+          child: GestureDetector(
+            onTap: onClose,
+            child: Container(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.glassWhite,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.glassBorder),
               ),
-              const TextSpan(
-                text: 'ENY',
-                style: TextStyle(
-                  color: AppColors.electricGreen,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
-                ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: AppColors.electricGreen,
+                size: 18,
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 1.5,
-          ),
+        const SizedBox(width: AppSpacing.md),
+        // Brand + subtitle
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: const TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'WARE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  TextSpan(
+                    text: 'ENY',
+                    style: TextStyle(
+                      color: AppColors.electricGreen,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ],
         ),
       ],
     );

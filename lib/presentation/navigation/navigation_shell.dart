@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
+import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
@@ -28,6 +29,21 @@ class _NavigationShellState extends State<NavigationShell> {
 
   static const _modes = AppMode.values;
 
+  @override
+  void initState() {
+    super.initState();
+    // Speak a greeting in the user's persisted language on first launch.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final l10n = AppLocalizations.of(context);
+      final tts = AppScope.of(context).audioHapticsBridge;
+      tts.speak(
+        l10n.appGreeting,
+        languageCode: widget.settings.locale.languageCode,
+        speechRate: widget.settings.speechRate,
+      );
+    });
+  }
+
   AppMode get _currentMode => _modes[_selectedIndex];
 
   AppMode get _previousMode {
@@ -46,7 +62,10 @@ class _NavigationShellState extends State<NavigationShell> {
 
     // Settings mode: full-screen settings hub (no camera)
     if (_currentMode == AppMode.settings) {
-      return SettingsScreen(settings: widget.settings);
+      return SettingsScreen(
+        settings: widget.settings,
+        onClose: () => _selectMode(AppMode.values.indexOf(AppMode.home)),
+      );
     }
 
     if (_currentMode == AppMode.read) {

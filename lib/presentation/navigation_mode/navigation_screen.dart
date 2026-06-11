@@ -155,9 +155,12 @@ class _NavigationScreenState extends State<NavigationScreen>
                     subMode: _navSubMode,
                     onSelect: (mode) {
                       setState(() => _navSubMode = mode);
+                      final l10n = AppLocalizations.of(context);
                       SemanticsService.announce(
-                        '${mode.label} navigation active',
-                        TextDirection.ltr,
+                        widget.settings.isArabic
+                            ? '${mode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
+                            : l10n.activeMode(mode.labelFor(l10n)),
+                        widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
                       );
                     },
                   ),

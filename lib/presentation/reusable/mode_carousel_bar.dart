@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
@@ -28,10 +29,11 @@ class ModeCarouselBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Semantics(
       label:
-          'Current mode ${current.label}. Previous ${previous.label}. Next ${next.label}.',
-      hint: 'Tap left or right pill to switch modes.',
+          'Current mode ${current.labelFor(l10n)}. Previous ${previous.labelFor(l10n)}. Next ${next.labelFor(l10n)}.',
+      hint: l10n.swipeHint,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(32),
         child: BackdropFilter(
@@ -71,9 +73,11 @@ class _SideModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final label = mode.labelFor(l10n);
     return Semantics(
       button: onTap != null,
-      label: onTap != null ? 'Switch to ${mode.label}' : mode.label,
+      label: onTap != null ? '${l10n.switchTo} $label' : label,
       child: GestureDetector(
         onTap: onTap,
         child: SizedBox(
@@ -88,7 +92,7 @@ class _SideModePill extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                mode.label.toUpperCase(),
+                label.toUpperCase(),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -114,6 +118,7 @@ class _ActiveModePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
@@ -140,7 +145,7 @@ class _ActiveModePill extends StatelessWidget {
           Icon(mode.icon, color: AppColors.electricGreen, size: 22),
           const SizedBox(height: 4),
           Text(
-            mode.label.toUpperCase(),
+            mode.labelFor(l10n).toUpperCase(),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,

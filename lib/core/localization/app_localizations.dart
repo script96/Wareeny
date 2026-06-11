@@ -44,6 +44,8 @@ class AppLocalizations {
   String get swipeHint =>
       isArabic ? 'مرر بإصبعين يميناً أو يساراً لتغيير الوضع.' : 'Swipe with two fingers left or right to switch modes.';
 
+  String get switchTo => isArabic ? 'الانتقال إلى' : 'Switch to';
+
   String get subModeSwipeHint =>
       isArabic ? 'مرر بإصبعين للأعلى أو الأسفل لتبديل النوع.' : 'Swipe with two fingers up or down to switch type.';
 
@@ -67,6 +69,11 @@ class AppLocalizations {
   String get appReady =>
       isArabic ? 'ويرني جاهز. الوضع الرئيسي.' : 'Wareeny active. Home Mode.';
 
+  String get appGreeting =>
+      isArabic
+          ? 'مرحباً بك في ويرني. مرّر بإصبعين للتنقل بين الأوضاع.'
+          : 'Welcome to Wareeny. Swipe with two fingers to navigate between modes.';
+
   String get scanComplete =>
       isArabic ? 'اكتملت القراءة.' : 'Reading complete.';
 
@@ -88,6 +95,12 @@ class AppLocalizations {
 
   String get settingsLanguageHint =>
       isArabic ? 'اختر لغة التطبيق' : 'Choose app language';
+
+  String get settingsBack =>
+      isArabic ? 'رجوع' : 'Back';
+
+  String get settingsExitHint =>
+      isArabic ? 'مرّر بإصبعين للخروج من الإعدادات' : 'Swipe with two fingers to exit settings';
 }
 
 // ── Delegate ──────────────────────────────────────────────────────────────────
