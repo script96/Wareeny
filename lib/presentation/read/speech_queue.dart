@@ -5,8 +5,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 /// arrive without utterances overlapping. Feed it sentences as they form; it
 /// drains them one at a time. Auto-detects Arabic vs English per item.
 ///
-/// Shared by the reading controller now and reused by the other VLM tasks
-/// (in-hand, currency, brand, ask-image) later.
+/// Shared by the scan and reading controllers, and reusable by the other VLM
+/// tasks (ask-image, scene describe) later.
 class SpeechQueue {
   SpeechQueue() {
     _tts.awaitSpeakCompletion(true);

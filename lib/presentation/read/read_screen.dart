@@ -1,18 +1,12 @@
-import 'dart:ui';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
-import 'package:wareeny/core/theme/app_colors.dart';
-import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/read/vlm_read_controller.dart';
 import 'package:wareeny/presentation/read/widgets/ocr_controls_bar.dart';
 import 'package:wareeny/presentation/read/widgets/reading_status_pill.dart';
-import 'package:wareeny/presentation/read/widgets/scan_result_view.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
@@ -51,6 +45,7 @@ class _ReadScreenState extends State<ReadScreen> {
       _read = VlmReadController(
         assistant: services.vlmAssistant,
         audioHaptics: services.audioHapticsBridge,
+        unavailableMessage: AppLocalizations.of(context).readUnavailable,
       )..addListener(_onReadChange);
       _readReady = true;
     }
@@ -75,23 +70,9 @@ class _ReadScreenState extends State<ReadScreen> {
 
   void _onReadChange() => setState(() {});
 
-  TextDirection get _announceDirection =>
-      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr;
-
-  /// SCAN ↔ READ is binary, so swipe up and swipe down both toggle. Announce the
-  /// new sub-mode so screen-reader users hear the change.
-  void _toggleSubMode() {
-    final l10n = AppLocalizations.of(context);
-    _read.toggleSubMode();
-    final label = _read.subMode == ReadSubMode.scan ? 'Scan' : 'Read';
-    SemanticsService.announce(l10n.activeMode(label), _announceDirection);
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isScreenReaderActive =
-        MediaQuery.maybeOf(context)?.accessibleNavigation ?? false;
 
     final modeActions = AppMode.read.getModeSwitchActions(
       l10n: l10n,
@@ -99,18 +80,11 @@ class _ReadScreenState extends State<ReadScreen> {
       onModeSelect: widget.onModeSelect,
     );
 
-    final changeSubModeLabel =
-        widget.settings.isArabic ? 'تغيير وضع القراءة' : 'Change Reading Mode';
-    modeActions[CustomSemanticsAction(label: changeSubModeLabel)] =
-        _toggleSubMode;
-
     return TwoFingerSwipeDetector(
       onSwipeLeft: () => widget.onModeSelect(
           (AppMode.values.indexOf(AppMode.read) + 1) % AppMode.values.length),
       onSwipeRight: () => widget.onModeSelect(
           (AppMode.values.indexOf(AppMode.read) - 1) % AppMode.values.length),
-      onSwipeUp: _toggleSubMode,
-      onSwipeDown: _toggleSubMode,
       child: Semantics(
         label: l10n.activeModeNamed(AppMode.read.labelFor(l10n)),
         customSemanticsActions: modeActions,
@@ -128,22 +102,9 @@ class _ReadScreenState extends State<ReadScreen> {
             ),
             if (_read.isThinking)
               IgnorePointer(
-                child: ReadingStatusPill(
-                  label: widget.settings.isArabic ? 'جارٍ القراءة…' : 'Reading…',
-                ),
+                child: ReadingStatusPill(label: l10n.readingStatus),
               ),
-            if (_read.subMode == ReadSubMode.scan &&
-                _read.streamedText.isNotEmpty)
-              Positioned(
-                left: 24,
-                right: 24,
-                bottom: 120,
-                child: IgnorePointer(
-                  ignoring: !isScreenReaderActive,
-                  child: ScanResultView(text: _read.streamedText),
-                ),
-              ),
-            _TopHud(subMode: _read.subMode, onToggle: _toggleSubMode),
+            const _TopHud(),
             const _RightActions(),
             _BottomArea(
               read: _read,
@@ -219,124 +180,24 @@ class _ReadScreenState extends State<ReadScreen> {
     final cam = _camera;
     if (cam == null || !cam.value.isInitialized || _read.isThinking) return;
     final file = await cam.takePicture();
-    final l10n = AppLocalizations.of(context);
-    if (_read.subMode == ReadSubMode.scan) {
-      await _read.scan(file.path);
-      if (mounted) {
-        SemanticsService.announce(l10n.scanComplete, _announceDirection);
-      }
-    } else {
-      await _read.startReading(file.path);
-    }
+    await _read.startReading(file.path);
   }
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _TopHud extends StatelessWidget {
-  const _TopHud({required this.subMode, required this.onToggle});
-
-  final ReadSubMode subMode;
-  final VoidCallback onToggle;
+  const _TopHud();
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
+    return const Positioned(
       top: 0,
       left: 0,
       right: 0,
       child: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Column(
-          children: [
-            const CameraTopBar(currentMode: AppMode.read),
-            const SizedBox(height: AppSpacing.sm),
-            _SubModeToggle(subMode: subMode, onToggle: onToggle),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SubModeToggle extends StatelessWidget {
-  const _SubModeToggle({required this.subMode, required this.onToggle});
-
-  final ReadSubMode subMode;
-  final VoidCallback onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Switch to ${subMode == ReadSubMode.scan ? "Read" : "Scan"} mode',
-      child: GestureDetector(
-        onTap: onToggle,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.xs + 2,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.glassWhite,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.glassBorder),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _Pill(
-                    label: 'SCAN',
-                    active: subMode == ReadSubMode.scan,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  _Pill(
-                    label: 'READ',
-                    active: subMode == ReadSubMode.read,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.active});
-
-  final String label;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: active ? AppColors.electricGreenDim : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: active
-            ? Border.all(color: AppColors.electricGreen, width: 1)
-            : null,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: active ? AppColors.electricGreen : Colors.white54,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.5,
-        ),
+        minimum: EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: CameraTopBar(currentMode: AppMode.read),
       ),
     );
   }
