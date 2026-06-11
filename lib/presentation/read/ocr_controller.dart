@@ -7,8 +7,8 @@ import 'package:wareeny/shared/ocr/ocr_service.dart';
 
 class OcrController extends ChangeNotifier {
   OcrController({required OcrBridge ocrBridge})
-      : _ocr = ocrBridge,
-        _service = OcrService() {
+    : _ocr = ocrBridge,
+      _service = OcrService() {
     _initTts();
   }
 
@@ -16,7 +16,7 @@ class OcrController extends ChangeNotifier {
   final OcrService _service;
   final FlutterTts _tts = FlutterTts();
 
-  OcrReadingMode subMode = OcrReadingMode.scan;
+  OcrReadingMode subMode = OcrReadingMode.document;
   bool isCapturing = false;
   OcrResult? lastResult;
   OcrFramingCue framingCue = OcrFramingCue.none;
@@ -34,11 +34,26 @@ class OcrController extends ChangeNotifier {
     _tts.setCompletionHandler(_onChunkComplete);
   }
 
-  void toggleSubMode() {
+  void cycleSubMode() {
     cancelReading();
-    subMode = subMode == OcrReadingMode.scan
-        ? OcrReadingMode.read
-        : OcrReadingMode.scan;
+    final modes = OcrReadingMode.values;
+    final nextIndex = (modes.indexOf(subMode) + 1) % modes.length;
+    subMode = modes[nextIndex];
+    notifyListeners();
+  }
+
+  void cycleSubModePrevious() {
+    cancelReading();
+    final modes = OcrReadingMode.values;
+    final prevIndex = (modes.indexOf(subMode) - 1 + modes.length) % modes.length;
+    subMode = modes[prevIndex];
+    notifyListeners();
+  }
+
+  void setSubMode(OcrReadingMode mode) {
+    if (subMode == mode) return;
+    cancelReading();
+    subMode = mode;
     notifyListeners();
   }
 
@@ -60,8 +75,10 @@ class OcrController extends ChangeNotifier {
       } else if (result.isEmpty) {
         await _speak('No text found.', OcrLanguage.latin);
       } else {
-        debugPrint('OCR latency: ${result.captureLatency.inMilliseconds}ms '
-            'chars: ${result.fullText.length}');
+        debugPrint(
+          'OCR latency: ${result.captureLatency.inMilliseconds}ms '
+          'chars: ${result.fullText.length}',
+        );
         await _speak(result.fullText, result.primaryLanguage);
       }
     } finally {
@@ -88,12 +105,17 @@ class OcrController extends ChangeNotifier {
       }
 
       if (result.isEmpty) {
-        await _speak('No text found. Aim at a document and try again.', OcrLanguage.latin);
+        await _speak(
+          'No text found. Aim at a document and try again.',
+          OcrLanguage.latin,
+        );
         return;
       }
 
-      debugPrint('OCR latency: ${result.captureLatency.inMilliseconds}ms '
-          'chars: ${result.fullText.length}');
+      debugPrint(
+        'OCR latency: ${result.captureLatency.inMilliseconds}ms '
+        'chars: ${result.fullText.length}',
+      );
 
       _chunks = _service.chunkForTts(result.fullText);
       _chunkIndex = 0;
@@ -152,11 +174,14 @@ class OcrController extends ChangeNotifier {
 
   Future<void> _speakChunk() async {
     if (_chunkIndex >= _chunks.length) return;
-    await _speak(_chunks[_chunkIndex], lastResult?.primaryLanguage ?? OcrLanguage.latin);
+    await _speak(
+      _chunks[_chunkIndex],
+      lastResult?.primaryLanguage ?? OcrLanguage.latin,
+    );
   }
 
   Future<void> _speak(String text, OcrLanguage language) async {
-    final lang = language == OcrLanguage.arabic ? 'ar-SA' : 'en-US';
+    final lang = language == OcrLanguage.arabic ? 'ar-EG' : 'en-US';
     await _tts.setLanguage(lang);
     await _tts.speak(text);
   }

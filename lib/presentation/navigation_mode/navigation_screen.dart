@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/theme/app_colors.dart';
+import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_controller.dart';
 import 'package:wareeny/presentation/navigation_mode/widgets/navigation_debug_panel.dart';
@@ -16,6 +20,17 @@ import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/shared/navigation/navigation_feedback.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
+
+/// Sub-modes available inside the Navigation screen.
+enum NavigationSubMode {
+  indoor('Indoor', Icons.apartment_outlined),
+  outdoor('Outdoor', Icons.explore_outlined);
+
+  const NavigationSubMode(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
+}
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({
@@ -43,6 +58,7 @@ class _NavigationScreenState extends State<NavigationScreen>
   Object? _modelError;
   bool _debugEnabled = false;
   bool _initialized = false;
+  NavigationSubMode _navSubMode = NavigationSubMode.indoor;
 
   @override
   void initState() {
@@ -101,6 +117,8 @@ class _NavigationScreenState extends State<NavigationScreen>
     return TwoFingerSwipeDetector(
       onSwipeLeft: widget.onNext,
       onSwipeRight: widget.onPrevious,
+      onSwipeUp: _cycleNavigationSubMode,
+      onSwipeDown: _cycleNavigationSubMode,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -120,7 +138,22 @@ class _NavigationScreenState extends State<NavigationScreen>
             right: 16,
             child: SafeArea(
               minimum: const EdgeInsets.only(top: 12),
-              child: const CameraTopBar(currentMode: AppMode.navigation),
+              child: Column(
+                children: [
+                  const CameraTopBar(currentMode: AppMode.navigation),
+                  const SizedBox(height: AppSpacing.sm),
+                  _NavSubModeToggle(
+                    subMode: _navSubMode,
+                    onSelect: (mode) {
+                      setState(() => _navSubMode = mode);
+                      SemanticsService.announce(
+                        '${mode.label} navigation active',
+                        TextDirection.ltr,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           Positioned(
@@ -230,5 +263,108 @@ class _NavigationScreenState extends State<NavigationScreen>
 
   void _onNavigationChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _cycleNavigationSubMode() {
+    final nextMode = _navSubMode == NavigationSubMode.indoor
+        ? NavigationSubMode.outdoor
+        : NavigationSubMode.indoor;
+    setState(() => _navSubMode = nextMode);
+    SemanticsService.announce(
+      '${nextMode.label} navigation active',
+      TextDirection.ltr,
+    );
+  }
+}
+
+// ── Navigation sub-mode toggle ────────────────────────────────────────────────
+
+class _NavSubModeToggle extends StatelessWidget {
+  const _NavSubModeToggle({required this.subMode, required this.onSelect});
+
+  final NavigationSubMode subMode;
+  final void Function(NavigationSubMode) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Navigation type. Current: ${subMode.label}.',
+      hint: 'Tap to switch between Indoor and Outdoor navigation.',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs + 2,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.glassWhite,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.glassBorder),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: NavigationSubMode.values.map((mode) {
+                final active = mode == subMode;
+                return Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  child: Semantics(
+                    button: true,
+                    selected: active,
+                    label: mode.label,
+                    child: GestureDetector(
+                      onTap: () => onSelect(mode),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm + 2,
+                          vertical: AppSpacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? AppColors.electricGreenDim
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: active
+                              ? Border.all(
+                                  color: AppColors.electricGreen, width: 1)
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              mode.icon,
+                              color: active
+                                  ? AppColors.electricGreen
+                                  : Colors.white54,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              mode.label.toUpperCase(),
+                              style: TextStyle(
+                                color: active
+                                    ? AppColors.electricGreen
+                                    : Colors.white54,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

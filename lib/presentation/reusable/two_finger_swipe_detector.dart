@@ -5,12 +5,16 @@ class TwoFingerSwipeDetector extends StatefulWidget {
     required this.child,
     required this.onSwipeLeft,
     required this.onSwipeRight,
+    this.onSwipeUp,
+    this.onSwipeDown,
     super.key,
   });
 
   final Widget child;
   final VoidCallback onSwipeLeft;
   final VoidCallback onSwipeRight;
+  final VoidCallback? onSwipeUp;
+  final VoidCallback? onSwipeDown;
 
   @override
   State<TwoFingerSwipeDetector> createState() => _TwoFingerSwipeDetectorState();
@@ -21,6 +25,7 @@ class _TwoFingerSwipeDetectorState extends State<TwoFingerSwipeDetector> {
 
   final Map<int, Offset> _positions = {};
   double? _startAverageX;
+  double? _startAverageY;
   var _hasTriggered = false;
 
   @override
@@ -47,28 +52,41 @@ class _TwoFingerSwipeDetectorState extends State<TwoFingerSwipeDetector> {
 
     _positions[event.pointer] = event.position;
 
-    if (_positions.length != 2 || _startAverageX == null || _hasTriggered) {
+    if (_positions.length != 2 || _startAverageX == null || _startAverageY == null || _hasTriggered) {
       return;
     }
 
-    final delta = _averageX - _startAverageX!;
-    if (delta.abs() < _swipeThreshold) {
-      return;
-    }
+    final deltaX = _averageX - _startAverageX!;
+    final deltaY = _averageY - _startAverageY!;
 
-    _hasTriggered = true;
-    delta.isNegative ? widget.onSwipeLeft() : widget.onSwipeRight();
+    // Check which axis has the stronger movement and exceeds the threshold
+    if (deltaX.abs() >= _swipeThreshold && deltaX.abs() > deltaY.abs()) {
+      _hasTriggered = true;
+      deltaX.isNegative ? widget.onSwipeLeft() : widget.onSwipeRight();
+    } else if (deltaY.abs() >= _swipeThreshold && deltaY.abs() > deltaX.abs()) {
+      final onSwipeUp = widget.onSwipeUp;
+      final onSwipeDown = widget.onSwipeDown;
+      if (deltaY.isNegative && onSwipeUp != null) {
+        _hasTriggered = true;
+        onSwipeUp();
+      } else if (!deltaY.isNegative && onSwipeDown != null) {
+        _hasTriggered = true;
+        onSwipeDown();
+      }
+    }
   }
 
   void _handlePointerEnd(PointerEvent event) {
     _positions.remove(event.pointer);
     _startAverageX = null;
+    _startAverageY = null;
     _hasTriggered = false;
   }
 
   void _resetSwipeStartIfReady() {
     if (_positions.length == 2) {
       _startAverageX = _averageX;
+      _startAverageY = _averageY;
       _hasTriggered = false;
     }
   }
@@ -77,6 +95,15 @@ class _TwoFingerSwipeDetectorState extends State<TwoFingerSwipeDetector> {
     final total = _positions.values.fold<double>(
       0,
       (sum, position) => sum + position.dx,
+    );
+
+    return total / _positions.length;
+  }
+
+  double get _averageY {
+    final total = _positions.values.fold<double>(
+      0,
+      (sum, position) => sum + position.dy,
     );
 
     return total / _positions.length;

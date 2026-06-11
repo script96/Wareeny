@@ -1,6 +1,18 @@
 import 'dart:ui';
 
-enum OcrReadingMode { scan, read }
+import 'package:flutter/material.dart';
+
+enum OcrReadingMode {
+  document('Document Reader', Icons.article_outlined),
+  currency('Currency Reader', Icons.payments_outlined),
+  brand('Brand Detector', Icons.label_outline_rounded),
+  qa('Q&A Mode', Icons.question_answer_outlined);
+
+  const OcrReadingMode(this.label, this.icon);
+
+  final String label;
+  final IconData icon;
+}
 
 enum OcrLanguage { arabic, latin, mixed }
 
