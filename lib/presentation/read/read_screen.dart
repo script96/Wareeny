@@ -9,16 +9,15 @@ import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
-import 'package:wareeny/presentation/read/ocr_controller.dart';
+import 'package:wareeny/presentation/read/vlm_read_controller.dart';
 import 'package:wareeny/presentation/read/widgets/ocr_controls_bar.dart';
-import 'package:wareeny/presentation/read/widgets/ocr_framing_overlay.dart';
+import 'package:wareeny/presentation/read/widgets/reading_status_pill.dart';
 import 'package:wareeny/presentation/read/widgets/scan_result_view.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
-import 'package:wareeny/shared/ocr/ocr_models.dart';
 
 class ReadScreen extends StatefulWidget {
   const ReadScreen({
@@ -40,20 +39,20 @@ class ReadScreen extends StatefulWidget {
 
 class _ReadScreenState extends State<ReadScreen> {
   CameraController? _camera;
-  late final OcrController _ocr;
-  bool _ocrReady = false;
+  late final VlmReadController _read;
+  bool _readReady = false;
   Object? _cameraError;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_ocrReady) {
+    if (!_readReady) {
       final services = AppScope.of(context);
-      _ocr = OcrController(
-        ocrBridge: services.ocrBridge,
-        audioHapticsBridge: services.audioHapticsBridge,
-      )..addListener(_onOcrChange);
-      _ocrReady = true;
+      _read = VlmReadController(
+        assistant: services.vlmAssistant,
+        audioHaptics: services.audioHapticsBridge,
+      )..addListener(_onReadChange);
+      _readReady = true;
     }
   }
 
@@ -65,39 +64,34 @@ class _ReadScreenState extends State<ReadScreen> {
 
   @override
   void dispose() {
-    if (_ocrReady) {
-      _ocr
-        ..removeListener(_onOcrChange)
+    if (_readReady) {
+      _read
+        ..removeListener(_onReadChange)
         ..dispose();
     }
     _camera?.dispose();
     super.dispose();
   }
 
-  void _onOcrChange() => setState(() {});
+  void _onReadChange() => setState(() {});
 
-  void _cycleOcrSubModeForward() {
-    final l10n = AppLocalizations.of(context);
-    _ocr.cycleSubMode();
-    SemanticsService.announce(
-      l10n.activeMode(_ocr.subMode.labelFor(l10n)),
-      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
-    );
-  }
+  TextDirection get _announceDirection =>
+      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr;
 
-  void _cycleOcrSubModeBackward() {
+  /// SCAN ↔ READ is binary, so swipe up and swipe down both toggle. Announce the
+  /// new sub-mode so screen-reader users hear the change.
+  void _toggleSubMode() {
     final l10n = AppLocalizations.of(context);
-    _ocr.cycleSubModePrevious();
-    SemanticsService.announce(
-      l10n.activeMode(_ocr.subMode.labelFor(l10n)),
-      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
-    );
+    _read.toggleSubMode();
+    final label = _read.subMode == ReadSubMode.scan ? 'Scan' : 'Read';
+    SemanticsService.announce(l10n.activeMode(label), _announceDirection);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isScreenReaderActive = MediaQuery.maybeOf(context)?.accessibleNavigation ?? false;
+    final isScreenReaderActive =
+        MediaQuery.maybeOf(context)?.accessibleNavigation ?? false;
 
     final modeActions = AppMode.read.getModeSwitchActions(
       l10n: l10n,
@@ -105,18 +99,18 @@ class _ReadScreenState extends State<ReadScreen> {
       onModeSelect: widget.onModeSelect,
     );
 
-    final changeSubModeLabel = widget.settings.isArabic
-        ? 'تغيير وضع القراءة'
-        : 'Change Reading Mode';
-    modeActions[CustomSemanticsAction(label: changeSubModeLabel)] = _cycleOcrSubModeForward;
+    final changeSubModeLabel =
+        widget.settings.isArabic ? 'تغيير وضع القراءة' : 'Change Reading Mode';
+    modeActions[CustomSemanticsAction(label: changeSubModeLabel)] =
+        _toggleSubMode;
 
     return TwoFingerSwipeDetector(
       onSwipeLeft: () => widget.onModeSelect(
           (AppMode.values.indexOf(AppMode.read) + 1) % AppMode.values.length),
       onSwipeRight: () => widget.onModeSelect(
           (AppMode.values.indexOf(AppMode.read) - 1) % AppMode.values.length),
-      onSwipeUp: _cycleOcrSubModeForward,
-      onSwipeDown: _cycleOcrSubModeBackward,
+      onSwipeUp: _toggleSubMode,
+      onSwipeDown: _toggleSubMode,
       child: Semantics(
         label: l10n.activeModeNamed(AppMode.read.labelFor(l10n)),
         customSemanticsActions: modeActions,
@@ -132,23 +126,27 @@ class _ReadScreenState extends State<ReadScreen> {
                 child: _buildCameraLayer(),
               ),
             ),
-            IgnorePointer(child: OcrFramingOverlay(cue: _ocr.framingCue)),
-            if (_ocr.subMode == OcrReadingMode.document &&
-                _ocr.lastResult != null &&
-                !_ocr.lastResult!.isEmpty)
+            if (_read.isThinking)
+              IgnorePointer(
+                child: ReadingStatusPill(
+                  label: widget.settings.isArabic ? 'جارٍ القراءة…' : 'Reading…',
+                ),
+              ),
+            if (_read.subMode == ReadSubMode.scan &&
+                _read.streamedText.isNotEmpty)
               Positioned(
                 left: 24,
                 right: 24,
                 bottom: 120,
                 child: IgnorePointer(
                   ignoring: !isScreenReaderActive,
-                  child: ScanResultView(text: _ocr.lastResult!.fullText),
+                  child: ScanResultView(text: _read.streamedText),
                 ),
               ),
-            _TopHud(subMode: _ocr.subMode, onSelect: _ocr.setSubMode),
+            _TopHud(subMode: _read.subMode, onToggle: _toggleSubMode),
             const _RightActions(),
             _BottomArea(
-              ocr: _ocr,
+              read: _read,
               previousMode: widget.previousMode,
               nextMode: widget.nextMode,
               onPreviousTap: () => widget.onModeSelect(
@@ -219,18 +217,16 @@ class _ReadScreenState extends State<ReadScreen> {
 
   Future<void> _handleTap() async {
     final cam = _camera;
-    if (cam == null || !cam.value.isInitialized || _ocr.isCapturing) return;
+    if (cam == null || !cam.value.isInitialized || _read.isThinking) return;
     final file = await cam.takePicture();
-    // In all modes we start continuous reading; document mode uses chunked TTS,
-    // others will eventually have specialised pipelines (currency, brand, qa).
-    // For now all modes funnel through startReading so the user gets audio feedback.
-    await _ocr.startReading(file.path);
-    if (mounted) {
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        '${_ocr.subMode.label} scan complete',
-        TextDirection.ltr,
-      );
+    final l10n = AppLocalizations.of(context);
+    if (_read.subMode == ReadSubMode.scan) {
+      await _read.scan(file.path);
+      if (mounted) {
+        SemanticsService.announce(l10n.scanComplete, _announceDirection);
+      }
+    } else {
+      await _read.startReading(file.path);
     }
   }
 }
@@ -238,10 +234,10 @@ class _ReadScreenState extends State<ReadScreen> {
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _TopHud extends StatelessWidget {
-  const _TopHud({required this.subMode, required this.onSelect});
+  const _TopHud({required this.subMode, required this.onToggle});
 
-  final OcrReadingMode subMode;
-  final void Function(OcrReadingMode) onSelect;
+  final ReadSubMode subMode;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +251,7 @@ class _TopHud extends StatelessWidget {
           children: [
             const CameraTopBar(currentMode: AppMode.read),
             const SizedBox(height: AppSpacing.sm),
-            _OcrSubModeSelector(subMode: subMode, onSelect: onSelect),
+            _SubModeToggle(subMode: subMode, onToggle: onToggle),
           ],
         ),
       ),
@@ -263,48 +259,46 @@ class _TopHud extends StatelessWidget {
   }
 }
 
-/// Horizontal scrollable row of OCR sub-mode pills.
-class _OcrSubModeSelector extends StatelessWidget {
-  const _OcrSubModeSelector({required this.subMode, required this.onSelect});
+class _SubModeToggle extends StatelessWidget {
+  const _SubModeToggle({required this.subMode, required this.onToggle});
 
-  final OcrReadingMode subMode;
-  final void Function(OcrReadingMode) onSelect;
+  final ReadSubMode subMode;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return Semantics(
-      label: '${l10n.ocrSelectorHint} ${l10n.activeMode(subMode.labelFor(l10n))}',
-      hint: l10n.subModeSwipeHint,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs + 2,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.glassWhite,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.glassBorder),
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+      button: true,
+      label: 'Switch to ${subMode == ReadSubMode.scan ? "Read" : "Scan"} mode',
+      child: GestureDetector(
+        onTap: onToggle,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs + 2,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.glassWhite,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.glassBorder),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: OcrReadingMode.values.map((mode) {
-                  final active = mode == subMode;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.xs),
-                    child: _OcrModePill(
-                      mode: mode,
-                      active: active,
-                      onTap: () => onSelect(mode),
-                    ),
-                  );
-                }).toList(),
+                children: [
+                  _Pill(
+                    label: 'SCAN',
+                    active: subMode == ReadSubMode.scan,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  _Pill(
+                    label: 'READ',
+                    active: subMode == ReadSubMode.read,
+                  ),
+                ],
               ),
             ),
           ),
@@ -314,59 +308,34 @@ class _OcrSubModeSelector extends StatelessWidget {
   }
 }
 
-class _OcrModePill extends StatelessWidget {
-  const _OcrModePill({
-    required this.mode,
-    required this.active,
-    required this.onTap,
-  });
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.active});
 
-  final OcrReadingMode mode;
+  final String label;
   final bool active;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Semantics(
-      button: true,
-      selected: active,
-      label: mode.labelFor(l10n),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm + 2,
-            vertical: AppSpacing.xs,
-          ),
-          decoration: BoxDecoration(
-            color: active ? AppColors.electricGreenDim : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: active
-                ? Border.all(color: AppColors.electricGreen, width: 1)
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                mode.icon,
-                color: active ? AppColors.electricGreen : Colors.white54,
-                size: 14,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                mode.labelFor(l10n).toUpperCase(),
-                style: TextStyle(
-                  color: active ? AppColors.electricGreen : Colors.white54,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: active ? AppColors.electricGreenDim : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: active
+            ? Border.all(color: AppColors.electricGreen, width: 1)
+            : null,
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: active ? AppColors.electricGreen : Colors.white54,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.5,
         ),
       ),
     );
@@ -391,14 +360,14 @@ class _RightActions extends StatelessWidget {
 
 class _BottomArea extends StatelessWidget {
   const _BottomArea({
-    required this.ocr,
+    required this.read,
     required this.previousMode,
     required this.nextMode,
     required this.onPreviousTap,
     required this.onNextTap,
   });
 
-  final OcrController ocr;
+  final VlmReadController read;
   final AppMode previousMode;
   final AppMode nextMode;
   final VoidCallback onPreviousTap;
@@ -413,12 +382,12 @@ class _BottomArea extends StatelessWidget {
       child: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         child: Center(
-          child: ocr.isReadingActive
+          child: read.isReadingActive
               ? OcrControlsBar(
-                  onStop: ocr.stopReading,
-                  onRepeat: ocr.repeatChunk,
-                  onSkip: ocr.skipChunk,
-                  onCancel: ocr.cancelReading,
+                  onStop: read.stopReading,
+                  onRepeat: read.repeatChunk,
+                  onSkip: read.skipChunk,
+                  onCancel: read.cancel,
                 )
               : ModeCarouselBar(
                   previous: previousMode,

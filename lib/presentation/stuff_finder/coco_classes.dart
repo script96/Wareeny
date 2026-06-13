@@ -1,3 +1,68 @@
+const customStuffFinderClasses = <String>['wallet', 'glasses', 'keys'];
+
+const popularCocoClasses = <String>[
+  // Personal items and electronics.
+  'bottle',
+  'cell phone',
+  'backpack',
+  'handbag',
+  'suitcase',
+  'umbrella',
+  'book',
+  'laptop',
+  'remote',
+  'mouse',
+  'keyboard',
+  'tv',
+  'clock',
+
+  // Food, drink, and kitchen items.
+  'cup',
+  'wine glass',
+  'fork',
+  'knife',
+  'spoon',
+  'bowl',
+  'banana',
+  'apple',
+  'sandwich',
+  'orange',
+  'broccoli',
+  'carrot',
+  'hot dog',
+  'pizza',
+  'donut',
+  'cake',
+  'microwave',
+  'oven',
+  'toaster',
+  'sink',
+  'refrigerator',
+
+  // Furniture, home, care, and useful tools.
+  'chair',
+  'couch',
+  'potted plant',
+  'bed',
+  'dining table',
+  'toilet',
+  'bench',
+  'vase',
+  'scissors',
+  'hair drier',
+  'toothbrush',
+  'teddy bear',
+
+  // Clothing, recreation, and everyday transport.
+  'tie',
+  'sports ball',
+  'bicycle',
+  'car',
+  'motorcycle',
+  'bus',
+  'train',
+];
+
 const cocoClasses = <String>[
   'person',
   'bicycle',
@@ -80,3 +145,25 @@ const cocoClasses = <String>[
   'hair drier',
   'toothbrush',
 ];
+
+final stuffFinderClasses = List<String>.unmodifiable([
+  ...customStuffFinderClasses,
+  ...popularCocoClasses.where(
+    (label) => !customStuffFinderClasses.contains(label),
+  ),
+  ...cocoClasses.where(
+    (label) =>
+        !customStuffFinderClasses.contains(label) &&
+        !popularCocoClasses.contains(label),
+  ),
+]);
+
+bool isCustomStuffFinderClass(String label) {
+  return customStuffFinderClasses.contains(label.trim().toLowerCase());
+}
+
+bool isPopularStuffFinderClass(String label) {
+  final normalized = label.trim().toLowerCase();
+  return customStuffFinderClasses.contains(normalized) ||
+      popularCocoClasses.contains(normalized);
+}

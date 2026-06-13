@@ -3,15 +3,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 void main() {
-  test('uses the bundled YOLOv8n platform model assets', () {
+  test('uses separate bundled models for navigation and Stuff Finder', () {
     expect(
-      UltralyticsYoloDetectionSource.androidModelPath,
+      UltralyticsYoloDetectionSource.navigationAndroidModelPath,
       'assets/models/yolov8n_int8.tflite',
     );
     expect(
-      UltralyticsYoloDetectionSource.iosModelPath,
+      UltralyticsYoloDetectionSource.navigationIosModelPath,
       'assets/models/yolov8n.mlpackage.zip',
     );
+    expect(
+      UltralyticsYoloDetectionSource.stuffFinderAndroidModelPath,
+      'assets/models/stuff_finder_yolov8n_int8.tflite',
+    );
+    expect(
+      UltralyticsYoloDetectionSource.stuffFinderIosModelPath,
+      'assets/models/stuff_finder_yolov8n_int8.mlpackage.zip',
+    );
+
+    final source = UltralyticsYoloDetectionSource();
+    expect(
+      source.modelPathForMode('stuff_finder', useCustomModel: true),
+      isNot(source.modelPath),
+    );
+    expect(source.modelPathForMode('stuff_finder'), source.modelPath);
+    expect(source.modelPathForMode('navigation'), source.modelPath);
   });
 
   test('maps normalized YOLO detections into source-frame pixels', () async {

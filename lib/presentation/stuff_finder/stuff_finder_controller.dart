@@ -76,8 +76,8 @@ class StuffFinderController extends ChangeNotifier {
 
   Future<void> selectTarget(String target) async {
     final normalizedTarget = target.trim().toLowerCase();
-    if (!cocoClasses.contains(normalizedTarget)) {
-      throw ArgumentError.value(target, 'target', 'Not a COCO class');
+    if (!stuffFinderClasses.contains(normalizedTarget)) {
+      throw ArgumentError.value(target, 'target', 'Not a Stuff Finder class');
     }
 
     final changed = selectedTarget != normalizedTarget;

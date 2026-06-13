@@ -13,4 +13,7 @@ class NativeBridgeChannels {
   static const ocr = 'com.wareeny.bridge/ocr';
   // Emergency: direct SMS dispatch via Android SmsManager (no UI required)
   static const emergency = 'com.wareeny.bridge/emergency';
+  // Event channel for streamed on-device VLM token deltas (MediaPipe LLM Inference).
+  static const localAiRuntimeStream =
+      'com.wareeny.bridge/local_ai_runtime/stream';
 }

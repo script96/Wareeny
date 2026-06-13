@@ -55,3 +55,20 @@ These rules keep the Flutter codebase clean and predictable. Share this file wit
 - Define method-channel names in `shared/bridges/native_bridge_channels.dart`.
 - Keep bridge method names explicit and stable.
 - Add native Android/iOS implementation against the Dart bridge contracts instead of calling method channels directly from screens.
+
+## Architecture And Runtime Rules
+
+These keep the VLM-assistant architecture intact (see `docs/ROADMAP.md` for the full design).
+
+- Realtime safety (obstacle, traffic light, danger signs, finders) is local CV only. Never route it
+  through a VLM.
+- Non-realtime understanding tasks (read, scene describe, in-hand, currency, brand, ask-image) go
+  through `VlmAssistant` and the task-aware `ModelRouter`. Do not call a `VlmProvider` directly from
+  a screen or controller.
+- Only one heavy mode runs hot at a time. Stop camera, VLM, and detector workers when leaving a mode.
+- Keep the three loops isolated: the UI loop must never block on inference, download, OCR, or network.
+- Feedback priority order is fixed: danger > obstacle > navigation cue > VLM result > general label.
+  Streaming VLM speech must yield immediately to danger and obstacle alerts.
+- Keep the on-device VLM unloaded until needed; park inactive heavy models.
+- `unavailable` is a valid VLM state (no local model and no network). Tell the user to install a
+  model or connect — do not add a literal-OCR fallback.
