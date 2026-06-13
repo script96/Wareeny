@@ -1,33 +1,45 @@
+import 'dart:ui';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 void main() {
-  test('uses separate bundled models for navigation and Stuff Finder', () {
+  test('uses separate bundled models for each detector mode', () {
     expect(
-      UltralyticsYoloDetectionSource.navigationAndroidModelPath,
-      'assets/models/yolov8n_int8.tflite',
+      UltralyticsYoloDetectionSource.homeAndroidModelPath,
+      'assets/models/home/home_object_detector_int8.tflite',
     );
     expect(
-      UltralyticsYoloDetectionSource.navigationIosModelPath,
-      'assets/models/yolov8n.mlpackage.zip',
+      UltralyticsYoloDetectionSource.indoorNavigationAndroidModelPath,
+      'assets/models/navigation/indoor/indoor_navigation_int8.tflite',
+    );
+    expect(
+      UltralyticsYoloDetectionSource.outdoorNavigationAndroidModelPath,
+      'assets/models/navigation/outdoor/outdoor_navigation_int8.tflite',
     );
     expect(
       UltralyticsYoloDetectionSource.stuffFinderAndroidModelPath,
-      'assets/models/stuff_finder_yolov8n_int8.tflite',
-    );
-    expect(
-      UltralyticsYoloDetectionSource.stuffFinderIosModelPath,
-      'assets/models/stuff_finder_yolov8n_int8.mlpackage.zip',
+      'assets/models/stuff_finder/stuff_finder_int8.tflite',
     );
 
     final source = UltralyticsYoloDetectionSource();
     expect(
       source.modelPathForMode('stuff_finder', useCustomModel: true),
-      isNot(source.modelPath),
+      UltralyticsYoloDetectionSource.stuffFinderAndroidModelPath,
     );
-    expect(source.modelPathForMode('stuff_finder'), source.modelPath);
-    expect(source.modelPathForMode('navigation'), source.modelPath);
+    expect(
+      source.modelPathForMode('navigation_indoor'),
+      UltralyticsYoloDetectionSource.indoorNavigationAndroidModelPath,
+    );
+    expect(
+      source.modelPathForMode('navigation_outdoor'),
+      UltralyticsYoloDetectionSource.outdoorNavigationAndroidModelPath,
+    );
+    expect(
+      source.modelPathForMode('home'),
+      UltralyticsYoloDetectionSource.homeAndroidModelPath,
+    );
   });
 
   test('maps normalized YOLO detections into source-frame pixels', () async {
@@ -94,4 +106,23 @@ void main() {
     expect(frames, hasLength(1));
     await subscription.cancel();
   });
+
+  test(
+    'does not drop frames when an old screen stops the shared source',
+    () async {
+      final source = UltralyticsYoloDetectionSource();
+      await source.start(mode: 'navigation');
+      await source.stop();
+      final frameFuture = source.frames.first;
+
+      source.processStreamingData({
+        'imageWidth': 640,
+        'imageHeight': 480,
+        'detections': const [],
+      });
+
+      final frame = await frameFuture;
+      expect(frame.sourceSize, const Size(640, 480));
+    },
+  );
 }

@@ -50,6 +50,7 @@ class ObjectDetectionFrame {
     this.inferenceTime,
     this.framesPerSecond,
     this.isLowLight = false,
+    this.modelSource = 'unknown',
   });
 
   final int frameId;
@@ -63,6 +64,7 @@ class ObjectDetectionFrame {
   final Duration? inferenceTime;
   final double? framesPerSecond;
   final bool isLowLight;
+  final String modelSource;
 
   factory ObjectDetectionFrame.fromMap(Map<Object?, Object?> map) {
     final sourceSize = Size(
@@ -103,6 +105,7 @@ class ObjectDetectionFrame {
           : Duration(milliseconds: _integer(map['inferenceTimeMs'])),
       framesPerSecond: map['fps'] == null ? null : _number(map['fps']),
       isLowLight: map['isLowLight'] == true,
+      modelSource: map['modelSource']?.toString() ?? 'unknown',
     );
   }
 }

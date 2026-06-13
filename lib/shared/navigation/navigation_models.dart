@@ -6,6 +6,8 @@ enum NavigationRisk { safe, caution, danger }
 
 enum NavigationZone { left, center, right }
 
+const indoorSlipHazardLabels = {'flip_flops', 'shoe_mouth', 'shoes'};
+
 class NavigationPath {
   const NavigationPath({
     this.topY = 0.48,
@@ -64,6 +66,9 @@ class NavigationObjectRisk {
 
   double get area =>
       detection.normalizedBox.width * detection.normalizedBox.height;
+
+  bool get isIndoorSlipHazard =>
+      indoorSlipHazardLabels.contains(detection.source.label.toLowerCase());
 
   String get fingerprint {
     final center = detection.normalizedBox.center;

@@ -65,6 +65,93 @@ void main() {
       expect(feedback.dangerHaptics, 0);
     },
   );
+
+  test('uses a caution warning for indoor shoes on the floor', () async {
+    var now = DateTime(2026);
+    final feedback = _FakeFeedback();
+    final controller = NavigationController(
+      detectionSource: _FakeDetectionSource(),
+      feedback: feedback,
+      clock: () => now,
+    );
+    final frame = _shoeFrame();
+
+    controller.processFrame(frame);
+    now = now.add(const Duration(milliseconds: 600));
+    controller.processFrame(frame);
+    await _flushAsync();
+
+    expect(feedback.spoken, [
+      'خلي بالك، في حذاء أو شبشب على الأرض وممكن يسبب انزلاق',
+    ]);
+    expect(feedback.cautionHaptics, 1);
+    expect(feedback.dangerHaptics, 0);
+  });
+
+  test('reports the active indoor and outdoor model from real frames', () {
+    final controller = NavigationController(
+      detectionSource: _FakeDetectionSource(),
+      feedback: _FakeFeedback(),
+    );
+
+    controller.processFrame(_emptyFrame());
+    expect(controller.detectorStatus, 'Indoor + COCO navigation active');
+
+    controller.setIndoorMode(false);
+    expect(controller.detectorStatus, 'Loading outdoor navigation model');
+
+    controller.processFrame(_emptyFrame());
+    expect(controller.detectorStatus, 'Outdoor navigation model active');
+  });
+
+  test('merges recent custom indoor and COCO detections', () {
+    final controller = NavigationController(
+      detectionSource: _FakeDetectionSource(),
+      feedback: _FakeFeedback(),
+    );
+    final timestamp = DateTime(2026);
+
+    controller.processFrame(
+      _frameWithDetection(
+        label: 'shoes',
+        source: 'indoor',
+        timestamp: timestamp,
+      ),
+    );
+    controller.processFrame(
+      _frameWithDetection(
+        label: 'chair',
+        source: 'coco',
+        timestamp: timestamp.add(const Duration(seconds: 1)),
+      ),
+    );
+
+    expect(
+      controller.latestFrame!.source.detections.map((item) => item.label),
+      containsAll(<String>['shoes', 'chair']),
+    );
+    expect(controller.latestFrame!.source.modelSource, 'indoor+coco');
+  });
+}
+
+ObjectDetectionFrame _frameWithDetection({
+  required String label,
+  required String source,
+  required DateTime timestamp,
+}) {
+  return ObjectDetectionFrame(
+    frameId: source == 'indoor' ? 10 : 11,
+    sourceSize: const Size(100, 100),
+    detections: [
+      ObjectDetection(
+        label: label,
+        confidence: 0.9,
+        boundingBox: const Rect.fromLTWH(40, 50, 20, 20),
+      ),
+    ],
+    timestamp: timestamp,
+    modelSource: source,
+  );
 }
 
 ObjectDetectionFrame _dangerFrame() {
@@ -87,6 +174,21 @@ ObjectDetectionFrame _emptyFrame() {
     frameId: 2,
     sourceSize: const Size(100, 100),
     detections: const [],
+    timestamp: DateTime(2026),
+  );
+}
+
+ObjectDetectionFrame _shoeFrame() {
+  return ObjectDetectionFrame(
+    frameId: 3,
+    sourceSize: const Size(100, 100),
+    detections: const [
+      ObjectDetection(
+        label: 'shoes',
+        confidence: 0.9,
+        boundingBox: Rect.fromLTWH(40, 70, 20, 25),
+      ),
+    ],
     timestamp: DateTime(2026),
   );
 }

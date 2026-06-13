@@ -20,65 +20,86 @@ class NavigationDebugPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final frame = controller.latestFrame?.source;
-    return Semantics(
-      button: true,
-      label: enabled
-          ? 'Disable navigation debug overlay'
-          : 'Enable navigation debug overlay',
-      child: GestureDetector(
-        onTap: onToggle,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 310),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.darkSurface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: enabled
-                      ? AppColors.electricGreen
-                      : AppColors.glassBorder,
+    final noFrames = controller.framesReceived == 0;
+    final labels = controller.latestDetectionLabels.isEmpty
+        ? 'none'
+        : controller.latestDetectionLabels.join(', ');
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 340),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.darkSurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: noFrames ? AppColors.alertRed : AppColors.electricGreen,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                controller.detectorStatus,
+                style: TextStyle(
+                  color: noFrames
+                      ? AppColors.alertRed
+                      : AppColors.electricGreen,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              child: enabled
-                  ? Text(
-                      [
-                        controller.detectorStatus,
-                        'Objects: ${controller.assessment.objects.length}  '
-                            'Risk: ${controller.assessment.highestRisk.name}',
-                        if (frame?.inferenceTime != null)
-                          'Inference: ${frame!.inferenceTime!.inMilliseconds} ms',
-                        if (frame?.framesPerSecond != null)
-                          'FPS: ${frame!.framesPerSecond!.toStringAsFixed(1)}',
-                        'Feedback: ${controller.cooldownStatus}',
-                        if (controller.latestMessage.isNotEmpty)
-                          'Latest: ${controller.latestMessage}',
-                      ].join('\n'),
-                      textDirection: TextDirection.ltr,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        height: 1.35,
-                      ),
-                    )
-                  : const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.bug_report_outlined, color: Colors.white70),
-                        SizedBox(width: 6),
-                        Text(
-                          'DEBUG',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+              const SizedBox(height: 4),
+              Text(
+                [
+                  'Inference frames: ${controller.framesReceived}',
+                  'Active detector: ${controller.activeDetectorSource}',
+                  'Frames with objects: ${controller.framesWithDetections}',
+                  'Total objects: ${controller.totalDetections}',
+                  if (frame != null) 'Last frame ID: ${frame.frameId}',
+                  'Current objects: ${frame?.detections.length ?? 0}',
+                  'Detected: $labels',
+                  if (frame?.inferenceTime != null)
+                    'Inference: ${frame!.inferenceTime!.inMilliseconds} ms',
+                  if (frame?.framesPerSecond != null)
+                    'Model FPS: ${frame!.framesPerSecond!.toStringAsFixed(1)}',
+                  if (controller.sceneLuminance != null)
+                    'Light: ${controller.sceneLuminance!.toStringAsFixed(0)} / 255',
+                  'Torch: ${controller.torchEnabled ? "ON" : "OFF"}',
+                  'Risk: ${controller.assessment.highestRisk.name}',
+                  if (enabled) 'Feedback: ${controller.cooldownStatus}',
+                  if (enabled && controller.latestMessage.isNotEmpty)
+                    'Latest warning: ${controller.latestMessage}',
+                ].join('\n'),
+                textDirection: TextDirection.ltr,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Semantics(
+                button: true,
+                label: enabled
+                    ? 'Hide detailed navigation diagnostics'
+                    : 'Show detailed navigation diagnostics',
+                child: GestureDetector(
+                  onTap: onToggle,
+                  child: Text(
+                    enabled ? 'HIDE DETAILS' : 'SHOW DETAILS',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
                     ),
-            ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

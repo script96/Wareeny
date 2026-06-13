@@ -12,4 +12,5 @@ class NativeBridgeChannels {
   // Event channel for streamed on-device VLM token deltas (MediaPipe LLM Inference).
   static const localAiRuntimeStream =
       'com.wareeny.bridge/local_ai_runtime/stream';
+  static const emergency = 'com.wareeny.bridge/emergency';
 }

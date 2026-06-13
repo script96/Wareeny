@@ -67,7 +67,7 @@ class _NavigationOverlayPainter extends CustomPainter {
         .toList(growable: false);
 
     _drawPath(canvas, size, imageSize, pathPoints);
-    if (showDebug && frame != null) {
+    if (frame != null) {
       _drawDetections(canvas, size, frame!);
     }
   }
@@ -182,12 +182,14 @@ class _NavigationOverlayPainter extends CustomPainter {
     final confidence = (item.detection.source.confidence * 100).round();
     final inside = item.insidePath ? 'IN PATH' : 'OUTSIDE PATH';
     final trackingId = item.detection.source.trackingId;
-    final details = [
-      '$confidence%',
-      item.risk.name.toUpperCase(),
-      inside,
-      if (trackingId != null) 'ID $trackingId',
-    ].join('  ');
+    final details = showDebug
+        ? [
+            '$confidence%',
+            item.risk.name.toUpperCase(),
+            inside,
+            if (trackingId != null) 'ID $trackingId',
+          ].join('  ')
+        : '$confidence%';
     final painter = TextPainter(
       text: TextSpan(
         children: [

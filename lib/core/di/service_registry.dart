@@ -1,10 +1,19 @@
+import 'package:http/http.dart' as http;
 import 'package:wareeny/core/config/app_config.dart';
+import 'package:wareeny/presentation/emergency/emergency_controller.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
 import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
 import 'package:wareeny/shared/bridges/battery_thermal_bridge.dart';
 import 'package:wareeny/shared/bridges/camera_bridge.dart';
+import 'package:wareeny/shared/bridges/emergency_call_bridge.dart';
 import 'package:wareeny/shared/bridges/file_download_bridge.dart';
 import 'package:wareeny/shared/bridges/local_ai_runtime_bridge.dart';
+import 'package:wareeny/shared/emergency/emergency_api_client.dart';
+import 'package:wareeny/shared/emergency/emergency_contact_store.dart';
+import 'package:wareeny/shared/emergency/emergency_event_store.dart';
+import 'package:wareeny/shared/emergency/emergency_location_service.dart';
+import 'package:wareeny/shared/emergency/emergency_sync_service.dart';
+import 'package:wareeny/shared/emergency/motion_monitoring_service.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 import 'package:wareeny/shared/vlm/cloud_vlm_provider.dart';
 import 'package:wareeny/shared/vlm/local_vlm_provider.dart';
@@ -22,6 +31,9 @@ class ServiceRegistry {
     required this.localAiRuntimeBridge,
     required this.vlmAssistant,
     required this.objectDetectionSource,
+    required this.emergencyController,
+    required this.emergencySyncService,
+    required this.emergencyCallBridge,
   });
 
   final AppConfig config;
@@ -33,6 +45,9 @@ class ServiceRegistry {
   final LocalAiRuntimeBridge localAiRuntimeBridge;
   final VlmAssistant vlmAssistant;
   final ObjectDetectionSource objectDetectionSource;
+  final EmergencyController emergencyController;
+  final EmergencySyncService emergencySyncService;
+  final EmergencyCallBridge emergencyCallBridge;
 
   /// Use [ServiceRegistry.createAsync] during bootstrap instead of this factory,
   /// because [SettingsController] must be loaded from SharedPreferences first.
@@ -49,17 +64,41 @@ class ServiceRegistry {
       modelId: config.cloudModelId,
     );
     final router = ModelRouter(local: local, cloud: cloud);
+    final audioHaptics = AudioHapticsBridge();
+    final eventStore = EmergencyEventStore();
+    final emergencyCallBridge = const EmergencyCallBridge();
+    final emergencySyncService = EmergencySyncService(
+      api: EmergencyApiClient(
+        apiBaseUrl: config.apiBaseUrl,
+        client: http.Client(),
+      ),
+      eventStore: eventStore,
+    );
+    final emergencyController = EmergencyController(
+      contactStore: EmergencyContactStore(),
+      eventStore: eventStore,
+      syncService: emergencySyncService,
+      motionMonitoring: MotionMonitoringService(),
+      callBridge: emergencyCallBridge,
+      audioHaptics: audioHaptics,
+      settings: settings,
+      locationService: const EmergencyLocationService(),
+    );
+    await emergencyController.initialize();
 
     return ServiceRegistry(
       config: config,
       settings: settings,
       cameraBridge: const CameraBridge(),
-      audioHapticsBridge: AudioHapticsBridge(),
+      audioHapticsBridge: audioHaptics,
       batteryThermalBridge: const BatteryThermalBridge(),
       fileDownloadBridge: const FileDownloadBridge(),
       localAiRuntimeBridge: localAiRuntimeBridge,
       vlmAssistant: VlmAssistant(router: router),
       objectDetectionSource: UltralyticsYoloDetectionSource(),
+      emergencyController: emergencyController,
+      emergencySyncService: emergencySyncService,
+      emergencyCallBridge: emergencyCallBridge,
     );
   }
 }

@@ -13,11 +13,13 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
     required this.settings,
     required this.onClose,
+    required this.emergencySection,
     super.key,
   });
 
   final SettingsController settings;
   final VoidCallback onClose;
+  final Widget emergencySection;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,10 @@ class SettingsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // ── Header with back button ──────────────────────────
-                    _SettingsHeader(title: l10n.settingsTitle, onClose: onClose),
+                    _SettingsHeader(
+                      title: l10n.settingsTitle,
+                      onClose: onClose,
+                    ),
                     const SizedBox(height: AppSpacing.xl),
 
                     // ── Language ─────────────────────────────────────────
@@ -54,10 +59,7 @@ class SettingsScreen extends StatelessWidget {
                             label: l10n.settingsLanguage,
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          _LanguageSelector(
-                            settings: settings,
-                            l10n: l10n,
-                          ),
+                          _LanguageSelector(settings: settings, l10n: l10n),
                         ],
                       ),
                     ),
@@ -83,6 +85,8 @@ class SettingsScreen extends StatelessWidget {
                     _GlassCard(
                       child: _HapticsToggle(settings: settings, l10n: l10n),
                     ),
+                    const SizedBox(height: AppSpacing.md),
+                    emergencySection,
 
                     const SizedBox(height: AppSpacing.xl),
 
@@ -265,10 +269,7 @@ class _LanguageSelector extends StatelessWidget {
             active: !settings.isArabic,
             onTap: () {
               settings.setLocale(const Locale('en'));
-              SemanticsService.announce(
-                'English selected',
-                TextDirection.ltr,
-              );
+              SemanticsService.announce('English selected', TextDirection.ltr);
             },
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -277,10 +278,7 @@ class _LanguageSelector extends StatelessWidget {
             active: settings.isArabic,
             onTap: () {
               settings.setLocale(const Locale('ar'));
-              SemanticsService.announce(
-                'تم اختيار العربية',
-                TextDirection.rtl,
-              );
+              SemanticsService.announce('تم اختيار العربية', TextDirection.rtl);
             },
           ),
         ],

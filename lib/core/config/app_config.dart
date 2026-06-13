@@ -18,6 +18,7 @@ class AppConfig {
     required this.cloudModelId,
     required this.localModelRegistryName,
     required this.enableDiagnostics,
+    required this.clerkPublishableKey,
   });
 
   final AppEnvironment environment;
@@ -26,8 +27,10 @@ class AppConfig {
   final String cloudModelId;
   final String localModelRegistryName;
   final bool enableDiagnostics;
+  final String clerkPublishableKey;
 
   bool get isProduction => environment == AppEnvironment.prod;
+  bool get clerkEnabled => clerkPublishableKey.trim().isNotEmpty;
 
   factory AppConfig.fromEnvironment() {
     const rawEnvironment = String.fromEnvironment(
@@ -62,6 +65,7 @@ class AppConfig {
         'ENABLE_DIAGNOSTICS',
         defaultValue: true,
       ),
+      clerkPublishableKey: String.fromEnvironment('CLERK_PUBLISHABLE_KEY'),
     );
   }
 
@@ -82,6 +86,7 @@ class AppConfig {
         defaultValue: 'wareeny-local-models',
       ),
       enableDiagnostics: bool.fromEnvironment('ENABLE_DIAGNOSTICS'),
+      clerkPublishableKey: String.fromEnvironment('CLERK_PUBLISHABLE_KEY'),
     );
   }
 }

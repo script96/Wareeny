@@ -21,6 +21,7 @@ class NavigationController extends ChangeNotifier {
         const DetectionCoordinateMapper(),
     NavigationClock? clock,
     bool diagnosticsEnabled = false,
+    bool indoorMode = true,
   }) {
     return NavigationController._(
       detectionSource,
@@ -29,6 +30,7 @@ class NavigationController extends ChangeNotifier {
       coordinateMapper,
       clock ?? DateTime.now,
       diagnosticsEnabled,
+      indoorMode,
     );
   }
 
@@ -39,6 +41,7 @@ class NavigationController extends ChangeNotifier {
     this._coordinateMapper,
     this._clock,
     this.diagnosticsEnabled,
+    this._indoorMode,
   );
 
   final ObjectDetectionSource _detectionSource;
@@ -47,6 +50,7 @@ class NavigationController extends ChangeNotifier {
   final DetectionCoordinateMapper _coordinateMapper;
   final NavigationClock _clock;
   final bool diagnosticsEnabled;
+  bool _indoorMode;
 
   static const dangerConfirmation = Duration(milliseconds: 250);
   static const cautionConfirmation = Duration(milliseconds: 500);
@@ -66,7 +70,16 @@ class NavigationController extends ChangeNotifier {
   DateTime? _lowLightSince;
   DateTime? _lastLowLightSpeechAt;
   DateTime? _lastPathClearSpeechAt;
+  DateTime? _lastFrameAt;
+  ObjectDetectionFrame? _latestIndoorFrame;
+  ObjectDetectionFrame? _latestCocoFrame;
   int _consecutiveClearFrames = 0;
+  int framesReceived = 0;
+  int framesWithDetections = 0;
+  int totalDetections = 0;
+  double? sceneLuminance;
+  bool torchEnabled = false;
+  String activeDetectorSource = 'indoor';
   bool _started = false;
 
   UprightDetectionFrame? latestFrame;
@@ -75,10 +88,12 @@ class NavigationController extends ChangeNotifier {
     selected: null,
   );
   String latestMessage = '';
-  String detectorStatus = 'Starting detector';
+  List<String> latestDetectionLabels = const [];
+  String detectorStatus = 'Waiting for navigation model';
   String cooldownStatus = 'No feedback yet';
 
   NavigationPath get path => _engine.path;
+  DateTime? get lastFrameAt => _lastFrameAt;
 
   Future<void> start() async {
     if (_started) return;
@@ -90,7 +105,7 @@ class NavigationController extends ChangeNotifier {
 
     try {
       await _detectionSource.start(mode: 'navigation');
-      detectorStatus = '${_detectionSource.displayName} active';
+      detectorStatus = _loadingStatus;
     } on MissingPluginException {
       detectorStatus = 'Object detector plugin is not installed';
     } on PlatformException catch (error) {
@@ -119,16 +134,31 @@ class NavigationController extends ChangeNotifier {
   }
 
   void processFrame(ObjectDetectionFrame rawFrame) {
-    final frame = _coordinateMapper.orient(rawFrame);
-    final nextAssessment = _engine.assess(frame);
+    framesReceived++;
+    _lastFrameAt = rawFrame.timestamp;
+    totalDetections += rawFrame.detections.length;
+    if (rawFrame.detections.isNotEmpty) {
+      framesWithDetections++;
+    }
+    final mergedFrame = _mergeIndoorFrames(rawFrame);
+    latestDetectionLabels = mergedFrame.detections
+        .map(
+          (item) =>
+              '${item.label} ${(item.confidence * 100).toStringAsFixed(0)}%',
+        )
+        .toList(growable: false);
+    final frame = _coordinateMapper.orient(mergedFrame);
+    final nextAssessment = _engine.assess(frame, indoorMode: _indoorMode);
     latestFrame = frame;
     assessment = nextAssessment;
-    detectorStatus = '${_detectionSource.displayName} active';
+    detectorStatus = _activeStatus;
 
     _log(
       'frame=${rawFrame.frameId} size=${rawFrame.sourceSize} '
       'rotation=${rawFrame.rotationDegrees} mirrored=${rawFrame.mirrored} '
-      'detections=${rawFrame.detections.length}',
+      'source=${rawFrame.modelSource} '
+      'detections=${rawFrame.detections.length} '
+      'merged=${mergedFrame.detections.length}',
     );
     for (final item in nextAssessment.objects) {
       _log(
@@ -279,6 +309,9 @@ class NavigationController extends ChangeNotifier {
   }
 
   String _messageFor(NavigationObjectRisk candidate) {
+    if (_indoorMode && candidate.isIndoorSlipHazard) {
+      return 'خلي بالك، في حذاء أو شبشب على الأرض وممكن يسبب انزلاق';
+    }
     if (candidate.isBottomDanger || candidate.area >= 0.18) {
       return 'وقف، في عائق قريب قدامك';
     }
@@ -298,6 +331,85 @@ class NavigationController extends ChangeNotifier {
   void _resetPending() {
     _pendingFingerprint = null;
     _pendingSince = null;
+  }
+
+  void setIndoorMode(bool enabled) {
+    if (_indoorMode == enabled) return;
+    _indoorMode = enabled;
+    latestFrame = null;
+    assessment = const NavigationAssessment(objects: [], selected: null);
+    latestDetectionLabels = const [];
+    framesReceived = 0;
+    framesWithDetections = 0;
+    totalDetections = 0;
+    _lastFrameAt = null;
+    _latestIndoorFrame = null;
+    _latestCocoFrame = null;
+    activeDetectorSource = enabled ? 'indoor' : 'coco';
+    detectorStatus = _loadingStatus;
+    _resetPending();
+    notifyListeners();
+  }
+
+  void reportModelError(Object error) {
+    detectorStatus = 'Navigation model unavailable: $error';
+    notifyListeners();
+  }
+
+  void reportLighting({required double luminance, required bool torchOn}) {
+    sceneLuminance = luminance;
+    torchEnabled = torchOn;
+    notifyListeners();
+  }
+
+  void reportActiveDetectorSource(String source) {
+    if (activeDetectorSource == source) return;
+    activeDetectorSource = source;
+    notifyListeners();
+  }
+
+  String get _loadingStatus => _indoorMode
+      ? 'Loading indoor navigation model'
+      : 'Loading outdoor navigation model';
+
+  String get _activeStatus => _indoorMode
+      ? 'Indoor + COCO navigation active'
+      : 'Outdoor navigation model active';
+
+  ObjectDetectionFrame _mergeIndoorFrames(ObjectDetectionFrame incoming) {
+    if (!_indoorMode) return incoming;
+    if (incoming.modelSource == 'indoor') {
+      _latestIndoorFrame = incoming;
+    } else if (incoming.modelSource == 'coco') {
+      _latestCocoFrame = incoming;
+    }
+
+    final now = incoming.timestamp;
+    final recent = <ObjectDetectionFrame>[
+      if (_isRecent(_latestIndoorFrame, now)) _latestIndoorFrame!,
+      if (_isRecent(_latestCocoFrame, now)) _latestCocoFrame!,
+    ];
+    if (recent.isEmpty) return incoming;
+
+    return ObjectDetectionFrame(
+      frameId: incoming.frameId,
+      sourceSize: incoming.sourceSize,
+      detections: recent
+          .expand((frame) => frame.detections)
+          .toList(growable: false),
+      timestamp: incoming.timestamp,
+      rotationDegrees: incoming.rotationDegrees,
+      mirrored: incoming.mirrored,
+      inferenceTime: incoming.inferenceTime,
+      framesPerSecond: incoming.framesPerSecond,
+      isLowLight: incoming.isLowLight,
+      modelSource: 'indoor+coco',
+    );
+  }
+
+  bool _isRecent(ObjectDetectionFrame? frame, DateTime now) {
+    return frame != null &&
+        now.difference(frame.timestamp).abs() <= const Duration(seconds: 4);
   }
 
   void _log(String message) {

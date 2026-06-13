@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,42 +8,37 @@ import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/di/service_registry.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const secureStorageChannel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
 
-  testWidgets('shows the camera mode shell', (WidgetTester tester) async {
-    final services = await ServiceRegistry.createAsync(AppConfig.dev());
-
-    await tester.pumpWidget(
-      AppScope(services: services, child: WareenyApp(settings: services.settings)),
-    );
-    await tester.pump();
-
-    expect(find.text('HOME'), findsOneWidget);
-    expect(find.text('SETTINGS'), findsOneWidget);
-    expect(find.text('NAVIGATION'), findsOneWidget);
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureStorageChannel, (_) async => null);
   });
 
-  testWidgets('switches modes with a two finger swipe', (
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureStorageChannel, null);
+  });
+
+  testWidgets('requires an emergency contact before opening the shell', (
     WidgetTester tester,
   ) async {
     final services = await ServiceRegistry.createAsync(AppConfig.dev());
 
     await tester.pumpWidget(
-      AppScope(services: services, child: WareenyApp(settings: services.settings)),
+      AppScope(
+        services: services,
+        child: WareenyApp(settings: services.settings),
+      ),
     );
     await tester.pump();
 
-    final firstFinger = await tester.createGesture(pointer: 1);
-    final secondFinger = await tester.createGesture(pointer: 2);
-
-    await firstFinger.down(const Offset(300, 300));
-    await secondFinger.down(const Offset(300, 360));
-    await firstFinger.moveBy(const Offset(-90, 0));
-    await secondFinger.moveBy(const Offset(-90, 0));
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.text('OUTDOOR'), findsOneWidget);
-    expect(find.text('SETTINGS'), findsNothing);
+    expect(find.text('Emergency contact'), findsOneWidget);
+    expect(find.text('Choose from contacts'), findsOneWidget);
+    expect(find.text('Confirm emergency contact'), findsOneWidget);
   });
 }
