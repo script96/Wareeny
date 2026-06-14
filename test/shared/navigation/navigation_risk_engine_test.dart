@@ -66,6 +66,24 @@ void main() {
     expect(assessment.selected?.detection.source.label, 'person');
     expect(assessment.selected?.isBottomDanger, isTrue);
   });
+
+  test('treats shoes as caution only in indoor mode', () {
+    final frame = UprightDetectionFrame(
+      source: _rawFrame(),
+      imageSize: const Size(100, 100),
+      detections: [
+        _detection(const Rect.fromLTWH(0.44, 0.72, 0.20, 0.25), 'shoes'),
+      ],
+    );
+
+    final indoor = engine.assess(frame, indoorMode: true);
+    final outdoor = engine.assess(frame, indoorMode: false);
+
+    expect(indoor.highestRisk, NavigationRisk.caution);
+    expect(indoor.selected?.isIndoorSlipHazard, isTrue);
+    expect(indoor.selected?.isBottomDanger, isFalse);
+    expect(outdoor.highestRisk, NavigationRisk.danger);
+  });
 }
 
 UprightDetectionFrame _frame(Rect box, {double confidence = 0.9}) {

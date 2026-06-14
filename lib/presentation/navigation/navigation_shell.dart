@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/emergency/emergency_controller.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
 import 'package:wareeny/presentation/emergency/emergency_overlay.dart';
+import 'package:wareeny/presentation/home/home_detection_screen.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
 import 'package:wareeny/presentation/onboarding/emergency_onboarding_screen.dart';
@@ -28,8 +30,15 @@ class NavigationShell extends StatefulWidget {
 
 class _NavigationShellState extends State<NavigationShell> {
   var _selectedIndex = 0;
+  late EmergencyController _emergencyController;
 
   static const _modes = AppMode.values;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _emergencyController = AppScope.of(context).emergencyController;
+  }
 
   @override
   void initState() {
@@ -46,7 +55,7 @@ class _NavigationShellState extends State<NavigationShell> {
       );
 
       // Arm the emergency controller and wire overlay callback.
-      final emergency = scope.emergencyController;
+      final emergency = _emergencyController;
       emergency.onCountdownStarted = () {
         if (!mounted) return;
         showEmergencyOverlay(context, emergency);
@@ -68,7 +77,7 @@ class _NavigationShellState extends State<NavigationShell> {
 
   @override
   void dispose() {
-    AppScope.of(context).emergencyController.disarm();
+    _emergencyController.disarm();
     super.dispose();
   }
 
@@ -126,6 +135,20 @@ class _NavigationShellState extends State<NavigationShell> {
       return Scaffold(
         backgroundColor: Colors.black,
         body: StuffFinderScreen(
+          previousMode: _previousMode,
+          nextMode: _nextMode,
+          onPrevious: _selectPreviousMode,
+          onNext: _selectNextMode,
+          onModeSelect: _selectMode,
+          settings: widget.settings,
+        ),
+      );
+    }
+
+    if (_currentMode == AppMode.home) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: HomeDetectionScreen(
           previousMode: _previousMode,
           nextMode: _nextMode,
           onPrevious: _selectPreviousMode,

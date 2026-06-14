@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,7 @@ import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
+import 'package:wareeny/shared/camera/light_condition_service.dart';
 import 'package:wareeny/shared/navigation/navigation_feedback.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
@@ -69,6 +71,12 @@ class _NavigationScreenState extends State<NavigationScreen>
   Object? _modelError;
   bool _debugEnabled = false;
   bool _initialized = false;
+  Timer? _modelCycleTimer;
+  Timer? _lightCheckTimer;
+  final LightConditionService _lightService = LightConditionService();
+  bool _modelSwitchInProgress = false;
+  bool _lightCheckInProgress = false;
+  String _activeModelSource = 'indoor';
   NavigationSubMode _navSubMode = NavigationSubMode.indoor;
 
   @override
@@ -110,6 +118,9 @@ class _NavigationScreenState extends State<NavigationScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _modelCycleTimer?.cancel();
+    _lightCheckTimer?.cancel();
+    unawaited(_yoloController.setTorchMode(false));
     unawaited(_yoloController.stop());
     _navigation
       ?..removeListener(_onNavigationChanged)
@@ -135,7 +146,8 @@ class _NavigationScreenState extends State<NavigationScreen>
     final toggleSubModeLabel = widget.settings.isArabic
         ? 'تبديل نوع التنقل'
         : 'Toggle Navigation Type';
-    modeActions[CustomSemanticsAction(label: toggleSubModeLabel)] = _cycleNavigationSubMode;
+    modeActions[CustomSemanticsAction(label: toggleSubModeLabel)] =
+        _cycleNavigationSubMode;
 
     return TwoFingerSwipeDetector(
       onSwipeLeft: widget.onNext,
@@ -170,31 +182,26 @@ class _NavigationScreenState extends State<NavigationScreen>
                     const SizedBox(height: AppSpacing.sm),
                     _NavSubModeToggle(
                       subMode: _navSubMode,
-                      onSelect: (mode) {
-                        setState(() => _navSubMode = mode);
-                        final l10n = AppLocalizations.of(context);
-                        SemanticsService.announce(
-                          widget.settings.isArabic
-                              ? '${mode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
-                              : l10n.activeMode(mode.labelFor(l10n)),
-                          widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                        );
-                      },
+                      onSelect: _selectNavigationSubMode,
                     ),
                   ],
                 ),
               ),
             ),
             Positioned(
-              top: 84,
+              top: 112,
               left: 16,
+              right: 16,
               child: SafeArea(
-                child: NavigationDebugPanel(
-                  controller: navigation,
-                  enabled: _debugEnabled,
-                  onToggle: () {
-                    setState(() => _debugEnabled = !_debugEnabled);
-                  },
+                child: Align(
+                  alignment: AlignmentDirectional.topStart,
+                  child: NavigationDebugPanel(
+                    controller: navigation,
+                    enabled: _debugEnabled,
+                    onToggle: () {
+                      setState(() => _debugEnabled = !_debugEnabled);
+                    },
+                  ),
                 ),
               ),
             ),
@@ -243,31 +250,47 @@ class _NavigationScreenState extends State<NavigationScreen>
       );
     }
 
+    final modelPath = source.modelPathForMode(
+      _navSubMode == NavigationSubMode.indoor
+          ? 'navigation_indoor'
+          : 'navigation_outdoor',
+    );
+    final isIndoor = _navSubMode == NavigationSubMode.indoor;
     return YOLOView(
-      modelPath: source.modelPathForMode('navigation'),
+      modelPath: modelPath,
       task: YOLOTask.detect,
       controller: _yoloController,
       cameraResolution: '720p',
-      confidenceThreshold: 0.45,
+      confidenceThreshold: isIndoor ? 0.20 : 0.35,
       iouThreshold: 0.45,
-      useGpu: true,
+      useGpu: !isIndoor,
       lensFacing: LensFacing.back,
       streamingConfig: const YOLOStreamingConfig(
         includeDetections: true,
         includeClassifications: false,
         includeProcessingTimeMs: true,
         includeFps: true,
-        maxFPS: 15,
-        inferenceFrequency: 15,
+        maxFPS: 12,
+        inferenceFrequency: 12,
       ),
-      onStreamingData: source.processStreamingData,
-      onModelLoad: (_, _) {
-        if (mounted && _modelError != null) {
+      onStreamingData: (data) {
+        source.processStreamingData({
+          ...data,
+          'modelSource': isIndoor ? _activeModelSource : 'coco',
+        });
+      },
+      onModelLoad: (loadedPath, _) {
+        if (loadedPath != modelPath || !mounted) return;
+        if (_modelError != null) {
           setState(() => _modelError = null);
         }
+        _startLightMonitoring();
+        if (isIndoor) _startIndoorModelCycle(source);
       },
-      onModelError: (error, _, _) {
-        if (mounted) setState(() => _modelError = error);
+      onModelError: (error, failedPath, _) {
+        if (failedPath != modelPath || !mounted) return;
+        _navigation?.reportModelError(error);
+        setState(() => _modelError = error);
       },
     );
   }
@@ -275,6 +298,12 @@ class _NavigationScreenState extends State<NavigationScreen>
   Future<void> _resume() async {
     try {
       await _yoloController.resume();
+      _startLightMonitoring();
+      final source = _detectionSource;
+      if (_navSubMode == NavigationSubMode.indoor &&
+          source is YoloStreamingObjectDetectionSource) {
+        _startIndoorModelCycle(source);
+      }
     } on MissingPluginException {
       if (mounted) {
         setState(() => _modelError = 'YOLO camera plugin is unavailable');
@@ -283,6 +312,10 @@ class _NavigationScreenState extends State<NavigationScreen>
   }
 
   Future<void> _pause() async {
+    _modelCycleTimer?.cancel();
+    _lightCheckTimer?.cancel();
+    _lightService.reset();
+    await _setTorch(false);
     try {
       await _yoloController.pause();
     } on MissingPluginException {
@@ -296,17 +329,132 @@ class _NavigationScreenState extends State<NavigationScreen>
   }
 
   void _cycleNavigationSubMode() {
-    final l10n = AppLocalizations.of(context);
     final nextMode = _navSubMode == NavigationSubMode.indoor
         ? NavigationSubMode.outdoor
         : NavigationSubMode.indoor;
-    setState(() => _navSubMode = nextMode);
-    SemanticsService.announce(
+    _selectNavigationSubMode(nextMode);
+  }
+
+  void _selectNavigationSubMode(NavigationSubMode mode) {
+    if (_navSubMode == mode) return;
+    setState(() {
+      _navSubMode = mode;
+      _modelError = null;
+    });
+    _navigation?.setIndoorMode(mode == NavigationSubMode.indoor);
+    _modelCycleTimer?.cancel();
+    _activeModelSource = mode == NavigationSubMode.indoor ? 'indoor' : 'coco';
+    _navigation?.reportActiveDetectorSource(_activeModelSource);
+    final l10n = AppLocalizations.of(context);
+    SemanticsService.sendAnnouncement(
+      View.of(context),
       widget.settings.isArabic
-          ? '${nextMode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
-          : l10n.activeMode(nextMode.labelFor(l10n)),
+          ? '${mode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
+          : l10n.activeMode(mode.labelFor(l10n)),
       widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
     );
+  }
+
+  void _startIndoorModelCycle(YoloStreamingObjectDetectionSource source) {
+    _modelCycleTimer?.cancel();
+    _modelCycleTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => unawaited(_switchIndoorModel(source)),
+    );
+  }
+
+  Future<void> _switchIndoorModel(
+    YoloStreamingObjectDetectionSource source,
+  ) async {
+    if (!mounted ||
+        _navSubMode != NavigationSubMode.indoor ||
+        _modelSwitchInProgress) {
+      return;
+    }
+    _modelSwitchInProgress = true;
+    final nextSource = _activeModelSource == 'indoor' ? 'coco' : 'indoor';
+    final nextPath = source.modelPathForMode(
+      nextSource == 'indoor' ? 'navigation_indoor' : 'navigation_outdoor',
+    );
+    try {
+      await _yoloController.switchModel(nextPath, YOLOTask.detect);
+      await _yoloController.setConfidenceThreshold(
+        nextSource == 'indoor' ? 0.20 : 0.35,
+      );
+      _activeModelSource = nextSource;
+      _navigation?.reportActiveDetectorSource(nextSource);
+    } catch (error) {
+      _navigation?.reportModelError(error);
+    } finally {
+      _modelSwitchInProgress = false;
+    }
+  }
+
+  void _startLightMonitoring() {
+    _lightCheckTimer?.cancel();
+    _lightCheckTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) => unawaited(_checkSceneLighting()),
+    );
+  }
+
+  Future<void> _checkSceneLighting() async {
+    if (!mounted || _lightCheckInProgress) return;
+    _lightCheckInProgress = true;
+    try {
+      final bytes = await _yoloController.captureFrame();
+      if (bytes == null || bytes.isEmpty) return;
+      final rawStats = await compute(analyzeEncodedLightFrame, {
+        'bytes': bytes,
+        'darkPixelThreshold': _lightService.config.darkPixelThreshold,
+        'sampleStride': _lightService.config.sampleStride,
+        'pathWeight': _navSubMode == NavigationSubMode.indoor
+            ? _lightService.config.pathWeight
+            : 1,
+      });
+      if (rawStats == null || !mounted) return;
+      final result = _lightService.addSample(
+        LightFrameStats(
+          averageBrightness: rawStats['averageBrightness']!.toDouble(),
+          darkPixelRatio: rawStats['darkPixelRatio']!.toDouble(),
+          sampleCount: rawStats['sampleCount']!.toInt(),
+        ),
+      );
+
+      var torchEnabled = _yoloController.isTorchEnabled;
+      if (result.flashRequested && !torchEnabled) {
+        torchEnabled = await _setTorch(true);
+        if (result.shouldSpeak) {
+          _navigation?.announceLowLight(flashEnabled: torchEnabled);
+        }
+      }
+      _navigation?.reportLighting(result: result, torchOn: torchEnabled);
+      debugPrint(
+        '[LightCondition] average=${result.averageBrightness.toStringAsFixed(1)} '
+        'darkRatio=${result.darkPixelRatio.toStringAsFixed(2)} '
+        'state=${result.condition.name} '
+        'darkFor=${result.darkDuration.inMilliseconds}ms '
+        'flashRequested=${result.flashRequested} torchOn=$torchEnabled',
+      );
+    } on MissingPluginException {
+      _lightCheckTimer?.cancel();
+    } catch (error) {
+      debugPrint('[Navigation] Light check failed: $error');
+    } finally {
+      _lightCheckInProgress = false;
+    }
+  }
+
+  Future<bool> _setTorch(bool enabled) async {
+    try {
+      await _yoloController.setTorchMode(enabled);
+    } on MissingPluginException {
+      return false;
+    } catch (error) {
+      debugPrint('[LightCondition] Torch change failed: $error');
+      return false;
+    }
+    return _yoloController.isTorchEnabled;
   }
 }
 
@@ -363,7 +511,9 @@ class _NavSubModeToggle extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                           border: active
                               ? Border.all(
-                                  color: AppColors.electricGreen, width: 1)
+                                  color: AppColors.electricGreen,
+                                  width: 1,
+                                )
                               : null,
                         ),
                         child: Row(

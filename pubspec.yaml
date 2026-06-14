@@ -70,7 +70,10 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/models/
+    - assets/models/home/
+    - assets/models/navigation/indoor/
+    - assets/models/navigation/outdoor/
+    - assets/models/stuff_finder/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

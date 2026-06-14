@@ -7,13 +7,20 @@ import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/di/service_registry.dart';
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(
+    () => SharedPreferences.setMockInitialValues({
+      'settings.emergencyOnboardingSeen': true,
+    }),
+  );
 
   testWidgets('shows the camera mode shell', (WidgetTester tester) async {
     final services = await ServiceRegistry.createAsync(AppConfig.dev());
 
     await tester.pumpWidget(
-      AppScope(services: services, child: WareenyApp(settings: services.settings)),
+      AppScope(
+        services: services,
+        child: WareenyApp(settings: services.settings),
+      ),
     );
     await tester.pump();
 
@@ -28,7 +35,10 @@ void main() {
     final services = await ServiceRegistry.createAsync(AppConfig.dev());
 
     await tester.pumpWidget(
-      AppScope(services: services, child: WareenyApp(settings: services.settings)),
+      AppScope(
+        services: services,
+        child: WareenyApp(settings: services.settings),
+      ),
     );
     await tester.pump();
 

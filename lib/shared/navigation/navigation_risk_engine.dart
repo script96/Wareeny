@@ -26,9 +26,12 @@ class NavigationRiskEngine {
   final NavigationPath path;
   final NavigationRiskConfig config;
 
-  NavigationAssessment assess(UprightDetectionFrame frame) {
+  NavigationAssessment assess(
+    UprightDetectionFrame frame, {
+    bool indoorMode = false,
+  }) {
     final objects = frame.detections
-        .map(_assessDetection)
+        .map((detection) => _assessDetection(detection, indoorMode: indoorMode))
         .toList(growable: false);
     final candidates = objects.where(
       (item) => !item.isIgnored && item.risk != NavigationRisk.safe,
@@ -43,7 +46,10 @@ class NavigationRiskEngine {
     return NavigationAssessment(objects: objects, selected: selected);
   }
 
-  NavigationObjectRisk _assessDetection(UprightDetection detection) {
+  NavigationObjectRisk _assessDetection(
+    UprightDetection detection, {
+    required bool indoorMode,
+  }) {
     final box = detection.normalizedBox;
     final area = box.width * box.height;
     final confidence = detection.source.confidence;
@@ -56,6 +62,11 @@ class NavigationRiskEngine {
       return _ignored(detection, zone, 'tiny bounding box');
     }
 
+    final isSlipHazard =
+        indoorMode &&
+        indoorSlipHazardLabels.contains(
+          detection.source.label.trim().toLowerCase(),
+        );
     final centerInside = _pointInPolygon(box.center, path.polygon);
     final intersectionArea = _polygonArea(
       _clipPolygonToRect(path.polygon, box),
@@ -68,7 +79,9 @@ class NavigationRiskEngine {
         zone == NavigationZone.center;
     final largeInside = overlaps && area >= config.largeBoxArea;
 
-    final risk = centerInside || bottomDanger || largeInside
+    final risk = isSlipHazard
+        ? NavigationRisk.caution
+        : centerInside || bottomDanger || largeInside
         ? NavigationRisk.danger
         : overlaps
         ? NavigationRisk.caution
@@ -78,10 +91,10 @@ class NavigationRiskEngine {
       detection: detection,
       risk: risk,
       zone: zone,
-      insidePath: overlaps || centerInside,
+      insidePath: isSlipHazard || overlaps || centerInside,
       centerInsidePath: centerInside,
       overlapRatio: overlapRatio.clamp(0, 1),
-      isBottomDanger: bottomDanger,
+      isBottomDanger: isSlipHazard ? false : bottomDanger,
       isIgnored: false,
     );
   }

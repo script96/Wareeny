@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:wareeny/shared/navigation/navigation_feedback.dart';
 import 'package:wareeny/shared/navigation/navigation_models.dart';
 import 'package:wareeny/shared/navigation/navigation_risk_engine.dart';
+import 'package:wareeny/shared/camera/light_condition_service.dart';
 import 'package:wareeny/shared/object_detection/detection_coordinate_mapper.dart';
 import 'package:wareeny/shared/object_detection/detection_models.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
@@ -21,6 +22,7 @@ class NavigationController extends ChangeNotifier {
         const DetectionCoordinateMapper(),
     NavigationClock? clock,
     bool diagnosticsEnabled = false,
+    bool indoorMode = true,
   }) {
     return NavigationController._(
       detectionSource,
@@ -29,6 +31,7 @@ class NavigationController extends ChangeNotifier {
       coordinateMapper,
       clock ?? DateTime.now,
       diagnosticsEnabled,
+      indoorMode,
     );
   }
 
@@ -39,6 +42,7 @@ class NavigationController extends ChangeNotifier {
     this._coordinateMapper,
     this._clock,
     this.diagnosticsEnabled,
+    this._indoorMode,
   );
 
   final ObjectDetectionSource _detectionSource;
@@ -47,6 +51,7 @@ class NavigationController extends ChangeNotifier {
   final DetectionCoordinateMapper _coordinateMapper;
   final NavigationClock _clock;
   final bool diagnosticsEnabled;
+  bool _indoorMode;
 
   static const dangerConfirmation = Duration(milliseconds: 250);
   static const cautionConfirmation = Duration(milliseconds: 500);
@@ -54,8 +59,6 @@ class NavigationController extends ChangeNotifier {
   static const cautionSpeechCooldown = Duration(seconds: 7);
   static const dangerHapticCooldown = Duration(milliseconds: 450);
   static const cautionHapticCooldown = Duration(milliseconds: 900);
-  static const lowLightConfirmation = Duration(seconds: 1);
-  static const lowLightSpeechCooldown = Duration(seconds: 10);
   static const pathClearSpeechCooldown = Duration(seconds: 12);
 
   StreamSubscription<ObjectDetectionFrame>? _subscription;
@@ -63,10 +66,21 @@ class NavigationController extends ChangeNotifier {
   String? _pendingFingerprint;
   DateTime? _pendingSince;
   DateTime? _lastHapticAt;
-  DateTime? _lowLightSince;
-  DateTime? _lastLowLightSpeechAt;
   DateTime? _lastPathClearSpeechAt;
+  DateTime? _lastFrameAt;
+  ObjectDetectionFrame? _latestIndoorFrame;
+  ObjectDetectionFrame? _latestCocoFrame;
   int _consecutiveClearFrames = 0;
+  int framesReceived = 0;
+  int framesWithDetections = 0;
+  int totalDetections = 0;
+  double? sceneLuminance;
+  double? darkPixelRatio;
+  LightCondition lightCondition = LightCondition.normal;
+  Duration darkDuration = Duration.zero;
+  bool flashRequested = false;
+  bool torchEnabled = false;
+  String activeDetectorSource = 'indoor';
   bool _started = false;
 
   UprightDetectionFrame? latestFrame;
@@ -75,10 +89,12 @@ class NavigationController extends ChangeNotifier {
     selected: null,
   );
   String latestMessage = '';
-  String detectorStatus = 'Starting detector';
+  List<String> latestDetectionLabels = const [];
+  String detectorStatus = 'Waiting for navigation model';
   String cooldownStatus = 'No feedback yet';
 
   NavigationPath get path => _engine.path;
+  DateTime? get lastFrameAt => _lastFrameAt;
 
   Future<void> start() async {
     if (_started) return;
@@ -90,7 +106,7 @@ class NavigationController extends ChangeNotifier {
 
     try {
       await _detectionSource.start(mode: 'navigation');
-      detectorStatus = '${_detectionSource.displayName} active';
+      detectorStatus = _loadingStatus;
     } on MissingPluginException {
       detectorStatus = 'Object detector plugin is not installed';
     } on PlatformException catch (error) {
@@ -119,16 +135,31 @@ class NavigationController extends ChangeNotifier {
   }
 
   void processFrame(ObjectDetectionFrame rawFrame) {
-    final frame = _coordinateMapper.orient(rawFrame);
-    final nextAssessment = _engine.assess(frame);
+    framesReceived++;
+    _lastFrameAt = rawFrame.timestamp;
+    totalDetections += rawFrame.detections.length;
+    if (rawFrame.detections.isNotEmpty) {
+      framesWithDetections++;
+    }
+    final mergedFrame = _mergeIndoorFrames(rawFrame);
+    latestDetectionLabels = mergedFrame.detections
+        .map(
+          (item) =>
+              '${item.label} ${(item.confidence * 100).toStringAsFixed(0)}%',
+        )
+        .toList(growable: false);
+    final frame = _coordinateMapper.orient(mergedFrame);
+    final nextAssessment = _engine.assess(frame, indoorMode: _indoorMode);
     latestFrame = frame;
     assessment = nextAssessment;
-    detectorStatus = '${_detectionSource.displayName} active';
+    detectorStatus = _activeStatus;
 
     _log(
       'frame=${rawFrame.frameId} size=${rawFrame.sourceSize} '
       'rotation=${rawFrame.rotationDegrees} mirrored=${rawFrame.mirrored} '
-      'detections=${rawFrame.detections.length}',
+      'source=${rawFrame.modelSource} '
+      'detections=${rawFrame.detections.length} '
+      'merged=${mergedFrame.detections.length}',
     );
     for (final item in nextAssessment.objects) {
       _log(
@@ -142,12 +173,7 @@ class NavigationController extends ChangeNotifier {
       );
     }
 
-    if (rawFrame.isLowLight && nextAssessment.selected == null) {
-      _handleLowLight();
-    } else {
-      _lowLightSince = null;
-      _handleCandidate(nextAssessment.selected);
-    }
+    _handleCandidate(nextAssessment.selected);
     notifyListeners();
   }
 
@@ -255,30 +281,10 @@ class NavigationController extends ChangeNotifier {
     );
   }
 
-  void _handleLowLight() {
-    final now = _clock();
-    _lowLightSince ??= now;
-    if (now.difference(_lowLightSince!) < lowLightConfirmation) {
-      cooldownStatus = 'Confirming low light';
-      return;
-    }
-    if (_lastLowLightSpeechAt != null &&
-        now.difference(_lastLowLightSpeechAt!) < lowLightSpeechCooldown) {
-      cooldownStatus = 'Low-light speech cooldown active';
-      return;
-    }
-    _lastLowLightSpeechAt = now;
-    latestMessage = 'الرؤية مش واضحة';
-    cooldownStatus = 'Spoke low-light warning';
-    _log('tts="$latestMessage"; reason=low light signal');
-    unawaited(
-      _feedback.speak(latestMessage).catchError((Object error) {
-        _log('low-light speech failed: $error');
-      }),
-    );
-  }
-
   String _messageFor(NavigationObjectRisk candidate) {
+    if (_indoorMode && candidate.isIndoorSlipHazard) {
+      return 'خلي بالك، في حذاء أو شبشب على الأرض وممكن يسبب انزلاق';
+    }
     if (candidate.isBottomDanger || candidate.area >= 0.18) {
       return 'وقف، في عائق قريب قدامك';
     }
@@ -298,6 +304,108 @@ class NavigationController extends ChangeNotifier {
   void _resetPending() {
     _pendingFingerprint = null;
     _pendingSince = null;
+  }
+
+  void setIndoorMode(bool enabled) {
+    if (_indoorMode == enabled) return;
+    _indoorMode = enabled;
+    latestFrame = null;
+    assessment = const NavigationAssessment(objects: [], selected: null);
+    latestDetectionLabels = const [];
+    framesReceived = 0;
+    framesWithDetections = 0;
+    totalDetections = 0;
+    _lastFrameAt = null;
+    _latestIndoorFrame = null;
+    _latestCocoFrame = null;
+    activeDetectorSource = enabled ? 'indoor' : 'coco';
+    detectorStatus = _loadingStatus;
+    _resetPending();
+    notifyListeners();
+  }
+
+  void reportModelError(Object error) {
+    detectorStatus = 'Navigation model unavailable: $error';
+    notifyListeners();
+  }
+
+  void reportLighting({
+    required LightConditionResult result,
+    required bool torchOn,
+  }) {
+    sceneLuminance = result.averageBrightness;
+    darkPixelRatio = result.darkPixelRatio;
+    lightCondition = result.condition;
+    darkDuration = result.darkDuration;
+    flashRequested = result.flashRequested;
+    torchEnabled = torchOn;
+    notifyListeners();
+  }
+
+  void announceLowLight({required bool flashEnabled}) {
+    latestMessage = flashEnabled
+        ? 'الإضاءة ضعيفة، هفتح الفلاش عشان الكشف يكون أوضح'
+        : 'الإضاءة ضعيفة، افتح الفلاش عشان أقدر أشوف الطريق';
+    cooldownStatus = flashEnabled
+        ? 'Auto-flash enabled'
+        : 'Torch unavailable; asked user to enable it';
+    _log('tts="$latestMessage"; flashEnabled=$flashEnabled');
+    notifyListeners();
+    unawaited(
+      _feedback.speak(latestMessage).catchError((Object error) {
+        _log('low-light speech failed: $error');
+      }),
+    );
+  }
+
+  void reportActiveDetectorSource(String source) {
+    if (activeDetectorSource == source) return;
+    activeDetectorSource = source;
+    notifyListeners();
+  }
+
+  String get _loadingStatus => _indoorMode
+      ? 'Loading indoor navigation model'
+      : 'Loading outdoor navigation model';
+
+  String get _activeStatus => _indoorMode
+      ? 'Indoor + COCO navigation active'
+      : 'Outdoor navigation model active';
+
+  ObjectDetectionFrame _mergeIndoorFrames(ObjectDetectionFrame incoming) {
+    if (!_indoorMode) return incoming;
+    if (incoming.modelSource == 'indoor') {
+      _latestIndoorFrame = incoming;
+    } else if (incoming.modelSource == 'coco') {
+      _latestCocoFrame = incoming;
+    }
+
+    final now = incoming.timestamp;
+    final recent = <ObjectDetectionFrame>[
+      if (_isRecent(_latestIndoorFrame, now)) _latestIndoorFrame!,
+      if (_isRecent(_latestCocoFrame, now)) _latestCocoFrame!,
+    ];
+    if (recent.isEmpty) return incoming;
+
+    return ObjectDetectionFrame(
+      frameId: incoming.frameId,
+      sourceSize: incoming.sourceSize,
+      detections: recent
+          .expand((frame) => frame.detections)
+          .toList(growable: false),
+      timestamp: incoming.timestamp,
+      rotationDegrees: incoming.rotationDegrees,
+      mirrored: incoming.mirrored,
+      inferenceTime: incoming.inferenceTime,
+      framesPerSecond: incoming.framesPerSecond,
+      isLowLight: incoming.isLowLight,
+      modelSource: 'indoor+coco',
+    );
+  }
+
+  bool _isRecent(ObjectDetectionFrame? frame, DateTime now) {
+    return frame != null &&
+        now.difference(frame.timestamp).abs() <= const Duration(seconds: 4);
   }
 
   void _log(String message) {

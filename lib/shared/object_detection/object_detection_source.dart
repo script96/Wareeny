@@ -18,8 +18,6 @@ abstract interface class ObjectDetectionSource {
 
 abstract interface class YoloStreamingObjectDetectionSource
     implements ObjectDetectionSource {
-  String get modelPath;
-
   String modelPathForMode(String mode, {bool useCustomModel = false});
 
   void processStreamingData(Map<String, dynamic> data);
@@ -68,26 +66,30 @@ class UltralyticsYoloDetectionSource
     implements YoloStreamingObjectDetectionSource {
   UltralyticsYoloDetectionSource();
 
-  static const navigationAndroidModelPath = 'assets/models/yolov8n_int8.tflite';
-  static const navigationIosModelPath = 'assets/models/yolov8n.mlpackage.zip';
+  static const homeAndroidModelPath =
+      'assets/models/home/home_object_detector_int8.tflite';
+  static const homeIosModelPath =
+      'assets/models/home/home_object_detector.mlpackage.zip';
+  static const indoorNavigationAndroidModelPath =
+      'assets/models/navigation/indoor/indoor_navigation_int8.tflite';
+  static const indoorNavigationIosModelPath =
+      'assets/models/navigation/indoor/indoor_navigation.mlpackage.zip';
+  static const outdoorNavigationAndroidModelPath =
+      'assets/models/navigation/outdoor/outdoor_navigation_int8.tflite';
+  static const outdoorNavigationIosModelPath =
+      'assets/models/navigation/outdoor/outdoor_navigation.mlpackage.zip';
   static const stuffFinderAndroidModelPath =
-      'assets/models/stuff_finder_yolov8n_int8.tflite';
+      'assets/models/stuff_finder/stuff_finder_int8.tflite';
   static const stuffFinderIosModelPath =
-      'assets/models/stuff_finder_yolov8n_int8.mlpackage.zip';
-  static const stuffFinderModelPath = stuffFinderAndroidModelPath;
+      'assets/models/stuff_finder/stuff_finder.mlpackage.zip';
 
   final StreamController<ObjectDetectionFrame> _frames =
       StreamController<ObjectDetectionFrame>.broadcast();
 
-  bool _started = false;
   int _frameId = 0;
 
   @override
   String get displayName => 'YOLOv8n';
-
-  @override
-  String get modelPath =>
-      Platform.isIOS ? navigationIosModelPath : navigationAndroidModelPath;
 
   @override
   String modelPathForMode(String mode, {bool useCustomModel = false}) {
@@ -96,20 +98,27 @@ class UltralyticsYoloDetectionSource
           ? stuffFinderIosModelPath
           : stuffFinderAndroidModelPath;
     }
-    return modelPath;
+    if (mode == 'navigation_indoor') {
+      return Platform.isIOS
+          ? indoorNavigationIosModelPath
+          : indoorNavigationAndroidModelPath;
+    }
+    if (mode == 'navigation_outdoor') {
+      return Platform.isIOS
+          ? outdoorNavigationIosModelPath
+          : outdoorNavigationAndroidModelPath;
+    }
+    return Platform.isIOS ? homeIosModelPath : homeAndroidModelPath;
   }
 
   @override
   Stream<ObjectDetectionFrame> get frames => _frames.stream;
 
   @override
-  Future<void> start({required String mode}) async {
-    _started = true;
-  }
+  Future<void> start({required String mode}) async {}
 
   @override
   void processStreamingData(Map<String, dynamic> data) {
-    if (!_started) return;
     try {
       final width = _number(data['imageWidth']);
       final height = _number(data['imageHeight']);
@@ -151,6 +160,7 @@ class UltralyticsYoloDetectionSource
               ? null
               : Duration(microseconds: (processingTimeMs * 1000).round()),
           framesPerSecond: _numberOrNull(data['fps']),
+          modelSource: data['modelSource']?.toString() ?? 'unknown',
         ),
       );
     } catch (error, stackTrace) {
@@ -159,9 +169,7 @@ class UltralyticsYoloDetectionSource
   }
 
   @override
-  Future<void> stop() async {
-    _started = false;
-  }
+  Future<void> stop() async {}
 
   ObjectDetection? _mapDetection(Map<Object?, Object?> data, Size sourceSize) {
     final boxData = data['normalizedBox'];
