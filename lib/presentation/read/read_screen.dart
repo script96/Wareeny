@@ -83,7 +83,8 @@ class _ReadScreenState extends State<ReadScreen> {
   void _toggleSubMode() {
     final l10n = AppLocalizations.of(context);
     _read.toggleSubMode();
-    final label = _read.subMode == ReadSubMode.scan ? 'Scan' : 'Read';
+    final label =
+        _read.subMode == ReadSubMode.scan ? l10n.readModeScan : l10n.readModeRead;
     SemanticsService.announce(l10n.activeMode(label), _announceDirection);
   }
 
@@ -267,9 +268,14 @@ class _SubModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final current =
+        subMode == ReadSubMode.scan ? l10n.readModeScan : l10n.readModeRead;
+    final next =
+        subMode == ReadSubMode.scan ? l10n.readModeRead : l10n.readModeScan;
     return Semantics(
       button: true,
-      label: 'Switch to ${subMode == ReadSubMode.scan ? "Read" : "Scan"} mode',
+      label: l10n.readModeToggle(current, next),
       child: GestureDetector(
         onTap: onToggle,
         child: ClipRRect(
@@ -290,12 +296,12 @@ class _SubModeToggle extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _Pill(
-                    label: 'SCAN',
+                    label: l10n.readModeScan.toUpperCase(),
                     active: subMode == ReadSubMode.scan,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   _Pill(
-                    label: 'READ',
+                    label: l10n.readModeRead.toUpperCase(),
                     active: subMode == ReadSubMode.read,
                   ),
                 ],

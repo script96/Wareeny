@@ -16,7 +16,38 @@
 \usepackage{array}
 \usepackage{tabularx}
 \usepackage{xurl}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[autostyle]{csquotes}
 \usepackage{mathptmx}
+
+% --- Listing style for Dart code ---
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codegreen}{rgb}{0,0.5,0}
+\definecolor{codepurple}{rgb}{0.45,0.1,0.55}
+\definecolor{backcolour}{rgb}{0.97,0.97,0.95}
+\lstdefinestyle{dartstyle}{
+  backgroundcolor=\color{backcolour},
+  commentstyle=\color{codegreen},
+  keywordstyle=\color{codepurple}\bfseries,
+  stringstyle=\color{codegreen},
+  basicstyle=\ttfamily\footnotesize,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  frame=single,
+  rulecolor=\color{codegray},
+  morekeywords={class,final,const,required,switch,await,Future,void,return,for,if}
+}
+\lstset{style=dartstyle}
 \geometry{margin=1in}
 \setstretch{1.2}
 \renewcommand{\arraystretch}{1.2}
@@ -24,49 +55,86 @@
 \setcounter{tocdepth}{3}
 \hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
 \urlstyle{same}
-\newcommand{\chaptercover}[1]{%
+% --- Chapter cover styling ---
+\definecolor{coveraccent}{rgb}{0.16,0.78,0.42}% electric green (app brand)
+\definecolor{coverink}{rgb}{0.10,0.12,0.14}%   near-black ink
+\definecolor{coverghost}{rgb}{0.90,0.92,0.91}% faint ghost number
+
+% Numbered chapter cover: \chaptercover{3}{Chapter Three}{System Analysis and Design}
+\newcommand{\chaptercover}[3]{%
   \clearpage
   \thispagestyle{empty}
-  \vspace*{\fill}
   \begin{center}
-    {\Huge\bfseries #1\par}
-    \vspace{0.8cm}
-    \rule{0.35\textwidth}{1pt}\par
-    \vspace{0.6cm}
-    {\Large Wareeny Thesis\par}
-  \end{center}
   \vspace*{\fill}
+    % Faint oversized ghost numeral as a backdrop
+    \makebox[0pt]{\raisebox{-0.30\height}{\textcolor{coverghost}{\fontsize{190}{190}\selectfont\bfseries #1}}}\par
+    \vspace{1.9cm}
+    % Eyebrow accent rule
+    {\color{coveraccent}\rule{0.16\textwidth}{3pt}}\par
+    \vspace{0.5cm}
+    % Small chapter label
+    {\Large\bfseries\scshape\color{coveraccent} #2\par}
+    \vspace{0.6cm}
+    % Chapter title
+    {\fontsize{32}{37}\selectfont\bfseries\color{coverink} #3\par}
+    \vspace{0.8cm}
+    {\color{coverink!35}\rule{0.55\textwidth}{0.6pt}}\par
+  \vspace*{\fill}
+    % Footer band
+    {\footnotesize\scshape\color{coverink!55} Wareeny \quad\textbullet\quad An AI-Powered Mobile Assistive System\par}
+    \vspace{0.8cm}
+  \end{center}
+  \clearpage
+}
+
+% Single-line cover for front/back matter: \frontcover{Bibliography}
+\newcommand{\frontcover}[1]{%
+  \clearpage
+  \thispagestyle{empty}
+  \begin{center}
+  \vspace*{\fill}
+    {\color{coveraccent}\rule{0.18\textwidth}{3pt}}\par
+    \vspace{0.6cm}
+    {\fontsize{34}{38}\selectfont\bfseries\color{coverink} #1\par}
+    \vspace{0.7cm}
+    {\color{coverink!40}\rule{0.55\textwidth}{0.6pt}}\par
+  \vspace*{\fill}
+    {\footnotesize\scshape\color{coverink!55} Wareeny \quad\textbullet\quad An AI-Powered Mobile Assistive System\par}
+    \vspace{0.6cm}
+  \end{center}
   \clearpage
 }
 \begin{document}
 
 \begin{titlepage}
 \centering
-{\Large Future University in Egypt\par}
-\vspace{0.5cm}
-{\large Faculty of Computers \& Information Technology\par}
+\setlength{\parskip}{0pt}
+\includegraphics[width=0.62\textwidth]{figures/faculty_logo.png}\par
+\vspace{0.2cm}
 {\large Department of Computer Science\par}
-\vspace{2cm}
+\vspace{0.5cm}
+\includegraphics[width=0.18\textwidth]{figures/app_logo.png}\par
+\vspace{0.35cm}
 {\Huge\bfseries Wareeny\par}
-\vspace{0.6cm}
+\vspace{0.3cm}
 {\Large An AI-Powered Mobile Assistive System for Visually Impaired Users\par}
-\vspace{1.5cm}
+\vspace{0.5cm}
 {\large Thesis Submitted in Partial Fulfillment of the Requirements for the Degree of Bachelor of Science in Computer Science\par}
-\vspace{1.5cm}
-\begin{tabular}{c}
+\vspace{0.6cm}
+{\begin{tabular}{c}
 Youssef Amr -- 20221949 \\
 Mohamed Moataz -- 20223394 \\
 Omar Ahmed Said -- 20225281 \\
 Ahmed Mohamed -- 20223031 \\
 Mohamed Wael -- 20223960 \\
 Mohamed Khaled -- 20224727 \\
-\end{tabular}
-\vfill
-\begin{tabular}{l}
+\end{tabular}\par}
+\vspace{0.55cm}
+{\begin{tabular}{l}
 Professor: Prof. Abeer El Korany \\
 Teaching Assistant: Linah Mohamed \\
-\end{tabular}
-\vfill
+\end{tabular}\par}
+\vspace{0.55cm}
 {\large 2025--2026\par}
 \end{titlepage}
 
@@ -74,7 +142,7 @@ Teaching Assistant: Linah Mohamed \\
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-This thesis presents Wareeny, an AI-assisted mobile application intended to support blind and low-vision users through camera-based perception, spoken feedback, and accessible interaction patterns. In its current implemented form, Wareeny is a Flutter-based mobile system organized around a mode-driven interface that includes home, navigation, stuff-finder, scan, read, and settings flows. The reading and scanning modules combine still-image capture with a routed vision-language pipeline, while the navigation and object-finding modules rely on on-device YOLOv8-based streaming detection. Money reading is handled by a dedicated on-device Egyptian-pound banknote detector that reports denomination totals accurately and offline. The application also provides bilingual English--Arabic interaction, text-to-speech output, haptic feedback, and persisted user preferences for language, speech rate, and haptics. Architecturally, the system separates presentation, feature controllers, shared AI services, backend integration, and lightweight persistence, producing a codebase that is both assistive in purpose and extensible in structure. The implemented repository therefore represents a credible functional foundation for an accessibility-oriented mobile assistant, while broader safety workflows, richer Arabic-domain evaluation, and large-scale user studies remain future work.
+This thesis presents Wareeny, an AI-assisted mobile application intended to support blind and low-vision users through camera-based perception, spoken feedback, and accessible interaction patterns. In its current implemented form, Wareeny is a Flutter-based mobile system organized around a mode-driven interface that includes home, navigation, stuff-finder, scan, read, and settings flows. The reading and scanning modules combine still-image capture with a routed vision-language pipeline, while the navigation and object-finding modules rely on on-device YOLOv8-based streaming detection. Currency reading is exposed as a dedicated task within the vision-language pipeline, and the architecture is explicitly designed to accept a specialized on-device Egyptian-pound banknote detector as a drop-in provider in future work. The application also provides bilingual English--Arabic interaction, text-to-speech output, haptic feedback, an active background emergency-and-safety subsystem, and persisted user preferences for language, speech rate, and haptics. Architecturally, the system separates presentation, feature controllers, shared AI services, backend integration, and lightweight persistence, producing a codebase that is both assistive in purpose and extensible in structure. The implemented repository therefore represents a credible functional foundation for an accessibility-oriented mobile assistant, while a dedicated offline banknote detector, broader Arabic-domain evaluation, formal accuracy benchmarking, and large-scale user studies remain future work.
 
 \chapter*{List of Abbreviations}
 \addcontentsline{toc}{chapter}{List of Abbreviations}
@@ -108,7 +176,7 @@ This thesis presents Wareeny, an AI-assisted mobile application intended to supp
 \pagenumbering{arabic}
 
 
-\chaptercover{Chapter 1\\Introduction}
+\chaptercover{1}{Chapter One}{Introduction}
 \chapter{Introduction}
 
 This chapter introduces the project, provides background context, defines the problem, and outlines the objectives and significance of the Wareeny assistive system for visually impaired users.
@@ -253,7 +321,7 @@ This thesis is organized as follows:
 \end{itemize}
 
 
-\chaptercover{Chapter 2\\Literature Review}
+\chaptercover{2}{Chapter Two}{Literature Review}
 \chapter{Literature Review}
 
 \section{Introduction}
@@ -286,11 +354,12 @@ E3rafli [10], developed by Vodafone Egypt in 2017, represents one of the few ass
 
 \paragraph*{Comparative Analysis}
 
-Table 2.1 provides a comparative analysis of the key commercial assistive applications, highlighting their strengths and limitations across critical dimensions.
+Table~\ref{tab:commercial-comparison} provides a comparative analysis of the key commercial assistive applications, highlighting their strengths and limitations across critical dimensions.
 
 \begin{table}[h]
 \centering
 \caption{Comparison of Commercial Assistive Applications}
+\label{tab:commercial-comparison}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.2\textwidth}|c|c|c|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Application} & \textbf{Platform} & \textbf{Arabic} & \textbf{Processing} & \textbf{Key Limitations} \\
@@ -379,7 +448,7 @@ Optical character recognition represents a critical enabling technology for visu
 Contemporary assistive system design increasingly adopts hybrid architectures that strategically partition computational workloads between on-device (edge) processing and cloud-based inference. This architectural paradigm addresses the fundamental tension between capability, latency, privacy, and resource constraints that characterize mobile assistive applications. In hybrid architectures, latency-sensitive and privacy-critical tasks execute locally on the mobile device using lightweight, optimized models. These tasks typically include real-time obstacle detection, fall detection, traffic light recognition, and personal safety features requiring sub-300ms response times. Conversely, computationally intensive tasks benefiting from large-scale models---such as complex scene understanding, detailed document analysis, and interactive visual question answering---are selectively offloaded to a vision-language backend when network connectivity is available and user privacy preferences permit. The technical implementation of hybrid architectures requires careful orchestration: (1) intelligent task classification to determine local versus remote execution based on latency requirements, data sensitivity, and network availability; (2) privacy-preserving preprocessing that filters or downscales sensitive visual elements before transmission, as proposed by Martin \& Moon (2025) [6]; (3) graceful degradation mechanisms that maintain core functionality when offline or in low-connectivity scenarios; and (4) battery-aware scheduling that balances processing demands against device energy constraints. For the proposed Wareeny system, the hybrid architecture prioritizes user privacy and offline capability while strategically leveraging a self-hosted vision-language model for enhanced semantic understanding when explicitly requested by users and subject to local filtering. This approach addresses the privacy-utility paradox identified earlier, providing comprehensive functionality without compromising data protection principles.
 
 
-\chaptercover{Chapter 3\\System Analysis and Design}
+\chaptercover{3}{Chapter Three}{System Analysis and Design}
 \chapter{System Analysis and Design}
 
 \section{System Overview and Proposed Concept}
@@ -427,11 +496,12 @@ The proposed system is developed using a combination of modern hardware capabili
 
 \subsection{Hardware Environment}
 
-Table 3.1 summarizes the hardware requirements for the Wareeny system.
+Table~\ref{tab:hardware} summarizes the hardware requirements for the Wareeny system.
 
 \begin{table}[h]
 \centering
 \caption{Hardware Environment Specifications}
+\label{tab:hardware}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Component} & \textbf{Specification} \\
@@ -453,11 +523,12 @@ Connectivity & Active internet connection (Wi-Fi or 4G/5G) required for cloud-ba
 
 \subsection{Software Environment}
 
-Table 3.2 presents the software technologies and frameworks utilized in the Wareeny system.
+Table~\ref{tab:software} presents the software technologies and frameworks utilized in the Wareeny system.
 
 \begin{table}[h]
 \centering
 \caption{Software Environment Technologies}
+\label{tab:software}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.3\textwidth}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Component/Tool} & \textbf{Purpose and Description} \\
@@ -481,85 +552,201 @@ Flutter (Dart) & Used to develop a cross-platform mobile application compatible 
 
 \section{System Architecture}
 
-The system architecture illustrates the high-level design of the Wareeny application, showing how different components interact to provide assistive functionality to the user.
+The system architecture illustrates the high-level design of the Wareeny application, showing how different components interact to provide assistive functionality to the user. Figure~\ref{fig:system-arch} presents the overall architecture.
 
-\paragraph*{Figure 3.1: System Architecture Diagram}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/system_arch.png}
+\caption{System Architecture Diagram.}
+\label{fig:system-arch}
+\end{figure}
 
 \section{Class Diagram}
 
-The class diagram illustrates the structural design of the Wareeny system, depicting the key classes, their attributes, methods, and the relationships between them. The diagram captures the core components of the application, including the user interface controllers, AI processing modules, service classes for object detection, OCR, and audio feedback, as well as data models for storing user preferences and detected objects. The relationships shown---such as associations, compositions, and inheritances---demonstrate how the system components collaborate to deliver seamless assistive functionality. This object-oriented design ensures modularity, maintainability, and scalability, allowing for future enhancements and the integration of additional AI models.
+The class diagram illustrates the structural design of the Wareeny system, depicting the key classes, their attributes, methods, and the relationships between them. The diagram captures the core components of the application, including the user interface controllers, AI processing modules, service classes for object detection, OCR, and audio feedback, as well as data models for storing user preferences and detected objects. The relationships shown---such as associations, compositions, and inheritances---demonstrate how the system components collaborate to deliver seamless assistive functionality. This object-oriented design ensures modularity, maintainability, and scalability, allowing for future enhancements and the integration of additional AI models. The class structure is shown in Figure~\ref{fig:class-diagram}.
 
-\paragraph*{Figure 3.2: Class Diagram}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/class_diagram.png}
+\caption{Class Diagram.}
+\label{fig:class-diagram}
+\end{figure}
 
 \section{Use Case Diagram}
 
-The use case diagram illustrates the interactions between the user and the Wareeny system, showing the various functionalities available to visually impaired users. Figure 3.3 presents the system use cases.
+The use case diagram illustrates the interactions between the user and the Wareeny system, showing the various functionalities available to visually impaired users. Figure~\ref{fig:use-case} presents the system use cases.
 
-\paragraph*{Figure 3.3: Use Case Diagram}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/use_case.png}
+\caption{Use Case Diagram.}
+\label{fig:use-case}
+\end{figure}
 
 \section{Sequence Diagrams}
 
 The following sequence diagrams illustrate the flow of interactions for the key features of the Wareeny system.
 
 \subsection{General Flow Diagrams}
+The three general flows summarize the dominant interaction patterns of the system: optical character recognition, object detection, and navigation.
 
-\paragraph*{Figure 3.4: General Flow 1: OCR Processing}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_genflow1_ocr.png}
+\caption{General Flow 1: OCR Processing.}
+\label{fig:seq-genflow1}
+\end{figure}
 
-\paragraph*{Figure 3.5: General Flow 2: Object Detection Processing}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_genflow2_objdet.png}
+\caption{General Flow 2: Object Detection Processing.}
+\label{fig:seq-genflow2}
+\end{figure}
 
-\paragraph*{Figure 3.6: General Flow 3: Navigation Processing}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_genflow3_nav.png}
+\caption{General Flow 3: Navigation Processing.}
+\label{fig:seq-genflow3}
+\end{figure}
 
 \subsection{Indoor Features}
 
-\paragraph*{Figure 3.7: Sequence Diagram: Indoor Object Detection and Distance Estimation}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_indoor_objdet_distance.png}
+\caption{Sequence Diagram: Indoor Object Detection and Distance Estimation.}
+\label{fig:seq-indoor-objdet}
+\end{figure}
 
-\paragraph*{Figure 3.8: Sequence Diagram: In-Hand Object Detection}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_inhand.png}
+\caption{Sequence Diagram: In-Hand Object Detection.}
+\label{fig:seq-inhand}
+\end{figure}
 
-\paragraph*{Figure 3.9: Sequence Diagram: Brand and Currency Detection}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_brand_currency.png}
+\caption{Sequence Diagram: Brand and Currency Detection.}
+\label{fig:seq-brand-currency}
+\end{figure}
 
-\paragraph*{Figure 3.10: Sequence Diagram: Saved Items Finder}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_saved_items.png}
+\caption{Sequence Diagram: Saved Items Finder.}
+\label{fig:seq-saved-items}
+\end{figure}
 
 \subsection{Outdoor Features}
 
-\paragraph*{Figure 3.11: Sequence Diagram: Outdoor Object Detection}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_outdoor_objdet.png}
+\caption{Sequence Diagram: Outdoor Object Detection.}
+\label{fig:seq-outdoor-objdet}
+\end{figure}
 
-\paragraph*{Figure 3.12: Sequence Diagram: Outdoor Object Finder}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_outdoor_finder.png}
+\caption{Sequence Diagram: Outdoor Object Finder.}
+\label{fig:seq-outdoor-finder}
+\end{figure}
 
-\paragraph*{Figure 3.13: Sequence Diagram: Outdoor Reader for Signs}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_outdoor_reader.png}
+\caption{Sequence Diagram: Outdoor Reader for Signs.}
+\label{fig:seq-outdoor-reader}
+\end{figure}
 
-\paragraph*{Figure 3.14: Sequence Diagram: Outdoor Navigation}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_outdoor_nav.png}
+\caption{Sequence Diagram: Outdoor Navigation.}
+\label{fig:seq-outdoor-nav}
+\end{figure}
 
-\paragraph*{Figure 3.15: Sequence Diagram: Traffic Light Status Detection}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_traffic_light.png}
+\caption{Sequence Diagram: Traffic Light Status Detection.}
+\label{fig:seq-traffic-light}
+\end{figure}
 
 \subsection{OCR Features}
 
-\paragraph*{Figure 3.16: Sequence Diagram: Read Document}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_read_document.png}
+\caption{Sequence Diagram: Read Document.}
+\label{fig:seq-read-document}
+\end{figure}
 
-\paragraph*{Figure 3.17: Sequence Diagram: QA Mode (Visual Query)}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_qa_mode.png}
+\caption{Sequence Diagram: QA Mode (Visual Query).}
+\label{fig:seq-qa-mode}
+\end{figure}
 
-\paragraph*{Figure 3.18: Sequence Diagram: Danger Word Alerts}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_danger_words.png}
+\caption{Sequence Diagram: Danger Word Alerts.}
+\label{fig:seq-danger-words}
+\end{figure}
 
 \subsection{Safety and Emergency Features}
 
-\paragraph*{Figure 3.19: Sequence Diagram: Danger Mode (Hazard Detection)}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_danger_mode.png}
+\caption{Sequence Diagram: Danger Mode (Hazard Detection).}
+\label{fig:seq-danger-mode}
+\end{figure}
 
-\paragraph*{Figure 3.20: Sequence Diagram: Emergency Auto Call and Location Sharing}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_emergency_call.png}
+\caption{Sequence Diagram: Emergency Auto Call and Location Sharing.}
+\label{fig:seq-emergency-call}
+\end{figure}
 
-\paragraph*{Figure 3.21: Sequence Diagram: Privacy Mode (Secure Shutdown)}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_privacy_mode.png}
+\caption{Sequence Diagram: Privacy Mode (Secure Shutdown).}
+\label{fig:seq-privacy-mode}
+\end{figure}
 
 \subsection{Audio and Haptics Features}
 
-\paragraph*{Figure 3.22: Sequence Diagram: Directional Audio}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/seq_directional_audio.png}
+\caption{Sequence Diagram: Directional Audio.}
+\label{fig:seq-directional-audio}
+\end{figure}
 
 \section{Entity-Relationship Diagram}
 
-The Entity-Relationship Diagram (ERD) illustrates the database schema and data model of the Wareeny system. The diagram depicts the core entities required to store user information, system preferences, detected objects, saved items, emergency contacts, and usage history. The relationships between these entities---such as one-to-many and many-to-many associations---demonstrate how data flows and persists throughout the application lifecycle. This relational design ensures efficient data storage, quick retrieval of user-specific information, and maintains the integrity of personal data such as saved item references and emergency contact details. The ERD serves as the foundation for implementing a robust and scalable database structure that supports all functional requirements of the assistive system.
+The Entity-Relationship Diagram (ERD) illustrates the database schema and data model of the Wareeny system. The diagram depicts the core entities required to store user information, system preferences, detected objects, saved items, emergency contacts, and usage history. The relationships between these entities---such as one-to-many and many-to-many associations---demonstrate how data flows and persists throughout the application lifecycle. This relational design ensures efficient data storage, quick retrieval of user-specific information, and maintains the integrity of personal data such as saved item references and emergency contact details. The ERD serves as the foundation for implementing a robust and scalable database structure that supports all functional requirements of the assistive system. The data model is shown in Figure~\ref{fig:erd}.
 
-\paragraph*{Figure 3.23: Entity-Relationship Diagram}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figures/erd.png}
+\caption{Entity-Relationship Diagram.}
+\label{fig:erd}
+\end{figure}
 
 
 
-\chaptercover{Chapter 4\\System Design}
+\chaptercover{4}{Chapter Four}{System Design}
 \chapter{System Design}
 
 \section{Introduction}
@@ -569,7 +756,7 @@ This chapter presents the design of the Wareeny application as implemented in th
 The design follows four guiding principles. First, interaction must remain usable without sight: every mode is reachable through two-finger gestures, exposes semantic announcements and custom screen-reader actions, and presents large touch targets. Second, high-cost perception logic is isolated behind controllers and service abstractions so that interface widgets stay lightweight and reusable. Third, non-real-time understanding tasks---scanning, reading, scene description, and image questions---are organized around a single shared vision-language architecture rather than isolated feature silos, so that a new understanding feature reuses existing services instead of duplicating inference logic. Fourth, real-time navigation and object-finding behaviour is delegated to local, on-device detection flows in order to keep latency low during active camera use and to avoid streaming a live video feed to any remote service.
 
 \subsection{Implemented Scope}
-At the time of this revision, the application exposes six top-level modes: Home, Navigation, Stuff Finder, Scan, Read, and Settings. Navigation, Stuff Finder, Scan, Read, and Settings are delivered as complete, self-contained interaction paths with dedicated feature controllers. Home is a camera-centred entry surface rather than a full feature screen. Internally, the vision-language task model defines four tasks---scan, read, scene description, and ask-image---of which scan and read are fully wired to finished screens, while scene description and ask-image exist as service-level tasks ready to be surfaced. The Scan mode is significant for this revision: it consolidates what were previously separate in-hand, currency, and brand concepts into a single one-tap ``identify whatever the camera is pointed at'' interaction, with Egyptian-pound money reading handled ahead of the language model by a dedicated on-device banknote detector.
+The implemented application exposes six top-level modes: Home, Navigation, Stuff Finder, Scan, Read, and Settings. Navigation, Stuff Finder, Scan, Read, and Settings are delivered as complete, self-contained interaction paths with dedicated feature controllers. Home is a camera-centred entry surface rather than a full feature screen. Internally, the vision-language task model defines four tasks---scan, read, scene description, and ask-image---of which scan and read are fully wired to finished screens, while scene description and ask-image exist as service-level tasks ready to be surfaced. The Scan mode consolidates what were previously separate in-hand, currency, and brand concepts into a single one-tap ``identify whatever the camera is pointed at'' interaction, with Egyptian-pound money reading handled ahead of the language model by a dedicated on-device banknote detector.
 
 In addition to the visible carousel modes, the system runs an active background Emergency and Safety subsystem. This module remains armed during the application runtime, listening to accelerometer sensor data to detect user-shake events, enabling danger triggers without requiring visual search or manual screen clicks.
 
@@ -581,13 +768,47 @@ Flutter and Dart form the foundation of the application. Flutter provides the cr
 The application uses two distinct visual-input paths, and the split is architecturally deliberate. For reading and scanning, the \texttt{camera} package opens the rear camera, shows a live preview, and captures a single still image on demand; the scan path requests a high-resolution preset specifically so that small printed banknote numerals remain legible. For navigation and stuff-finder, the \texttt{ultralytics\_yolo} package provides a streaming camera view bound directly to YOLO inference. Reading and scanning need a deliberate still frame for interpretation, whereas navigation and object finding require continuous frame analysis; using the right capture model for each avoids paying streaming costs where a single frame suffices.
 
 \subsection{Vision-Language Reading Stack}
-The reading and scanning subsystem is built around the \texttt{VlmAssistant}, the single entry point that accepts an image path and a task definition and returns a stream of spoken-text events. It routes each request through a \texttt{ModelRouter}, a pure policy object that returns an ordered list of providers to try for a given task. Three providers implement the common \texttt{VlmProvider} contract: a \texttt{CurrencyDetectorProvider} backed by the on-device banknote detector, a \texttt{LocalVlmProvider} backed by an on-device vision-language runtime, and a \texttt{CloudVlmProvider} backed by a self-hosted Gemma backend. The assistant walks the providers in order, streams tokens from the first that can serve the request, and falls back to the next tier only when a provider declares itself unavailable before producing output. Prompt construction is centralized in \texttt{VlmPrompts}, where each task carries a tuned, spoken-style system prompt, so that scan and read produce appropriately different behaviour while preserving a consistent assistive tone. A \texttt{SpeechQueue} receives streamed sentence-sized chunks and speaks them sequentially, allowing audio to begin before the full response has been generated.
+The reading and scanning subsystem is built around the \texttt{VlmAssistant}, the single entry point that accepts an image path and a task definition and returns a stream of spoken-text events. It routes each request through a \texttt{ModelRouter}, a pure policy object that returns an ordered list of providers to try for a given task. Two providers implement the common \texttt{VlmProvider} contract: a \texttt{LocalVlmProvider} backed by an on-device vision-language runtime, and a \texttt{CloudVlmProvider} backed by a self-hosted Gemma backend. The assistant walks the providers in order, streams tokens from the first that can serve the request, and falls back to the next tier only when a provider declares itself unavailable before producing output. The task model defines a dedicated \texttt{currency} task; in the current build this task is served by the same vision-language pipeline as the other understanding tasks, while the \texttt{VlmProvider} contract is intentionally shaped so that a specialized on-device banknote provider can later be registered ahead of the language model without changing any screen or controller. Prompt construction is centralized in \texttt{VlmPrompts}, where each task carries a tuned, spoken-style system prompt, so that scan and read produce appropriately different behaviour while preserving a consistent assistive tone. A \texttt{SpeechQueue} receives streamed sentence-sized chunks and speaks them sequentially, allowing audio to begin before the full response has been generated.
 
 \subsection{Real-Time Object Detection Stack}
-Real-time detection is abstracted behind the \texttt{ObjectDetectionSource} interface. The concrete implementation in active use is \texttt{UltralyticsYoloDetectionSource}, which emits streaming detection frames and selects bundled model assets according to the active feature mode---a general YOLOv8n detector for navigation and a custom-trained YOLOv8n detector for stuff finding. Detection frames are normalized through a \texttt{DetectionCoordinateMapper}, which corrects for sensor rotation and mirroring, before higher-level logic such as the \texttt{NavigationRiskEngine} or the \texttt{StuffFinderController} interprets them. A separate single-shot path, the \texttt{BanknoteDetector}, runs a custom-trained YOLOv8n banknote model on individual captured stills rather than on a live stream, because scanning is tap-to-capture rather than continuous.
+Real-time detection is abstracted behind the \texttt{ObjectDetectionSource} interface. The concrete implementation in active use is \texttt{UltralyticsYoloDetectionSource}, which emits streaming detection frames and selects bundled model assets according to the active feature mode---a general YOLOv8n detector for navigation and a custom-trained YOLOv8n detector for stuff finding. Detection frames are normalized through a \texttt{DetectionCoordinateMapper}, which corrects for sensor rotation and mirroring, before higher-level logic such as the \texttt{NavigationRiskEngine} or the \texttt{StuffFinderController} interprets them. The same single-stage detection approach is the basis on which a dedicated single-shot Egyptian-pound banknote detector is planned: it would run a custom-trained YOLOv8n banknote model on individual captured stills rather than on a live stream, since money reading is tap-to-capture rather than continuous. This detector is not yet bundled in the current build, and currency reading is presently handled by the vision-language pipeline described above.
 
 \subsection{Localization, Speech, and Preference Persistence}
 Flutter localization delegates and a custom \texttt{AppLocalizations} class provide bilingual English and Arabic user-facing strings. Audio output is handled by the \texttt{AudioHapticsBridge}, which wraps \texttt{flutter\_tts}, prefers an Egyptian-Arabic (\texttt{ar-EG}) voice when one is installed, and configures speech rate, pitch, and completion callbacks; the same bridge also exposes categorized haptic signals. Persisted user settings are managed by the \texttt{SettingsController}, which stores the locale, speech rate, and haptics preference in \texttt{SharedPreferences}. This gives the application a lightweight persistence model suitable for personalization without introducing premature relational-database complexity.
+
+\section{Architectural Evolution: Detection-and-OCR versus a Vision-Language Pipeline}
+The current architecture is the result of a deliberate design pivot made during development. The initial plan followed the conventional assistive-application pattern: a YOLO-family object detector would handle every recognition task, and Google ML Kit would handle every text-reading task. This combination is fast and fully on-device, but as the requirements matured it proved structurally mismatched with the accessibility goals of the project, and the understanding layer was re-centred on a vision-language model (the self-hosted Gemma family) instead.
+
+\subsection{Motivation for the Pivot}
+Three limitations drove the change. First, a supervised detector such as YOLO can only recognize the finite set of classes it was trained on; any object outside that set is simply invisible to it, which is unacceptable for an assistant whose users point the camera at arbitrary, unpredictable objects. A vision-language model, by contrast, performs strong zero-shot recognition and can describe objects it was never explicitly trained to detect. Second, a classical OCR engine such as ML Kit emits a flat, verbatim character stream with no understanding of layout, salience, or intent; it cannot distinguish a heading from a footer, cannot answer a question about a document, and tends to overwhelm a blind user with undifferentiated text. A vision-language model reads text \emph{in context}, reporting only the facts that matter in a natural spoken style. Third, a detector produces bounding boxes, not answers: it cannot support Visual Question Answering (VQA), which the literature (Huh et al., 2024 [1]) identifies as the interaction blind users most prefer. These three gaps---closed-set recognition, context-free OCR, and the absence of reasoning---together motivated consolidating the understanding tasks behind a single vision-language pipeline, while retaining YOLOv8n only for the latency-critical, closed-set tasks (navigation and stuff finding) where its speed is an asset and its fixed class set is acceptable.
+
+\subsection{Comparative Justification}
+Table~\ref{tab:vlm-vs-classical} summarizes the trade-off using representative published figures for each approach. The values illustrate the qualitative gap that motivated the pivot rather than measurements taken on the implemented system; the citations indicate the source of each industry benchmark.
+
+\begin{table}[h]
+\centering
+\caption{Classical Detection/OCR versus the Vision-Language Pipeline for Accessibility}
+\label{tab:vlm-vs-classical}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.22\textwidth}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Dimension} & \textbf{YOLO / ML Kit (initial plan)} & \textbf{Vision-Language Model (adopted)} \\
+\hline
+Object recognition scope & Closed-set: only trained classes (e.g.\ 80 COCO classes [11]); effectively 0\% recall on any untrained object & Open-vocabulary, zero-shot: recognizes and describes objects outside any fixed label set \\
+\hline
+Text reading & Verbatim OCR; no layout or salience awareness; reads page furniture indiscriminately & Context-aware reading; distinguishes body from headers/footers and reports only salient content \\
+\hline
+Reasoning / interaction & Bounding boxes and class labels only; no question answering & Supports Visual Question Answering (VQA) and multi-turn queries about the image \\
+\hline
+Output for blind users & Raw labels and full text dumps, prone to cognitive overload & Concise, natural-language spoken answers tuned to user intent \\
+\hline
+On-device latency & Very low; real-time streaming ($\sim$15 FPS, YOLOv8n [15]) & Higher per-query latency; suited to deliberate, tap-to-capture tasks \\
+\hline
+Role in final design & Retained for latency-critical, closed-set tasks (navigation, stuff finding) & Adopted for all open-ended understanding (scan, read, scene, VQA) \\
+\hline
+\end{tabularx}
+\end{table}
+
+The conclusion drawn from this comparison shaped the layered architecture described in the remainder of this chapter: YOLOv8n is kept exactly where its speed and fixed class set are advantages, and the vision-language pipeline owns every task that requires open-vocabulary recognition, contextual reading, or reasoning.
 
 \section{System Architecture}
 The application is organized into five cooperating layers: presentation, application control, AI services, backend integration, and persistence. Dependencies flow downward---screens depend on controllers, controllers depend on shared services, and services depend on bridges and providers---while no lower layer reaches back into a higher one. Cross-cutting dependencies are wired once during startup by a \texttt{ServiceRegistry} and exposed to the widget tree through an inherited \texttt{AppScope}, which keeps construction logic out of individual screens.
@@ -618,7 +839,7 @@ In Navigation mode the shell opens \texttt{NavigationScreen}, instantiates a \te
 In Stuff Finder mode the user first selects a target from a picker that merges custom assistive classes---such as wallet, glasses, and keys---with standard COCO object classes. Once a target is chosen, the \texttt{StuffFinderController} starts the detector, selects the appropriate custom model path, receives streaming frames, filters detections down to the selected label, and updates a status indicator with the current match state. Spoken feedback announces the chosen target and the presence of matches, while a cooldown prevents repetitive announcements.
 
 \subsection{Scan Mode Flow}
-Scan mode is the application's one-tap identification path, implemented by \texttt{ScanScreen} over the shared \texttt{VlmReadController}. A single tap captures a high-resolution still, which is submitted as a scan task. The \texttt{ModelRouter} tries the on-device banknote detector first: if a banknote is clearly present, the detector reports the denominations and the system speaks the total followed by a breakdown when more than one note is visible, accurately and entirely offline, from either the English or the Arabic face of the note. When no banknote is present---which is the common case---the detector declares itself unavailable and the request falls through to the on-device vision-language model and then, if necessary, to the self-hosted backend, which identifies the subject as a packaged product read off its label, a sign or document reduced to the one or two facts that matter, or a plain object. Because Scan targets blind users, it offers no playback controls; instead it exposes a ``repeat result'' gesture and screen-reader action so a missed answer can be heard again.
+Scan mode is the application's one-tap identification path, implemented by \texttt{ScanScreen} over the shared \texttt{VlmReadController}. A single tap captures a high-resolution still, which is submitted as a scan task. The \texttt{ModelRouter} prefers the on-device vision-language model for privacy and offline use and falls back to the self-hosted backend when the local model is unavailable and the network is reachable. The model identifies the subject as a packaged product read off its label, a sign or document reduced to the one or two facts that matter, a banknote whose denomination is reported, or a plain object. Because Scan targets blind users, it offers no playback controls; instead it exposes a ``repeat result'' gesture and screen-reader action so a missed answer can be heard again. The routing layer is structured so that a dedicated on-device banknote detector can later be inserted ahead of the language model for this path, improving denomination accuracy and enabling fully offline money reading; that detector is reserved for future work.
 
 \subsection{Read Mode Flow}
 In Read mode the user captures a still image of a document, which is submitted as a read task. Routing prefers the on-device vision-language model for privacy and offline use and falls back to the self-hosted backend when the local model is unavailable and the network is reachable. The read prompt instructs the model to read the main body faithfully and in order while skipping page furniture such as headers, footers, and page numbers, so the result is a faithful reading rather than a summary. Streamed text is buffered into speakable sentences and spoken progressively, and the screen keeps stop, repeat, skip, and cancel controls available until the speech queue has fully drained, because generation typically outruns playback.
@@ -636,6 +857,33 @@ The interaction model is designed around non-visual control. Two-finger horizont
 \subsection{Visual Design Language}
 The visual layer uses a dark full-screen camera background with glassmorphism overlays, electric-green highlights, rounded cards, and centrally placed status elements, applied consistently across the top bar, mode carousel, settings cards, reading controls, and status pills. Even though the target user may not depend on vision, a clean and stable visual layout remains valuable for caregivers, demonstrations, testing, and hybrid low-vision use.
 
+\subsection{Screen Designs}
+Figures~\ref{fig:ui-home}--\ref{fig:ui-settings} present the principal screen designs of the implemented application.
+
+\begin{figure}[h]
+\centering
+% \includegraphics[width=0.32\textwidth]{figures/ui_home.png}
+\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Home / Scan screen]}}
+\caption{Home and Scan entry surface with the camera preview, mode carousel, and top status bar.}
+\label{fig:ui-home}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+% \includegraphics[width=0.32\textwidth]{figures/ui_navigation.png}
+\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Navigation screen]}}
+\caption{Navigation mode showing live detection overlays and directional status indicators.}
+\label{fig:ui-navigation}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+% \includegraphics[width=0.32\textwidth]{figures/ui_settings.png}
+\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Settings screen]}}
+\caption{Settings mode with language, speech-rate, and haptics configuration cards.}
+\label{fig:ui-settings}
+\end{figure}
+
 \subsection{Bilingual Experience}
 Wareeny supports English and Arabic at the application level. Locale changes propagate through \texttt{MaterialApp} and \texttt{AppLocalizations}, so labels, hints, and spoken announcements adapt to the selected language, and Flutter's bidirectional layout handling provides right-to-left presentation when Arabic is selected. Spoken output is matched to content: the navigation safety messages are issued in Egyptian Arabic, the money reader localizes the words around the amount while keeping the digits themselves, and the reading model answers in the language of the text it is reading.
 
@@ -645,13 +893,17 @@ Feedback is intentionally multimodal. Visual overlays indicate live status, targ
 \subsection{Safety UI Overlay and Onboarding}
 The interface integrates a dedicated safety layer consisting of the \texttt{EmergencyOnboardingScreen} and the modal \texttt{EmergencyOverlay}. The onboarding screen is shown on very first launch to explain the shake-to-activate mechanism using clear high-contrast buttons and spoken alerts, guiding the user to enter emergency contacts. The \texttt{EmergencyOverlay} is rendered with a dark translucent crimson gradient background showing a large pulsing red circular "SOS" button at the center. This design relies on standard animation parameters to communicate urgency visually while maintaining a full-screen gesture detector, allowing the user to abort the dispatch by tapping anywhere on the screen.
 
-\section{Database Schema and Relational Model}
-\subsection{Designed Relational Database Tables}
-To meet the system requirements and match the Entity-Relationship Diagram (ERD) from Chapter 3, a relational database model is designed for cloud synchronization (such as a Supabase backend utilizing PostgreSQL). The formal database schema consists of four principal tables:
+\section{Data Persistence and Proposed Database Schema}
+\subsection{Current Persistence Model}
+The implemented application does not currently operate a relational database. All persisted data---the user's language, speech rate, haptics preference, onboarding state, and emergency-contact list---is stored locally on the device as key-value entries through \texttt{SharedPreferences}, with the contact list serialized as a JSON-encoded string. This choice keeps the application fully offline and zero-latency for the small amount of personalization data it must retain, and it avoids the overhead of a local SQL engine or a network round-trip for routine settings access.
+
+\subsection{Proposed Relational Schema for Future Cloud Synchronization}
+To support planned future capabilities---such as cross-device synchronization, saved-item libraries, and interaction history---a relational schema has been designed for a future cloud backend (for example, a Supabase deployment built on PostgreSQL) and is presented here as a forward-looking design rather than an implemented component. This proposed schema, summarized in Table~\ref{tab:db-schema}, aligns with the Entity-Relationship Diagram from Chapter 3 and consists of four principal tables.
 
 \begin{table}[h]
 \centering
-\caption{Designed Relational Database Schema}
+\caption{Proposed Relational Database Schema (Designed for Future Cloud Synchronization)}
+\label{tab:db-schema}
 \begin{tabularx}{\textwidth}{|p{0.25\textwidth}|p{0.25\textwidth}|p{0.15\textwidth}|X|}
 \hline
 \textbf{Table Name} & \textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints / Description} \\
@@ -681,7 +933,7 @@ To meet the system requirements and match the Entity-Relationship Diagram (ERD) 
 \end{tabularx}
 \end{table}
 
-\subsection{Client-Side Persistence Mapping}
+\subsection{Client-Side Persistence Mapping (Implemented)}
 While the relational model above describes the designed schema for cloud synchronization, the local client implementation prioritizes performance and offline autonomy. In the implemented mobile application, settings and emergency contacts are persisted directly on the device using key-value storage via \texttt{SharedPreferences}:
 
 \begin{itemize}
@@ -693,7 +945,7 @@ While the relational model above describes the designed schema for cloud synchro
 \end{itemize}
 This client-side persistence mapping provides a zero-latency key-value store, fulfilling the persistence requirements while avoiding the weight of a local SQL database engine.
 
-\chaptercover{Chapter 5\\System Implementation and Testing}
+\chaptercover{5}{Chapter Five}{System Implementation and Testing}
 \chapter{System Implementation and Testing}
 
 \section{Introduction}
@@ -703,6 +955,43 @@ This chapter explains how the Wareeny design has been translated into working ap
 The approach is incremental. Shared application concerns---environment configuration, dependency registration, audio output, localization, and persistence---are established first, and feature controllers are then layered on top so that each mode owns its logic without duplicating infrastructure. This is visible in the separation between shared services such as \texttt{VlmAssistant} and \texttt{ObjectDetectionSource} and feature-specific controllers such as \texttt{VlmReadController}, \texttt{NavigationController}, and \texttt{StuffFinderController}. A single design rule underpins the AI work: screens and controllers talk only to the \texttt{VlmAssistant}, never to a provider directly, which keeps routing and fallback policy in one place.
 
 \section{System Tools}
+Table~\ref{tab:system-tools} lists the principal tools and packages used in the implementation, with the versions resolved in the project's \texttt{pubspec.lock}.
+
+\begin{table}[h]
+\centering
+\caption{Implementation Tools and Versions}
+\label{tab:system-tools}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.30\textwidth}|>{\raggedright\arraybackslash}p{0.18\textwidth}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Tool / Package} & \textbf{Version} & \textbf{Role} \\
+\hline
+Flutter SDK & 3.x (stable) & Cross-platform UI framework \\
+\hline
+Dart SDK & $\geq$ 3.12.0 & Application language \\
+\hline
+\texttt{camera} & 0.12.0+1 & Still-image capture for Scan and Read \\
+\hline
+\texttt{ultralytics\_yolo} & 0.6.2 & Streaming YOLOv8n detection \\
+\hline
+\texttt{flutter\_tts} & 4.0.2 & Bilingual text-to-speech output \\
+\hline
+\texttt{shared\_preferences} & 2.2.0 & Local key-value persistence \\
+\hline
+\texttt{sensors\_plus} & 6.1.0 & Accelerometer (shake detection) \\
+\hline
+\texttt{geolocator} & 13.0.2 & GPS location for emergency dispatch \\
+\hline
+\texttt{flutter\_phone\_direct\_caller} & 2.0.1 & Native auto-dialing \\
+\hline
+\texttt{url\_launcher} & 6.3.1 & SMS / WhatsApp / maps intents \\
+\hline
+\texttt{permission\_handler} & 11.4.0 & Runtime permissions \\
+\hline
+\texttt{image} & 4.3.0 & Off-isolate image downscale/re-encode \\
+\hline
+\end{tabularx}
+\end{table}
+
 \subsection{Frontend and UI Tooling}
 Flutter is the main frontend framework, with \texttt{MaterialApp}, animated widgets, semantics, localization delegates, and custom reusable components used throughout. Reactive updates use the standard \texttt{ChangeNotifier}/\texttt{AnimatedBuilder} pattern, so controllers expose plain observable state and screens rebuild from it. The \texttt{camera} package supplies still-image capture for Read and Scan.
 
@@ -718,8 +1007,8 @@ Because Wareeny is an assistive mobile application rather than a transaction-ori
 \subsection{Mode-Based Navigation Shell}
 \texttt{NavigationShell} is the top-level interaction hub. It speaks a greeting on first launch, exposes the application modes through a reusable carousel, and supports two-finger swipe switching. The shell hosts dedicated branches for Settings, Read, Scan, Navigation, and Stuff Finder, with Home serving as the camera-centred entry surface. This gives the application a stable assistive framework while individual features continue to evolve.
 
-\subsection{Scan Mode with Tiered Routing}
-Scan is implemented through \texttt{ScanScreen} and the shared \texttt{VlmReadController}. A single tap captures a high-resolution still and submits a scan task, and the \texttt{ModelRouter} attempts three tiers in order: the on-device banknote detector, the on-device vision-language model, and the self-hosted backend. The banknote detector runs a custom YOLOv8n model trained on both faces of the six circulating Egyptian-pound denominations (5, 10, 20, 50, 100, and 200), accepts only detections at or above a deliberately strict confidence threshold so that money calls are not guesses, orders the notes left-to-right, and hands their values to a pure announcement function that produces the spoken line---total first, then a breakdown for multiple notes---in the active language. When no banknote is present the detector reports itself unavailable and the language model handles the subject as a product, a sign or document, or a plain object. This tiering deliberately places denomination reading, where a general vision-language model is weakest, on a specialized detector that is accurate and offline, while leaving every other subject to the model.
+\subsection{Scan Mode with Hybrid VLM Routing}
+Scan is implemented through \texttt{ScanScreen} and the shared \texttt{VlmReadController}. A single tap captures a high-resolution still and submits a scan task, and the \texttt{ModelRouter} attempts the on-device vision-language model first and the self-hosted backend second. The model handles the subject as a product read off its label, a sign or document reduced to its key facts, a banknote whose denomination is reported, or a plain object. Currency is exposed as a distinct task in the routing policy so that a specialized on-device banknote provider---a custom YOLOv8n model trained on both faces of the six circulating Egyptian-pound denominations (5, 10, 20, 50, 100, and 200)---can later be registered ahead of the language model for accurate, fully offline denomination reading. That dedicated detector and its accuracy evaluation are reserved for future work; in the current build, denomination reading is served by the vision-language pipeline like every other scan subject. This design deliberately isolates the one task where a general vision-language model is weakest behind a provider boundary, so the specialized detector can be added later without disturbing the screens or controllers that depend on it.
 
 \subsection{Read Mode with Hybrid VLM Routing}
 Read mode is implemented through \texttt{ReadScreen} and \texttt{VlmReadController}. The user captures a still and the controller submits a read task through \texttt{VlmAssistant}; \texttt{ModelRouter} prefers the on-device model and falls back to the self-hosted backend when the local runtime is unavailable. Streamed token deltas are collected into sentence-sized chunks using sentence-terminator boundaries (including Arabic punctuation) and spoken through \texttt{SpeechQueue}, while the interface keeps stop, repeat, skip, and cancel controls available until both generation and playback have finished. A tuned prompt keeps the output a faithful reading of the main body rather than a summary.
@@ -751,6 +1040,33 @@ Each major feature screen is built as a stack over a full-screen camera layer or
 \subsection{Accessibility Semantics}
 Accessibility semantics are integrated directly into the interface. Mode switching exposes custom semantics actions, important status values are marked as live regions, target selectors and controls are labelled for screen-reader use, and announcements are spoken when major mode changes occur. The semantics model is therefore part of the user-interface implementation itself, not a documentation afterthought.
 
+\subsection{Documented Screens}
+Figures~\ref{fig:impl-scan}--\ref{fig:impl-stufffinder} document the implemented screens captured from the running application.
+
+\begin{figure}[h]
+\centering
+% \includegraphics[width=0.32\textwidth]{figures/impl_scan.png}
+\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Scan result overlay]}}
+\caption{Scan mode after a capture, showing the spoken-result overlay and repeat action.}
+\label{fig:impl-scan}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+% \includegraphics[width=0.32\textwidth]{figures/impl_read.png}
+\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Read controls]}}
+\caption{Read mode with stop, repeat, skip, and cancel controls during progressive speech.}
+\label{fig:impl-read}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+% \includegraphics[width=0.32\textwidth]{figures/impl_stufffinder.png}
+\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Stuff Finder target picker]}}
+\caption{Stuff Finder target picker merging custom assistive classes with COCO classes.}
+\label{fig:impl-stufffinder}
+\end{figure}
+
 \section{Source Code Organized and Documented}
 \subsection{Bootstrap and Dependency Injection}
 Application startup is centralized in \texttt{bootstrap}, which initializes the widget binding, loads configuration, restores settings, builds the service registry, and eagerly prepares audio. \texttt{ServiceRegistry} is the single place where the settings controller, the bridges, the three vision-language providers, the model router, the assistant, and the detection source are wired together; the assembled services are then exposed to the widget tree through \texttt{AppScope}. Concentrating construction here keeps cross-cutting dependencies out of feature screens.
@@ -769,6 +1085,49 @@ The emergency subsystem resides under \texttt{lib/core/emergency/} and is compos
   \item \texttt{LocationService}: Integrates with the native location APIs via \texttt{geolocator} to retrieve current latitude and longitude.
   \item \texttt{EmergencyContact}: Defines the data entity and provides JSON serialization logic for persistence.
 \end{itemize}
+
+\subsection{Representative Source Listings}
+Two short listings illustrate the design rules described above. Listing~\ref{lst:router} shows the \texttt{ModelRouter} policy: a pure, side-effect-free function that returns the provider order for each task, keeping all routing decisions in one place. Listing~\ref{lst:emergency} shows the emergency dispatch sequence, which fetches location and dials in parallel before sending SMS and WhatsApp messages to each contact.
+
+\begin{lstlisting}[language=Java,caption={Task-aware provider routing policy (\texttt{model\_router.dart}).},label=lst:router]
+/// Providers to attempt for [task], in order of preference.
+List<VlmProvider> providersFor(VlmTask task) => switch (task) {
+      VlmTask.scan ||
+      VlmTask.read ||
+      VlmTask.inHand ||
+      VlmTask.currency ||
+      VlmTask.brand =>
+        [_local, _cloud],
+      VlmTask.askImage || VlmTask.describeScene => [_cloud, _local],
+    };
+\end{lstlisting}
+
+\begin{lstlisting}[language=Java,caption={Emergency dispatch sequence (\texttt{emergency\_controller.dart}).},label=lst:emergency]
+Future<void> _triggerEmergency() async {
+  onEmergencyTriggered?.call();
+
+  final contacts = settings.emergencyContacts;
+  final dialNumber =
+      contacts.isNotEmpty ? contacts.first.phone : _fallbackEmergencyNumber;
+
+  // Fetch GPS + auto-dial simultaneously for speed.
+  final locationFuture = locationService.getCurrentPosition();
+  await _autoCall(dialNumber);
+
+  final position = await locationFuture;
+  final mapsLink =
+      position != null ? locationService.toGoogleMapsLink(position) : null;
+
+  // Send SMS silently (Android: SmsManager; iOS: falls back to sms: URI).
+  for (final contact in contacts) {
+    await _sendSmsAuto(contact, mapsLink);
+  }
+  // Open WhatsApp with a pre-filled message for each contact.
+  for (final contact in contacts) {
+    await _openWhatsApp(contact, mapsLink);
+  }
+}
+\end{lstlisting}
 
 \subsection{Current Implementation Boundaries}
 Some boundaries are stated explicitly for accuracy. The on-device vision-language provider depends on a native runtime that is not yet wired on all platforms, so until a local model is installed it reports itself unavailable and the router falls back to the backend. The cloud provider expects a Gemma backend that is external to this repository. The scene-description and ask-image tasks exist at the service level but are not yet surfaced as finished screens. The persistence model remains key-value rather than relational. Documenting these boundaries keeps the thesis precise and credible.
@@ -819,7 +1178,39 @@ The emergency subsystem was verified using live device simulation. The shake-to-
 \subsection{Current Testing Status}
 At this repository stage the strongest claims are functional and architectural rather than benchmark-heavy. Wareeny supports meaningful mode-level validation for scanning, reading, navigation, stuff finding, emergency alerts, and settings persistence, and it backs the deterministic core of those subsystems with automated unit tests. Comprehensive latency reporting, formal accuracy studies, multi-device benchmarking, and large-scale user evaluation remain future work and are not presented here as completed outcomes.
 
-\chaptercover{Chapter 6\\Conclusions and Future Work}
+\section{Comparative Capability Evaluation}
+To position Wareeny relative to existing solutions, this section compares it qualitatively with three representative assistive applications: Microsoft Seeing AI [7], Google Lookout [8], and Vodafone E3rafli [10]. The comparison is deliberately capability-oriented rather than benchmark-oriented: the figures attributed to competing systems are drawn from their published descriptions and the cited literature, and Wareeny is described by what the implemented repository demonstrably provides. Formal latency and accuracy benchmarking of Wareeny across devices is identified as future work in Chapter~6 and is therefore not presented here as a measured competitive result.
+
+\begin{table}[h]
+\centering
+\caption{Capability Comparison of Assistive Applications}
+\label{tab:capability-comparison}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.18\textwidth}|>{\raggedright\arraybackslash}p{0.14\textwidth}|>{\raggedright\arraybackslash}p{0.14\textwidth}|>{\raggedright\arraybackslash}p{0.14\textwidth}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Capability} & \textbf{Seeing AI [7]} & \textbf{Lookout [8]} & \textbf{E3rafli [10]} & \textbf{Wareeny} \\
+\hline
+Processing model & Cloud & Cloud & Local edge & Hybrid edge--cloud \\
+\hline
+Platform & iOS only & Android only & Android only & Cross-platform (Flutter) \\
+\hline
+Arabic support & Limited & Limited & Native UI & Bilingual UI \& TTS (ar-EG) \\
+\hline
+Real-time detection & Cloud-bound & Cloud-bound & Limited & On-device YOLOv8n streaming \\
+\hline
+Offline currency reading & Not offline & Not offline & Local, low robustness & Planned dedicated detector (future work) \\
+\hline
+Contextual reading / VQA & Captioning & Captioning & Basic OCR & VLM-based contextual reading \\
+\hline
+Emergency subsystem & Not supported & Not supported & Not supported & Shake-triggered auto-call, GPS SMS, WhatsApp \\
+\hline
+Interaction model & Visual-first + screen reader & Visual-first + screen reader & Basic audio & Accessibility-first (gestures, custom semantics) \\
+\hline
+\end{tabularx}
+\end{table}
+
+The comparison highlights four areas where Wareeny's implemented design is differentiated. First, its hybrid model keeps latency-critical detection on-device through YOLOv8n streaming while reserving the vision-language pipeline for deliberate understanding tasks, avoiding the continuous cloud dependency of Seeing AI and Lookout. Second, bilingual English--Arabic interaction with an Egyptian-Arabic voice addresses a geo-linguistic gap that the global applications leave open. Third, the vision-language reading pipeline interprets text in context and supports visual question answering rather than emitting verbatim transcriptions; this aligns with the finding of Huh et al. (2024) [1] that blind and low-vision users prefer interactive visual dialogue over static captioning. Fourth, the active background emergency subsystem---shake-triggered countdown, automatic dialing, GPS location sharing by SMS, and a redundant WhatsApp message---is a safety capability that none of the compared applications provide. Where the implemented system does not yet lead, this is stated plainly: a dedicated offline banknote detector and formal cross-device performance benchmarking remain future work rather than current results.
+
+\chaptercover{6}{Chapter Six}{Conclusions and Future Work}
 \chapter{Conclusions and Future Work}
 
 \section{Introduction}
@@ -827,7 +1218,7 @@ This chapter summarizes the current state of Wareeny as represented by the imple
 
 \section{Project Summary}
 \subsection{Functional Summary}
-Wareeny currently provides a mode-based assistive shell with working Navigation, Stuff Finder, Scan, Read, and Settings flows. The Scan module performs one-tap identification, reading Egyptian-pound money accurately and offline through a dedicated on-device detector and deferring every other subject to a vision-language model. The Read module uses a hybrid vision-language pipeline to turn a captured document into a faithful spoken reading. The Navigation module turns streamed object detection into geometric, risk-based caution and danger feedback. The Stuff Finder module filters streamed detections to a user-selected target and reports matches. The Settings module persists language, speech-rate, and haptics preferences across sessions, including a local CRUD-managed list of emergency contacts. Running continuously in the background, a safety subsystem monitors device acceleration, triggering a 5-second countdown and dispatching GPS location alerts and native calls in danger scenarios.
+Wareeny currently provides a mode-based assistive shell with working Navigation, Stuff Finder, Scan, Read, and Settings flows. The Scan module performs one-tap identification, deferring every subject---including banknote denominations---to a vision-language model, with the routing layer designed to accept a dedicated offline Egyptian-pound detector in future work. The Read module uses a hybrid vision-language pipeline to turn a captured document into a faithful spoken reading. The Navigation module turns streamed object detection into geometric, risk-based caution and danger feedback. The Stuff Finder module filters streamed detections to a user-selected target and reports matches. The Settings module persists language, speech-rate, and haptics preferences across sessions, including a local CRUD-managed list of emergency contacts. Running continuously in the background, a safety subsystem monitors device acceleration, triggering a 5-second countdown and dispatching GPS location alerts and native calls in danger scenarios.
 
 \subsection{Architectural Summary}
 Architecturally, the project has progressed well beyond a basic prototype. The codebase separates presentation, feature control, shared AI services, detection abstractions, bridge-based platform services, and persisted settings, and it encodes a clear distinction between real-time on-device vision flows and higher-level vision-language understanding tasks. A single routing point, a pure prompt module, and a provider contract give the AI subsystem one place for policy and one place for tone, which is what makes the system extensible without redesign.
@@ -837,7 +1228,7 @@ Architecturally, the project has progressed well beyond a basic prototype. The c
 A first contribution is the explicit accessibility orientation at the interaction level. Two-finger gestures, custom screen-reader actions, semantic live regions, a spoken greeting, language-aware speech, and configurable haptics are part of the core interaction contract rather than additions over a primarily visual interface, which makes Wareeny genuinely suited to non-visual use.
 
 \subsection{Hybrid, Tiered Understanding Architecture}
-A second contribution is the shared understanding architecture built around \texttt{VlmAssistant}, an ordered provider router, task-specialized prompts, and streamed speech. Its tiered Scan policy is the clearest expression of the design: a specialized on-device detector owns the one task---Egyptian-pound denomination reading---where a general model is weakest, while the model owns everything else, and the whole thing degrades gracefully from on-device to backend. This is more extensible and more accurate than a single hard-coded OCR pipeline.
+A second contribution is the shared understanding architecture built around \texttt{VlmAssistant}, an ordered provider router, task-specialized prompts, and streamed speech. Its Scan policy is the clearest expression of the design: currency is isolated as a distinct task behind the provider contract so that a specialized on-device detector can later own Egyptian-pound denomination reading---the one task where a general model is weakest---while the model owns everything else, and the whole pipeline degrades gracefully from on-device to backend. This is more extensible than a single hard-coded OCR pipeline.
 
 \subsection{Real-Time Local Detection Integration}
 A third contribution is the integration of real-time YOLOv8n detection into mode-specific controllers for navigation and object finding. Rather than merely displaying raw boxes, the application converts detections into assistive feedback through path geometry, target filtering, cooldown logic, and screen-reader-compatible overlays, which makes the detection component practically useful inside the larger assistive experience.
@@ -845,45 +1236,13 @@ A third contribution is the integration of real-time YOLOv8n detection into mode
 \subsection{Extensible Service Structure}
 A fourth contribution is the service-oriented organization of the codebase, which already includes clear extension points for backend-assisted understanding, on-device runtime integration, battery and thermal awareness, file-download workflows, and additional perception tasks such as scene description and image questions. As a result, the project can grow feature by feature while preserving a coherent architecture.
 
-\section{Comparative Performance Analysis}
-To demonstrate the advantages of the Wareeny application, the system is evaluated quantitatively and qualitatively against leading commercial and localized assistive applications: Microsoft Seeing AI, Google Lookout, and Vodafone E3rafli. Table 6.1 presents a capability and performance comparison.
-
-\begin{table}[h]
-\centering
-\caption{System Performance and Capability Comparison}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.18\textwidth}|>{\raggedright\arraybackslash}p{0.14\textwidth}|>{\raggedright\arraybackslash}p{0.14\textwidth}|>{\raggedright\arraybackslash}p{0.14\textwidth}|>{\raggedright\arraybackslash}X|}
-\hline
-\textbf{Metric / Feature} & \textbf{Microsoft Seeing AI [7]} & \textbf{Google Lookout [8]} & \textbf{Vodafone E3rafli [10]} & \textbf{Wareeny (Proposed System)} \\
-\hline
-\textbf{Processing Model} & Cloud-dependent & Cloud-dependent & Local edge & \textbf{Hybrid Edge-Cloud} \\
-\hline
-\textbf{Latency (Detection)} & 800ms -- 2.0s & 1.0s -- 3.0s & 200ms -- 500ms & \textbf{Sub-70ms} (Local YOLOv8n, 15+ FPS) \\
-\hline
-\textbf{Arabic OCR Accuracy} & Low / Morphologically challenged & Low / Frequent transcription errors & Very Low / Outdated Tesseract core & \textbf{High} (Vision-Language model context-aware) \\
-\hline
-\textbf{Egyptian Currency Reading (EGP)} & Unsupported offline & Unsupported offline & Supported locally, low accuracy on worn notes & \textbf{94\% Accuracy} (Custom local YOLOv8n, 100\% offline) \\
-\hline
-\textbf{Emergency Subsystem} & Not Supported & Not Supported & Not Supported & \textbf{Implemented} (Shake trigger, Silent SMS with GPS link, Auto-call) \\
-\hline
-\textbf{User Interaction Model} & Visual-first with screen-reader overlay & Visual-first with screen-reader overlay & Basic audio feedback & \textbf{Accessibility-first} (Gestures, custom semantics, bilingual TTS) \\
-\hline
-\end{tabularx}
-\end{table}
-
-The empirical advantages of the proposed hybrid architecture are detailed below:
-\begin{itemize}
-  \item \textbf{Real-Time Latency}: For safety-critical obstacle detection and stuff finding, cloud-based apps introduce latencies (800ms to 3s) that are unsafe for navigation. Wareeny’s local YOLOv8n inference streams at 15+ FPS with sub-70ms latency, providing immediate haptic and directional audio cues.
-  \item \textbf{Geo-Linguistic Adaptation}: While global models fail on cursive Arabic text and Egyptian pound denominations, Wareeny integrates a localized, custom-trained banknote detector achieving 94\% accuracy on circulating EGP notes entirely offline, alongside a VLM reading pipeline optimized for bilingual contextual parsing.
-  \item \textbf{Contextual Semantic Understanding}: Unlike traditional OCR engines that perform verbatim text dumps (causing cognitive overload), Wareeny's VLM-driven Scan and Read pipelines interpret the document layout, extracting only key facts in a natural spoken style and supporting Visual Question Answering (VQA). According to Huh et al. (2024) [1], interactive visual dialogue improves task completion rates by 40\% for blind users.
-  \item \textbf{Background Safety Automation}: Deployed commercial apps ignore emergency states. Wareeny’s shake-to-activate trigger runs as a low-overhead background service, allowing location sharing (Google Maps link) and auto-dialing within a 5-second countdown window, ensuring continuous user safety.
-\end{itemize}
-
 \section{Conclusion and Future Work}
 \subsection{Conclusion}
-In conclusion, Wareeny stands as a serious assistive-application foundation rather than a superficial proof of concept. The system already demonstrates a reusable accessibility shell, a hybrid and tiered reading pipeline, accurate offline currency reading, real-time local detection flows, persisted personalization, bilingual interaction, background safety alerts with automated calling and location sharing, and an automated test suite over its core logic. At the same time, the academically correct interpretation of the repository is that several major extensions remain under development and are reported here as future work rather than completed functionality.
+In conclusion, Wareeny stands as a serious assistive-application foundation rather than a superficial proof of concept. The system already demonstrates a reusable accessibility shell, a hybrid vision-language reading pipeline, real-time local detection flows, persisted personalization, bilingual interaction, background safety alerts with automated calling and location sharing, and an automated test suite over its core logic. At the same time, the academically correct interpretation of the repository is that several major extensions remain under development and are reported here as future work rather than completed functionality.
 
 \subsection{Near-Term Future Work}
 \begin{itemize}
+  \item Implement and bundle the dedicated on-device YOLOv8n Egyptian-pound banknote detector as a \texttt{VlmProvider} ahead of the language model, and formally evaluate its denomination accuracy on worn and partially occluded notes.
   \item Surface the vision-language tasks that already exist at the service level---scene description and ask-image---as dedicated, accessible user flows.
   \item Complete production-grade integration of the on-device vision-language runtime so that scanning and reading can operate privately and offline once a local model is installed.
   \item Stabilize and validate the self-hosted backend contract used by the cloud provider, including deployment, reliability, and secure request handling.
@@ -894,7 +1253,7 @@ In conclusion, Wareeny stands as a serious assistive-application foundation rath
 \subsection{Long-Term Future Work}
 Longer-term work may include a wider range of object-finder and currency models, thermal- and battery-aware adaptation, and formal user studies with blind and low-vision participants. These extensions would move Wareeny from its current strong foundational state toward a broader and clinically discussable assistive platform. For this thesis version, the most accurate and professional conclusion is that the project has successfully implemented a credible architectural and functional base on which these future additions can be built.
 
-\chaptercover{Bibliography}
+\frontcover{Bibliography}
 \addcontentsline{toc}{chapter}{Bibliography}
 \begin{thebibliography}{99}
   \bibitem{ref1} M. Huh et al., ``Long-Form Answers to Visual Questions from Blind and Low Vision People,'' arXiv preprint arXiv:2408.06303, 2024. [Online]. Available: \url{https://arxiv.org/abs/2408.06303}

@@ -15,28 +15,33 @@ class CameraTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.glassWhite,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.glassBorder, width: 1),
-          ),
-          child: Row(
-            children: [
-              _BrandLabel(),
-              const Spacer(),
-              const LiveIndicator(),
-              const Spacer(),
-              _ModeIconBadge(mode: currentMode),
-            ],
+    // Purely decorative chrome (brand, live dot, mode icon). The active mode is
+    // already announced by each screen's root Semantics, so hide this from
+    // screen readers to keep focus on the actionable controls below it.
+    return ExcludeSemantics(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.glassWhite,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.glassBorder, width: 1),
+            ),
+            child: Row(
+              children: [
+                _BrandLabel(),
+                const Spacer(),
+                const LiveIndicator(),
+                const Spacer(),
+                _ModeIconBadge(mode: currentMode),
+              ],
+            ),
           ),
         ),
       ),

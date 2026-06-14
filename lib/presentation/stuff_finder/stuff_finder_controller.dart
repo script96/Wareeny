@@ -9,6 +9,19 @@ import 'package:wareeny/shared/object_detection/detection_coordinate_mapper.dart
 import 'package:wareeny/shared/object_detection/detection_models.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
+/// Locale-independent description of the finder's current status, so the
+/// presentation layer can render it through [AppLocalizations]. The English
+/// [StuffFinderController.status] string is kept unchanged for logging/tests.
+enum StuffFinderStatusKind {
+  idle,
+  starting,
+  searching,
+  matches,
+  pluginMissing,
+  unavailable,
+  streamError,
+}
+
 abstract interface class StuffFinderFeedback {
   Future<void> speak(String message);
 
@@ -72,6 +85,15 @@ class StuffFinderController extends ChangeNotifier {
   UprightDetectionFrame? latestFrame;
   String status = 'Choose an object to start searching';
 
+  /// Locale-independent status descriptor mirroring [status].
+  StuffFinderStatusKind statusKind = StuffFinderStatusKind.idle;
+
+  /// Match count associated with [StuffFinderStatusKind.matches].
+  int statusMatchCount = 0;
+
+  /// Detector display name associated with [StuffFinderStatusKind.starting].
+  String? statusDetector;
+
   int get matchCount => latestFrame?.detections.length ?? 0;
 
   Future<void> selectTarget(String target) async {
@@ -88,6 +110,8 @@ class StuffFinderController extends ChangeNotifier {
       _lastMatchSpeechAt = null;
     }
     status = 'Starting ${_detectionSource.displayName}';
+    statusKind = StuffFinderStatusKind.starting;
+    statusDetector = _detectionSource.displayName;
     notifyListeners();
     unawaited(_feedback.speak('Searching for $normalizedTarget'));
     await start();
@@ -104,12 +128,16 @@ class StuffFinderController extends ChangeNotifier {
     try {
       await _detectionSource.start(mode: 'stuff_finder');
       status = 'Searching for $selectedTarget';
+      statusKind = StuffFinderStatusKind.searching;
     } on MissingPluginException {
       status = 'Object detector plugin is not installed';
+      statusKind = StuffFinderStatusKind.pluginMissing;
     } on PlatformException catch (error) {
       status = 'Detector unavailable: ${error.code}';
+      statusKind = StuffFinderStatusKind.unavailable;
     } catch (error) {
       status = 'Detector unavailable: $error';
+      statusKind = StuffFinderStatusKind.unavailable;
     }
     notifyListeners();
   }
@@ -148,6 +176,12 @@ class StuffFinderController extends ChangeNotifier {
     status = matches.isEmpty
         ? 'Searching for $target'
         : '${matches.length} ${matches.length == 1 ? "match" : "matches"} found';
+    if (matches.isEmpty) {
+      statusKind = StuffFinderStatusKind.searching;
+    } else {
+      statusKind = StuffFinderStatusKind.matches;
+      statusMatchCount = matches.length;
+    }
     _handleMatchSpeech(target, matches.length);
     notifyListeners();
   }
@@ -174,6 +208,7 @@ class StuffFinderController extends ChangeNotifier {
 
   void _onDetectorError(Object error, StackTrace stackTrace) {
     status = 'Detector stream error: $error';
+    statusKind = StuffFinderStatusKind.streamError;
     notifyListeners();
   }
 

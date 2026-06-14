@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/emergency/emergency_controller.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
 import 'package:wareeny/presentation/emergency/emergency_overlay.dart';
@@ -29,6 +30,10 @@ class NavigationShell extends StatefulWidget {
 class _NavigationShellState extends State<NavigationShell> {
   var _selectedIndex = 0;
 
+  /// Cached so [dispose] can disarm without an (illegal) inherited-widget
+  /// lookup on a deactivated element.
+  EmergencyController? _emergency;
+
   static const _modes = AppMode.values;
 
   @override
@@ -47,6 +52,7 @@ class _NavigationShellState extends State<NavigationShell> {
 
       // Arm the emergency controller and wire overlay callback.
       final emergency = scope.emergencyController;
+      _emergency = emergency;
       emergency.onCountdownStarted = () {
         if (!mounted) return;
         showEmergencyOverlay(context, emergency);
@@ -68,7 +74,7 @@ class _NavigationShellState extends State<NavigationShell> {
 
   @override
   void dispose() {
-    AppScope.of(context).emergencyController.disarm();
+    _emergency?.disarm();
     super.dispose();
   }
 
@@ -144,10 +150,15 @@ class _NavigationShellState extends State<NavigationShell> {
         child: Semantics(
           label: l10n.activeModeNamed(_currentMode.labelFor(l10n)),
           hint: l10n.swipeHint,
+          customSemanticsActions: _currentMode.getModeSwitchActions(
+            l10n: l10n,
+            settings: widget.settings,
+            onModeSelect: _selectMode,
+          ),
           child: Stack(
             fit: StackFit.expand,
             children: [
-              const CameraFeedView(),
+              const ExcludeSemantics(child: CameraFeedView()),
               _TopOverlay(currentMode: _currentMode),
               const _RightSideOverlay(),
               _BottomModeMenu(

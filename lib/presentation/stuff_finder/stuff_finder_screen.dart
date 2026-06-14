@@ -110,10 +110,8 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
       onModeSelect: widget.onModeSelect,
     );
 
-    final pickTargetLabel = widget.settings.isArabic
-        ? 'اختر الشيء للبحث عنه'
-        : 'Choose object to find';
-    modeActions[CustomSemanticsAction(label: pickTargetLabel)] = _pickTarget;
+    modeActions[CustomSemanticsAction(label: l10n.sfChooseObjectToFind)] =
+        _pickTarget;
 
     return TwoFingerSwipeDetector(
       onSwipeLeft: widget.onNext,
@@ -182,26 +180,27 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
   }
 
   Widget _buildCamera(StuffFinderController finder) {
+    final l10n = AppLocalizations.of(context);
     if (finder.selectedTarget == null) {
-      return const CameraStatusView(
+      return CameraStatusView(
         icon: Icons.search_outlined,
-        title: 'Stuff Finder',
-        message: 'Choose an object to start the camera and detector.',
+        title: l10n.sfTitle,
+        message: l10n.sfChooseToStart,
       );
     }
     if (_modelError != null) {
       return CameraStatusView(
         icon: Icons.error_outline,
-        title: 'Stuff Finder model unavailable',
-        message: 'Choose another object or try again. $_modelError',
+        title: l10n.sfModelUnavailableTitle,
+        message: l10n.sfModelUnavailableMsg(_modelError!),
       );
     }
     final source = _detectionSource;
     if (source is! YoloStreamingObjectDetectionSource) {
-      return const CameraStatusView(
+      return CameraStatusView(
         icon: Icons.error_outline,
-        title: 'Detector unavailable',
-        message: 'Stuff Finder requires the YOLO streaming detector.',
+        title: l10n.sfDetectorUnavailableTitle,
+        message: l10n.sfDetectorUnavailableMsg,
       );
     }
 
@@ -211,36 +210,40 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
       useCustomModel: useCustomModel,
     );
 
-    return YOLOView(
-      modelPath: modelPath,
-      task: YOLOTask.detect,
-      controller: _yoloController,
-      cameraResolution: '720p',
-      confidenceThreshold: 0.45,
-      iouThreshold: 0.45,
-      useGpu: !(useCustomModel && Platform.isAndroid),
-      lensFacing: LensFacing.back,
-      streamingConfig: const YOLOStreamingConfig(
-        includeDetections: true,
-        includeClassifications: false,
-        includeProcessingTimeMs: true,
-        includeFps: true,
-        maxFPS: 15,
-        inferenceFrequency: 15,
+    // The platform view is a raw camera/detector surface with no readable
+    // content; hide it from TalkBack/VoiceOver so focus stays on the overlays.
+    return ExcludeSemantics(
+      child: YOLOView(
+        modelPath: modelPath,
+        task: YOLOTask.detect,
+        controller: _yoloController,
+        cameraResolution: '720p',
+        confidenceThreshold: 0.45,
+        iouThreshold: 0.45,
+        useGpu: !(useCustomModel && Platform.isAndroid),
+        lensFacing: LensFacing.back,
+        streamingConfig: const YOLOStreamingConfig(
+          includeDetections: true,
+          includeClassifications: false,
+          includeProcessingTimeMs: true,
+          includeFps: true,
+          maxFPS: 15,
+          inferenceFrequency: 15,
+        ),
+        onStreamingData: source.processStreamingData,
+        onModelLoad: (_, _) {
+          if (mounted && _modelError != null) {
+            setState(() => _modelError = null);
+          }
+        },
+        onModelError: (error, failedPath, _) {
+          debugPrint(
+            '[StuffFinder] Failed to load $failedPath for '
+            '${finder.selectedTarget}: $error',
+          );
+          if (mounted) setState(() => _modelError = error);
+        },
       ),
-      onStreamingData: source.processStreamingData,
-      onModelLoad: (_, _) {
-        if (mounted && _modelError != null) {
-          setState(() => _modelError = null);
-        }
-      },
-      onModelError: (error, failedPath, _) {
-        debugPrint(
-          '[StuffFinder] Failed to load $failedPath for '
-          '${finder.selectedTarget}: $error',
-        );
-        if (mounted) setState(() => _modelError = error);
-      },
     );
   }
 
@@ -260,6 +263,16 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
     if (target == null || !mounted) return;
     setState(() => _modelError = null);
     await finder.selectTarget(target);
+    if (!mounted) return;
+    // Announce the selection in the user's language for screen-reader users.
+    final l10n = AppLocalizations.of(context);
+    if (MediaQuery.supportsAnnounceOf(context)) {
+      SemanticsService.sendAnnouncement(
+        View.of(context),
+        l10n.sfStatusSearching(_titleCase(target)),
+        widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
+      );
+    }
   }
 
   Future<void> _resume() async {
@@ -297,18 +310,21 @@ class _TargetButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final target = finder.selectedTarget;
     return Semantics(
       button: true,
       label: target == null
-          ? 'Choose object to find'
-          : 'Change target from $target',
+          ? l10n.sfChooseObjectToFind
+          : l10n.sfChangeTargetFrom(_titleCase(target)),
       child: FilledButton.icon(
         key: const ValueKey('stuff-finder-target-button'),
         onPressed: onTap,
         icon: Icon(target == null ? Icons.add : Icons.manage_search),
         label: Text(
-          target == null ? 'Choose object' : 'Finding ${_titleCase(target)}',
+          target == null
+              ? l10n.sfChooseObject
+              : l10n.sfFinding(_titleCase(target)),
         ),
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.electricGreen,
@@ -331,9 +347,11 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final text = _localizedStatus(l10n);
     return Semantics(
       liveRegion: true,
-      label: finder.status,
+      label: text,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -345,7 +363,7 @@ class _StatusChip extends StatelessWidget {
           border: Border.all(color: Colors.white24),
         ),
         child: Text(
-          finder.status,
+          text,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -353,6 +371,22 @@ class _StatusChip extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _localizedStatus(AppLocalizations l10n) {
+    final target = finder.selectedTarget;
+    return switch (finder.statusKind) {
+      StuffFinderStatusKind.idle => l10n.sfStatusIdle,
+      StuffFinderStatusKind.starting =>
+        l10n.sfStatusStarting(finder.statusDetector ?? ''),
+      StuffFinderStatusKind.searching =>
+        l10n.sfStatusSearching(target == null ? '' : _titleCase(target)),
+      StuffFinderStatusKind.matches =>
+        l10n.sfStatusMatches(finder.statusMatchCount),
+      StuffFinderStatusKind.pluginMissing => l10n.sfStatusPluginMissing,
+      StuffFinderStatusKind.unavailable => l10n.sfStatusUnavailable,
+      StuffFinderStatusKind.streamError => l10n.sfStatusStreamError,
+    };
   }
 }
 

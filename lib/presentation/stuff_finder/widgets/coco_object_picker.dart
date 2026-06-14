@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
+import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/stuff_finder/coco_classes.dart';
 
+/// Bottom sheet that lets the user choose a Stuff Finder target.
+///
+/// Designed for screen-reader use: there is no text field to type into. The
+/// list opens on a short shortlist of common objects so TalkBack/VoiceOver
+/// users can swipe through a few items and double-tap to pick. A "More objects"
+/// item at the end reveals the full catalogue when needed.
 class CocoObjectPicker extends StatefulWidget {
   const CocoObjectPicker({required this.selectedTarget, super.key});
 
@@ -14,107 +21,63 @@ class CocoObjectPicker extends StatefulWidget {
 }
 
 class _CocoObjectPickerState extends State<CocoObjectPicker> {
-  static const _searchAliases = <String, List<String>>{
-    'bottle': ['bottel', 'bottles', 'water bottle'],
-    'cell phone': ['phone', 'mobile', 'mobile phone', 'smartphone'],
-    'remote': ['remotes', 'controller', 'tv remote'],
-    'backpack': ['bag', 'school bag'],
-    'handbag': ['bag', 'purse'],
-    'refrigerator': ['fridge'],
-    'couch': ['sofa'],
-    'tv': ['television'],
-    'hair drier': ['hair dryer'],
-    'dining table': ['table'],
-  };
-
-  var _query = '';
+  bool _showAll = false;
 
   @override
   Widget build(BuildContext context) {
-    final filteredClasses = stuffFinderClasses
-        .where((label) => _matchesQuery(label, _query))
-        .toList(growable: false);
+    final l10n = AppLocalizations.of(context);
+    // Always make sure the currently selected target is visible even if it is
+    // not part of the shortlist.
+    final selected = widget.selectedTarget;
+    final classes = _showAll
+        ? stuffFinderClasses
+        : <String>[
+            ...commonStuffFinderClasses,
+            if (selected != null && !commonStuffFinderClasses.contains(selected))
+              selected,
+          ];
 
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(
+        padding: const EdgeInsets.only(
           left: AppSpacing.md,
           top: AppSpacing.md,
           right: AppSpacing.md,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + AppSpacing.md,
+          bottom: AppSpacing.md,
         ),
         child: Column(
           children: [
-            Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white38,
-                borderRadius: BorderRadius.circular(2),
-              ),
+            // Decorative drag handle — not useful to a screen reader.
+            const ExcludeSemantics(
+              child: _DragHandle(),
             ),
             const SizedBox(height: AppSpacing.md),
-            const Text(
-              'What do you want to find?',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              autofocus: true,
-              onChanged: (value) => setState(() => _query = value),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Search ${stuffFinderClasses.length} objects',
-                hintStyle: const TextStyle(color: Colors.white54),
-                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                filled: true,
-                fillColor: Colors.white10,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.sfPickerTitle,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.md),
             Expanded(
               child: ListView.builder(
-                itemCount: filteredClasses.length,
+                itemCount: classes.length + (_showAll ? 0 : 1),
                 itemBuilder: (context, index) {
-                  final label = filteredClasses[index];
-                  final selected = label == widget.selectedTarget;
-                  return Semantics(
-                    button: true,
-                    selected: selected,
-                    label: 'Find $label',
-                    child: ListTile(
-                      key: ValueKey('coco-$label'),
-                      title: Text(
-                        _titleCase(label),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        isCustomStuffFinderClass(label)
-                            ? 'Custom Stuff Finder model'
-                            : isPopularStuffFinderClass(label)
-                            ? 'Everyday COCO object'
-                            : 'COCO object',
-                        style: const TextStyle(color: Colors.white54),
-                      ),
-                      trailing: selected
-                          ? const Icon(
-                              Icons.check_circle,
-                              color: AppColors.electricGreen,
-                            )
-                          : null,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      onTap: () => Navigator.of(context).pop(label),
-                    ),
+                  if (!_showAll && index == classes.length) {
+                    return _MoreObjectsTile(
+                      label: l10n.sfMoreObjects,
+                      onTap: () => setState(() => _showAll = true),
+                    );
+                  }
+                  final label = classes[index];
+                  return _ObjectTile(
+                    label: label,
+                    selected: label == widget.selectedTarget,
                   );
                 },
               ),
@@ -124,25 +87,93 @@ class _CocoObjectPickerState extends State<CocoObjectPicker> {
       ),
     );
   }
+}
 
-  String _titleCase(String value) {
-    return value
-        .split(' ')
-        .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
-        .join(' ');
-  }
+// ── Tiles ──────────────────────────────────────────────────────────────────────
 
-  bool _matchesQuery(String label, String query) {
-    final normalizedQuery = query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) return true;
-    if (label.contains(normalizedQuery)) return true;
-    if (normalizedQuery.endsWith('s') &&
-        label == normalizedQuery.substring(0, normalizedQuery.length - 1)) {
-      return true;
-    }
-    return _searchAliases[label]?.any(
-          (alias) => alias.contains(normalizedQuery),
-        ) ??
-        false;
+class _ObjectTile extends StatelessWidget {
+  const _ObjectTile({required this.label, required this.selected});
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    // One clean node per object: the screen reader announces just the object
+    // name (e.g. "Wallet") plus its button/selected role — no category subtitle
+    // to read out. MergeSemantics keeps the name, selected flag, and tap action
+    // as a single focusable item.
+    return MergeSemantics(
+      child: Semantics(
+        selected: selected,
+        child: ListTile(
+          key: ValueKey('coco-$label'),
+          title: Text(
+            _titleCase(label),
+            style: const TextStyle(color: Colors.white),
+          ),
+          trailing: selected
+              ? const Icon(Icons.check_circle, color: AppColors.electricGreen)
+              : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          onTap: () => Navigator.of(context).pop(label),
+        ),
+      ),
+    );
   }
+}
+
+class _MoreObjectsTile extends StatelessWidget {
+  const _MoreObjectsTile({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: ListTile(
+        key: const ValueKey('coco-more'),
+        leading: const Icon(Icons.expand_more, color: AppColors.electricGreen),
+        title: Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.electricGreen,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 4,
+      decoration: BoxDecoration(
+        color: Colors.white38,
+        borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+}
+
+String _titleCase(String value) {
+  return value
+      .split(' ')
+      .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
+      .join(' ');
 }

@@ -249,11 +249,12 @@ class _ContactTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPrimary = index == 0;
-    return Semantics(
-      label: isArabic
-          ? '${contact.name}، ${contact.phone}${isPrimary ? '، جهة الاتصال الأولى' : ''}'
-          : '${contact.name}, ${contact.phone}${isPrimary ? ', primary contact' : ''}',
-      child: ClipRRect(
+    // Read the name + phone (+ primary marker) as one block; the edit and
+    // delete buttons stay as separate, independently operable actions.
+    final semanticLabel = isArabic
+        ? '${contact.name}، ${contact.phone}${isPrimary ? '، جهة الاتصال الأولى' : ''}'
+        : '${contact.name}, ${contact.phone}${isPrimary ? ', primary contact' : ''}';
+    return ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -271,8 +272,9 @@ class _ContactTile extends StatelessWidget {
             ),
             child: Row(
               children: [
-                // Avatar circle with initial.
-                Container(
+                // Avatar circle with initial (decorative — hidden from a11y).
+                ExcludeSemantics(
+                  child: Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
@@ -297,9 +299,13 @@ class _ContactTile extends StatelessWidget {
                     ),
                   ),
                 ),
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Column(
+                  child: Semantics(
+                    label: semanticLabel,
+                    excludeSemantics: true,
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
@@ -344,6 +350,7 @@ class _ContactTile extends StatelessWidget {
                       ),
                     ],
                   ),
+                  ),
                 ),
                 // Edit button.
                 Semantics(
@@ -369,8 +376,7 @@ class _ContactTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

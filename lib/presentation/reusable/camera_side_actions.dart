@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 
@@ -11,24 +12,25 @@ class CameraSideActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _GlassIconButton(
           icon: Icons.flashlight_on_outlined,
-          tooltip: 'Flash',
+          tooltip: l10n.flash,
           onTap: () {},
         ),
         const SizedBox(height: AppSpacing.sm),
         _GlassIconButton(
           icon: Icons.photo_camera_outlined,
-          tooltip: 'Capture',
+          tooltip: l10n.capture,
           onTap: () {},
         ),
         const SizedBox(height: AppSpacing.sm),
         _GlassIconButton(
           icon: Icons.info_outline_rounded,
-          tooltip: 'Info',
+          tooltip: l10n.info,
           onTap: () {},
         ),
       ],
@@ -54,6 +56,12 @@ class _GlassIconButton extends StatefulWidget {
 class _GlassIconButtonState extends State<_GlassIconButton> {
   var _pressed = false;
 
+  /// Minimum accessible touch target (logical pixels), per WCAG/Material a11y.
+  static const double _minTouchTarget = 48;
+
+  /// Visible diameter of the glass circle.
+  static const double _visualSize = 44;
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -62,30 +70,39 @@ class _GlassIconButtonState extends State<_GlassIconButton> {
       child: Tooltip(
         message: widget.tooltip,
         child: GestureDetector(
+          // Opaque so the full 48x48 area is tappable, not just the 44 circle.
+          behavior: HitTestBehavior.opaque,
           onTapDown: (_) => setState(() => _pressed = true),
           onTapUp: (_) {
             setState(() => _pressed = false);
             widget.onTap();
           },
           onTapCancel: () => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? 0.88 : 1.0,
-            duration: const Duration(milliseconds: 100),
-            child: ClipOval(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.glassWhite,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.glassBorder, width: 1),
-                  ),
-                  child: Icon(
-                    widget.icon,
-                    color: Colors.white.withValues(alpha: 0.85),
-                    size: 20,
+          child: SizedBox(
+            width: _minTouchTarget,
+            height: _minTouchTarget,
+            child: Center(
+              child: AnimatedScale(
+                scale: _pressed ? 0.88 : 1.0,
+                duration: const Duration(milliseconds: 100),
+                child: ClipOval(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      width: _visualSize,
+                      height: _visualSize,
+                      decoration: BoxDecoration(
+                        color: AppColors.glassWhite,
+                        shape: BoxShape.circle,
+                        border:
+                            Border.all(color: AppColors.glassBorder, width: 1),
+                      ),
+                      child: Icon(
+                        widget.icon,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ),
               ),

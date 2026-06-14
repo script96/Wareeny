@@ -1,0 +1,915 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wareeny — Defense 2025–2026</title>
+<link rel="stylesheet" href="wareeny-deck.css">
+</head>
+<body style="margin:0;background:#000">
+<deck-stage width="1920" height="1080">
+
+<!-- ───────────────────────────────────────
+     01 · TITLE
+─────────────────────────────────────── -->
+<section data-label="01 · Title" style="display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:52px 100px 44px">
+
+  <!-- Large faded watermark -->
+  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:0;overflow:hidden;pointer-events:none">
+    <span style="font-family:var(--fh);font-size:420px;font-weight:900;color:var(--g);opacity:.022;letter-spacing:-18px;white-space:nowrap;user-select:none">WAREENY</span>
+  </div>
+
+  <!-- University header -->
+  <div class="af" style="width:100%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,.07);padding-bottom:24px;position:relative;z-index:1">
+    <span style="font-family:var(--fh);font-size:var(--tl);letter-spacing:.08em;text-transform:uppercase;color:var(--t3)">Future University in Egypt &nbsp;·&nbsp; Faculty of Computers &amp; Information Technology</span>
+    <span style="font-family:var(--fh);font-size:var(--tl);letter-spacing:.08em;text-transform:uppercase;color:var(--t3)">Department of Computer Science</span>
+  </div>
+
+  <!-- Center: logo + title -->
+  <div class="af" style="display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;position:relative;z-index:1">
+    <div style="position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <svg class="logo-svg-lg" width="90" height="90" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:relative;z-index:2">
+        <path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/>
+        <circle cx="45" cy="45" r="16" fill="white"/>
+        <circle cx="45" cy="45" r="9" fill="#00E096"/>
+        <circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/>
+      </svg>
+    </div>
+    <h1 style="font-family:var(--fh);font-size:112px;font-weight:900;letter-spacing:-5px;line-height:.92;color:#fff;text-shadow:0 0 100px rgba(0,224,150,.10)">Wareeny</h1>
+
+    <!-- Arabic display name -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <p style="font-family:'Amiri',serif;font-size:86px;font-weight:700;color:var(--g);line-height:1;direction:rtl;letter-spacing:.02em;text-shadow:0 0 60px rgba(0,224,150,.45),0 0 120px rgba(0,224,150,.20)">وَرِّيني</p>
+    </div>
+    <p style="font-size:33px;color:var(--t2);font-style:italic;max-width:920px;line-height:1.45">An AI-Powered Mobile Assistive System for Visually Impaired Users</p>
+    <!-- Pill tagline -->
+    <div style="background:rgba(0,224,150,.09);border:1px solid rgba(0,224,150,.22);border-radius:100px;padding:8px 30px;margin-top:2px">
+      <p style="font-size:var(--txs);color:var(--g);letter-spacing:.12em;font-family:var(--fh);font-weight:700;text-transform:uppercase">Turning Darkness Into Understanding</p>
+    </div>
+  </div>
+
+  <!-- Team + supervisor -->
+  <div class="af" style="width:100%;border-top:1px solid rgba(255,255,255,.07);padding-top:24px;display:flex;flex-direction:column;gap:14px;position:relative;z-index:1">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px">
+      <div style="text-align:center;padding:13px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.13);border-radius:14px">
+        <div style="font-family:var(--fh);font-size:25px;font-weight:700;color:#fff">Youssef Amr</div>
+        <div style="font-size:22px;color:var(--g);margin-top:4px;font-family:var(--fh);font-weight:600">20221949</div>
+      </div>
+      <div style="text-align:center;padding:13px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.13);border-radius:14px">
+        <div style="font-family:var(--fh);font-size:25px;font-weight:700;color:#fff">Ahmed Mohamed</div>
+        <div style="font-size:22px;color:var(--g);margin-top:4px;font-family:var(--fh);font-weight:600">20223031</div>
+      </div>
+      <div style="text-align:center;padding:13px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.13);border-radius:14px">
+        <div style="font-family:var(--fh);font-size:25px;font-weight:700;color:#fff">Mohamed Moataz</div>
+        <div style="font-size:22px;color:var(--g);margin-top:4px;font-family:var(--fh);font-weight:600">20223394</div>
+      </div>
+      <div style="text-align:center;padding:13px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.13);border-radius:14px">
+        <div style="font-family:var(--fh);font-size:25px;font-weight:700;color:#fff">Mohamed Wael</div>
+        <div style="font-size:22px;color:var(--g);margin-top:4px;font-family:var(--fh);font-weight:600">20223960</div>
+      </div>
+      <div style="text-align:center;padding:13px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.13);border-radius:14px">
+        <div style="font-family:var(--fh);font-size:25px;font-weight:700;color:#fff">Omar Ahmed Said</div>
+        <div style="font-size:22px;color:var(--g);margin-top:4px;font-family:var(--fh);font-weight:600">20225281</div>
+      </div>
+      <div style="text-align:center;padding:13px 10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-top:1px solid rgba(255,255,255,.13);border-radius:14px">
+        <div style="font-family:var(--fh);font-size:25px;font-weight:700;color:#fff">Mohamed Khaled</div>
+        <div style="font-size:22px;color:var(--g);margin-top:4px;font-family:var(--fh);font-weight:600">20224727</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:var(--txs);color:var(--t3)">
+      <span style="color:var(--t2)">Supervisor:</span> Prof. Abeer El Korany &nbsp;·&nbsp;
+      <span style="color:var(--t2)">Teaching Assistant:</span> Linah Mohamed &nbsp;·&nbsp; 2025–2026
+    </div>
+  </div>
+
+</section>
+
+<!-- ───────────────────────────────────────
+     02 · INTRODUCTION
+─────────────────────────────────────── -->
+<section data-label="02 · Introduction">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>02 · Introduction</span></div>
+  <div class="sb">
+    <div class="a1 lbl">What is Wareeny?</div>
+    <h2 class="stitle a2">The eyes of a blind user.</h2>
+    <div class="g2 a3" style="flex:1;gap:40px">
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <p class="body">Wareeny is a Flutter-based mobile assistant that <strong style="color:#fff">sees through the phone camera</strong>, understands the scene in context, and speaks only what matters — not every pixel, just the facts.</p>
+        <p class="body">It unifies vision, language, audio and haptics into one <strong style="color:#fff">voice-driven app</strong> with full English &amp; Arabic (RTL + TTS) support — so users interact with their environment without sighted assistance.</p>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+          <div class="lbl" style="font-size:var(--txs)">Three core pillars</div>
+          <div style="display:flex;align-items:flex-start;gap:14px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:3px">◆</span><p class="sm"><strong style="color:#fff;font-family:var(--fh)">Audio-first UX</strong> — every action has spoken feedback; the user may never look at the screen.</p></div>
+          <div style="display:flex;align-items:flex-start;gap:14px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:3px">◆</span><p class="sm"><strong style="color:#fff;font-family:var(--fh)">Bilingual EN / AR</strong> — Arabic-script auto-detection, RTL layout and Egyptian-Arabic voice output.</p></div>
+          <div style="display:flex;align-items:flex-start;gap:14px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:3px">◆</span><p class="sm"><strong style="color:#fff;font-family:var(--fh)">Context-aware AI</strong> — a vision-language core reports relevant facts, not robotic verbatim dumps.</p></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="lbl" style="font-size:var(--txs)">Six top-level modes</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:14px;flex:1">
+          <div class="card" style="align-items:center;justify-content:center;text-align:center"><span style="font-family:var(--fh);font-size:var(--ts);font-weight:700">🏠 Home</span></div>
+          <div class="card" style="align-items:center;justify-content:center;text-align:center"><span style="font-family:var(--fh);font-size:var(--ts);font-weight:700">🧭 Navigation</span></div>
+          <div class="card" style="align-items:center;justify-content:center;text-align:center"><span style="font-family:var(--fh);font-size:var(--ts);font-weight:700">🔍 Stuff Finder</span></div>
+          <div class="card" style="align-items:center;justify-content:center;text-align:center"><span style="font-family:var(--fh);font-size:var(--ts);font-weight:700">📷 Scan</span></div>
+          <div class="card" style="align-items:center;justify-content:center;text-align:center"><span style="font-family:var(--fh);font-size:var(--ts);font-weight:700">📖 Read</span></div>
+          <div class="card" style="align-items:center;justify-content:center;text-align:center"><span style="font-family:var(--fh);font-size:var(--ts);font-weight:700">⚙️ Settings</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     03 · MOTIVATION — SVG stat donut
+─────────────────────────────────────── -->
+<section data-label="03 · Motivation">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>03 · Motivation</span></div>
+  <div class="sb">
+    <div class="a1 lbl">Why this matters</div>
+    <div style="display:flex;flex:1;gap:56px;align-items:stretch">
+
+      <!-- Left: 4 problem cards -->
+      <div class="g22 a2" style="flex:1">
+        <div class="card">
+          <div class="ctitle" style="font-size:32px">A Western-centric market</div>
+          <div class="cbody">Leading apps optimise for English and Western environments, leaving the MENA region underserved.</div>
+        </div>
+        <div class="card">
+          <div class="ctitle" style="font-size:32px">An Arabic-language gap</div>
+          <div class="cbody">Cursive Arabic script and Egyptian currency are poorly recognised by global tools.</div>
+        </div>
+        <div class="card">
+          <div class="ctitle" style="font-size:32px">A privacy cost</div>
+          <div class="cbody">High-accuracy apps stream private images of homes and documents to third-party cloud servers.</div>
+        </div>
+        <div class="card">
+          <div class="ctitle" style="font-size:32px">A daily-independence need</div>
+          <div class="cbody">Reading, money, obstacles and calling for help should not require sighted assistance.</div>
+        </div>
+      </div>
+
+      <!-- Right: animated SVG donut stat -->
+      <div class="a3" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;flex-shrink:0;width:500px">
+        <div style="position:relative;width:400px;height:400px">
+          <svg width="400" height="400" viewBox="0 0 400 400" style="overflow:visible">
+            <circle cx="200" cy="200" r="170" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="28"/>
+            <circle cx="200" cy="200" r="170" fill="none"
+              stroke="rgba(0,224,150,.25)" stroke-width="28"
+              stroke-dasharray="133.5 934.5" transform="rotate(-90 200 200)"
+              style="filter:drop-shadow(0 0 10px rgba(0,224,150,.3))"/>
+            <circle class="arc-stat" cx="200" cy="200" r="170" fill="none"
+              stroke="#00E096" stroke-width="28" stroke-linecap="round"
+              stroke-dasharray="293.6 774.4" transform="rotate(-90 200 200)"
+              style="filter:drop-shadow(0 0 18px rgba(0,224,150,.7))"/>
+            <g stroke="rgba(255,255,255,.12)" stroke-width="1.5">
+              <line x1="200" y1="22" x2="200" y2="38" transform="rotate(0 200 200)"/>
+              <line x1="200" y1="22" x2="200" y2="38" transform="rotate(90 200 200)"/>
+              <line x1="200" y1="22" x2="200" y2="38" transform="rotate(180 200 200)"/>
+              <line x1="200" y1="22" x2="200" y2="38" transform="rotate(270 200 200)"/>
+            </g>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+            <div class="neon-num" style="font-size:80px">2.2B</div>
+            <div style="font-size:var(--txs);color:var(--t2);text-align:center;line-height:1.3;font-family:var(--fh)">people with<br>vision impairment</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;width:100%">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:14px;height:14px;border-radius:50%;background:var(--g);box-shadow:0 0 12px rgba(0,224,150,.65);flex-shrink:0"></div>
+            <span style="font-size:var(--txs);color:var(--t2)"><strong style="color:#fff">2.2 billion</strong> worldwide (27.5% of global population)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:14px;height:14px;border-radius:50%;background:rgba(0,224,150,.28);flex-shrink:0"></div>
+            <span style="font-size:var(--txs);color:var(--t2)"><strong style="color:rgba(0,224,150,.8)">1 billion+</strong> cases preventable or unaddressed</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.08);flex-shrink:0"></div>
+            <span style="font-size:var(--txs);color:var(--t2)">8 billion world population (WHO, 2019)</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     04 · PROBLEM STATEMENT
+─────────────────────────────────────── -->
+<section data-label="04 · Problem Statement">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>04 · Problem Statement</span></div>
+  <div class="sb">
+    <div class="a1 lbl">The core problem</div>
+    <div class="a2" style="background:linear-gradient(90deg,rgba(0,224,150,.07),rgba(0,224,150,.02));border-radius:var(--r);border-left:3px solid var(--g);padding:26px 36px;box-shadow:0 0 40px rgba(0,224,150,.06)">
+      <p style="font-size:var(--ts);line-height:1.65;color:rgba(255,255,255,.85)">Blind and low-vision users <strong style="color:#fff">lack a single, reliable mobile system</strong> that provides real-time, contextual understanding of their surroundings. Existing solutions handle isolated functions, fail in cluttered environments, do not prioritise safety-critical information, and offer limited privacy control.</p>
+    </div>
+    <div class="lbl a3" style="margin-top:4px">The result — four daily failures</div>
+    <div class="g4 a4" style="flex:1">
+      <div class="card">
+        <div style="font-size:40px;margin-bottom:4px">🧩</div>
+        <div class="ctitle" style="font-size:var(--ts)">Fragmented tools</div>
+        <div class="cbody">Users juggle several single-purpose apps for one outing.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:40px;margin-bottom:4px">🧠</div>
+        <div class="ctitle" style="font-size:var(--ts)">Cognitive overload</div>
+        <div class="cbody">Verbose narration buries the one fact that matters.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:40px;margin-bottom:4px">⚠️</div>
+        <div class="ctitle" style="font-size:var(--ts)">No safety priority</div>
+        <div class="cbody">Obstacle and hazard alerts wait behind chatty descriptions.</div>
+      </div>
+      <div class="card">
+        <div style="font-size:40px;margin-bottom:4px">🔗</div>
+        <div class="ctitle" style="font-size:var(--ts)">Lost independence</div>
+        <div class="cbody">Higher daily risk and continued reliance on sighted help.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     05 · RESEARCH GAP
+─────────────────────────────────────── -->
+<section data-label="05 · Research Gap">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>05 · Research Gap</span></div>
+  <div class="sb">
+    <div class="a1 lbl">Four gaps current solutions leave open</div>
+    <h2 class="stitle a2">What the field has not solved — yet.</h2>
+    <div class="g22 a3" style="flex:1">
+      <div class="card">
+        <div class="cnum">01</div>
+        <div class="ctitle">Geo-Linguistic Disparity</div>
+        <div class="cbody">Western-trained models misread Arabic script and fail on Egyptian currency, local products and MENA environments.</div>
+      </div>
+      <div class="card">
+        <div class="cnum">02</div>
+        <div class="ctitle">Legacy CV Architectures</div>
+        <div class="cbody">Pre-2023 cloud models add 0.8–3 s latency and act as simple taggers with no semantic, safety-aware reasoning.</div>
+      </div>
+      <div class="card">
+        <div class="cnum">03</div>
+        <div class="ctitle">The Privacy–Utility Paradox</div>
+        <div class="cbody">Users are forced to choose between accurate cloud apps that expose private data and offline tools that barely function.</div>
+      </div>
+      <div class="card">
+        <div class="cnum">04</div>
+        <div class="ctitle">No Interactive Context</div>
+        <div class="cbody">Systems give one-way descriptions, with no follow-up questions and no filtering of safety-critical information.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     06 · COMPARISON · APPS
+─────────────────────────────────────── -->
+<section data-label="06 · Comparison — Apps">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>06 · Comparison · Existing Apps</span></div>
+  <div class="sb">
+    <div class="a1 lbl">How Wareeny differs from commercial assistants</div>
+    <h2 class="stitle a2">Market landscape</h2>
+    <div class="a3" style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px">
+      <table class="matrix">
+        <thead>
+          <tr><th>Application</th><th>Cross-platform</th><th>Arabic support</th><th>Processing</th><th>Key limitation</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="name">Microsoft Seeing AI</span><span class="app-sub">iOS only</span></td>
+            <td><span class="dot-pill dp-no">No</span></td>
+            <td><span class="dot-pill dp-part">Limited</span></td>
+            <td><span class="dot-pill dp-no">Cloud</span></td>
+            <td class="lim">Inaccurate in clutter; cognitive overload</td>
+          </tr>
+          <tr>
+            <td><span class="name">Google Lookout</span><span class="app-sub">Android only</span></td>
+            <td><span class="dot-pill dp-no">No</span></td>
+            <td><span class="dot-pill dp-part">Limited</span></td>
+            <td><span class="dot-pill dp-no">Cloud</span></td>
+            <td class="lim">Crashes; high battery drain; privacy concerns</td>
+          </tr>
+          <tr>
+            <td><span class="name">Envision AI</span><span class="app-sub">iOS &amp; Android</span></td>
+            <td><span class="dot-pill dp-yes">Yes</span></td>
+            <td><span class="dot-pill dp-no">Weak</span></td>
+            <td><span class="dot-pill dp-part">Hybrid</span></td>
+            <td class="lim">Poor localisation; outdated CV models</td>
+          </tr>
+          <tr>
+            <td><span class="name">E3rafli (Vodafone)</span><span class="app-sub">Android only</span></td>
+            <td><span class="dot-pill dp-no">No</span></td>
+            <td><span class="dot-pill dp-yes">Native</span></td>
+            <td><span class="dot-pill dp-yes">Local</span></td>
+            <td class="lim">Few features; inaccurate detection</td>
+          </tr>
+          <tr class="win">
+            <td><span class="name">Wareeny ✦</span><span class="app-sub">Android &amp; iOS</span></td>
+            <td><span class="dot-pill dp-yes">Yes</span></td>
+            <td><span class="dot-pill dp-yes">Native + TTS</span></td>
+            <td><span class="dot-pill dp-yes">Hybrid edge-cloud</span></td>
+            <td class="lim" style="color:var(--g2)">Localised · private · fully integrated</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="background:linear-gradient(90deg,rgba(0,224,150,.08),transparent);border-radius:var(--r);border-left:2px solid rgba(0,224,150,.4);padding:14px 24px">
+        <p class="sm" style="color:rgba(0,224,150,.8);font-style:italic">The only entry that is cross-platform, Arabic-native, hybrid edge-cloud and integrated in one tool.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     07 · COMPARISON · RESEARCH
+─────────────────────────────────────── -->
+<section data-label="07 · Comparison — Research">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>07 · Comparison · Research</span></div>
+  <div class="sb">
+    <div class="a1 lbl">What the literature establishes — and how Wareeny applies it</div>
+    <h2 class="stitle a2">Evidence base</h2>
+    <div class="a3" style="flex:1;display:flex;flex-direction:column;justify-content:center">
+      <div class="ev-grid">
+        <div class="ev-card as">
+          <div class="ev-src">Huh et al. · 2024</div>
+          <div class="ev-stat">+40%</div>
+          <div class="ev-topic">Interactive VQA</div>
+          <div class="ev-body">Higher task completion vs. static captioning for blind users.</div>
+          <div class="ev-apply">VQA + follow-up speech Q&amp;A</div>
+        </div>
+        <div class="ev-card as">
+          <div class="ev-src">Ayadi et al. · 2025</div>
+          <div class="ev-stat">89%</div>
+          <div class="ev-topic">Arabic OCR</div>
+          <div class="ev-body">Accuracy with specialised models, vs. 68% for generic OCR.</div>
+          <div class="ev-apply">Dedicated Arabic OCR pipeline</div>
+        </div>
+        <div class="ev-card as">
+          <div class="ev-src">Ghanem et al. · 2025</div>
+          <div class="ev-stat">94%</div>
+          <div class="ev-topic">Egyptian currency</div>
+          <div class="ev-body">Local accuracy vs. 72% for transfer-learned models.</div>
+          <div class="ev-apply">Custom EGP banknote detector</div>
+        </div>
+        <div class="ev-card as">
+          <div class="ev-src">Wang et al. · 2024</div>
+          <div class="ev-stat">15.2 <span style="font-size:28px">FPS</span></div>
+          <div class="ev-topic">YOLO obstacle detection</div>
+          <div class="ev-body">On-device throughput — fast enough for safe real-time alerts.</div>
+          <div class="ev-apply">YOLOv8n real-time CV tier</div>
+        </div>
+        <div class="ev-card as">
+          <div class="ev-src">Wojtowicz · 2025</div>
+          <div class="ev-stat">91.7%</div>
+          <div class="ev-topic">YOLOv8 indoor</div>
+          <div class="ev-body">Door precision at 12.8 FPS on mid-range phones.</div>
+          <div class="ev-apply">Indoor navigation mode</div>
+        </div>
+        <div class="ev-card as">
+          <div class="ev-src">Martin &amp; Moon · 2025</div>
+          <div class="ev-stat">94%</div>
+          <div class="ev-topic">Privacy captioning</div>
+          <div class="ev-body">Less sensitive data exposed, retaining 89% of capability.</div>
+          <div class="ev-apply">Edge-first privacy routing</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     08 · TECHNIQUES (before → after)
+─────────────────────────────────────── -->
+<section data-label="08 · Techniques">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>08 · Comparison · Techniques</span></div>
+  <div class="sb">
+    <div class="a1 lbl">Design choices versus the conventional approach</div>
+    <h2 class="stitle a2">What we chose — and why</h2>
+    <div style="display:flex;flex-direction:column;gap:15px;flex:1;justify-content:center">
+      <div class="ba a3"><div class="ba-old">Verbatim OCR dump</div><div class="ba-arrow">→</div><div class="ba-new">Context-aware VLM reading</div><div class="ba-sep"></div><div class="ba-desc">Reads relevant facts in a natural spoken style instead of every character on the page.</div></div>
+      <div class="ba a4"><div class="ba-old">Cloud-only inference</div><div class="ba-arrow">→</div><div class="ba-new">Hybrid edge-cloud routing</div><div class="ba-sep"></div><div class="ba-desc">Latency-critical safety runs locally; heavy reasoning offloads only when the user permits.</div></div>
+      <div class="ba a5"><div class="ba-old">Static image captioning</div><div class="ba-arrow">→</div><div class="ba-new">Interactive VQA + token streaming</div><div class="ba-sep"></div><div class="ba-desc">Speech starts mid-generation; the user can ask follow-up questions in real time.</div></div>
+      <div class="ba a6"><div class="ba-old">One general model</div><div class="ba-arrow">→</div><div class="ba-new">Specialised + general tiers</div><div class="ba-sep"></div><div class="ba-desc">A dedicated EGP banknote detector handles money; the VLM handles everything else.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     09 · REQUIREMENTS
+─────────────────────────────────────── -->
+<section data-label="09 · Functional Requirements">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>09 · Functional Requirements</span></div>
+  <div class="sb">
+    <div class="a1 lbl">Functional · 4 assistance domains</div>
+    <div class="g2 a2" style="gap:22px;align-content:start">
+
+      <!-- Indoor -->
+      <div class="req-row a2">
+        <div class="fx fx-radar"><div class="sweep"></div><div class="blip"></div></div>
+        <div class="card" style="gap:8px"><div class="ctitle" style="font-size:var(--ts)">Indoor</div><div class="cbody">Object &amp; in-hand detection · brand recognition · currency · privacy mode · saved items</div></div>
+      </div>
+
+      <!-- Outdoor -->
+      <div class="req-row a3">
+        <div class="fx fx-obstacle"><div class="lane"></div><i></i><i></i><i></i><div class="walk"></div></div>
+        <div class="card" style="gap:8px"><div class="ctitle" style="font-size:var(--ts)">Outdoor</div><div class="cbody">Obstacle detection · object finder · sign reader · traffic-light status</div></div>
+      </div>
+
+      <!-- OCR / Reading -->
+      <div class="req-row a4">
+        <div class="fx fx-ocr"><div class="doc"><span></span><span></span><span></span><span></span></div><div class="line"></div></div>
+        <div class="card" style="gap:8px"><div class="ctitle" style="font-size:var(--ts)">OCR / Reading</div><div class="cbody">Document reading · Visual Q&amp;A · danger-word alerts</div></div>
+      </div>
+
+      <!-- Audio & Safety + Emergency SOS -->
+      <div class="req-row a5">
+        <div class="fx fx-sos">
+          <span class="pulse"></span><span class="pulse p2"></span>
+          <div class="shield"><svg viewBox="0 0 24 26"><path d="M12 1 22 5v8c0 6-4.4 9.6-10 12C6.4 22.6 2 19 2 13V5z"/></svg><b>SOS</b></div>
+        </div>
+        <div class="card" style="gap:8px"><div class="ctitle" style="font-size:var(--ts)">Audio &amp; Safety</div><div class="cbody">Danger mode · <strong style="color:#ff8095">auto emergency call</strong> · live GPS share to a guardian · directional audio cues</div></div>
+      </div>
+
+    </div>
+
+    <!-- Guidance scene: AI assisting a blind traveller -->
+    <div class="scene a6" style="flex:1;margin-top:22px">
+      <div class="ground"></div>
+      <div class="tile" style="left:60px"></div>
+      <div class="tile" style="left:160px"></div>
+      <div class="tile" style="left:260px"></div>
+      <div class="tile" style="left:360px"></div>
+      <div class="tile" style="left:460px"></div>
+
+      <!-- spoken cues -->
+      <div class="cue c1">Person, 2 m ahead</div>
+      <div class="cue c2">Clear path — go straight</div>
+      <div class="cue c3">Door on your right</div>
+
+      <!-- traveller with cane -->
+      <div class="traveller">
+        <svg viewBox="0 0 70 128">
+          <circle class="head" cx="30" cy="16" r="9"/>
+          <path class="body" d="M30 25 L30 58"/>
+          <path class="body" d="M30 34 L14 46"/>
+          <path class="body" d="M30 34 L42 50"/>
+          <path class="body leg-b" d="M30 58 L18 90 L14 116"/>
+          <path class="body leg-f" d="M30 58 L40 90 L46 116"/>
+          <path class="cane" d="M42 50 L66 118"/>
+          <circle class="cane-tip" cx="66" cy="118" r="4"/>
+        </svg>
+      </div>
+
+      <!-- guidance waves + phone -->
+      <span class="guide-wave"></span><span class="guide-wave w2"></span><span class="guide-wave w3"></span>
+      <div class="guide-phone"><div class="cam"></div><div class="scan"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     10 · NON-FUNCTIONAL REQUIREMENTS
+─────────────────────────────────────── -->
+<section data-label="10 · Non-Functional">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>10 · Non-Functional Requirements</span></div>
+  <div class="sb">
+    <div class="a1 lbl">Non-functional · quality attributes</div>
+    <div style="flex:1;display:grid;grid-template-columns:1.55fr 1fr;gap:48px;align-items:center">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Performance</div><div class="cbody" style="font-size:24px">Real-time, minimal delay</div></div>
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Accessibility</div><div class="cbody" style="font-size:24px">Full voice &amp; gesture control</div></div>
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Privacy</div><div class="cbody" style="font-size:24px">Local processing by default</div></div>
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Reliability</div><div class="cbody" style="font-size:24px">Varied lighting conditions</div></div>
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Scalability</div><div class="cbody" style="font-size:24px">Room for stronger models</div></div>
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Security</div><div class="cbody" style="font-size:24px">Protects personal images</div></div>
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Usability</div><div class="cbody" style="font-size:24px">Consistent spatial audio cues</div></div>
+        <div class="card as" style="gap:6px"><div class="ctitle" style="font-size:var(--txs)">Power</div><div class="cbody" style="font-size:24px">Battery-aware operation</div></div>
+      </div>
+
+      <!-- Guardian Eye -->
+      <div class="a3" style="display:flex;flex-direction:column;align-items:center;gap:22px">
+        <div class="fx fx-eye" style="width:240px;height:240px;border-radius:24px;background:radial-gradient(circle at center,rgba(0,224,150,.07),transparent 70%);border:1px solid rgba(0,224,150,.16)">
+          <div class="tick"></div>
+          <svg viewBox="0 0 118 74">
+            <path class="lid" d="M6 37 Q59 4 112 37 Q59 70 6 37 Z"/>
+            <g class="ig">
+              <circle class="iris" cx="59" cy="37" r="19"/>
+              <circle class="pupil" cx="59" cy="37" r="8.5"/>
+              <circle class="spark" cx="55" cy="33" r="2.6"/>
+            </g>
+            <path class="blink" d="M6 37 Q59 4 112 37 Q59 70 6 37 Z"/>
+          </svg>
+        </div>
+        <div class="lbl" style="font-size:var(--txs);text-align:center">Built around the user it serves</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     11 · SYSTEM ARCHITECTURE
+─────────────────────────────────────── -->
+<section data-label="11 · Architecture">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>11 · System Architecture</span></div>
+  <div class="sb">
+    <div class="a1 lbl">A tiered, safety-first design</div>
+    <div style="flex:1;position:relative;min-height:0">
+
+      <!-- Flutter App bar -->
+      <div class="arch-node a2" style="left:0;right:0;top:0;height:80px;background:linear-gradient(90deg,rgba(0,224,150,.12),rgba(0,224,150,.06));border:1px solid rgba(0,224,150,.30);flex-direction:row;align-items:center;gap:22px">
+        <div class="an-label" style="color:var(--g);white-space:nowrap;font-size:var(--tl)">Flutter App (Dart)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span style="background:rgba(0,224,150,.14);border:1px solid rgba(0,224,150,.28);border-radius:8px;padding:5px 16px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--g)">Home</span>
+          <span style="background:rgba(0,224,150,.14);border:1px solid rgba(0,224,150,.28);border-radius:8px;padding:5px 16px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--g)">Navigation</span>
+          <span style="background:rgba(0,224,150,.14);border:1px solid rgba(0,224,150,.28);border-radius:8px;padding:5px 16px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--g)">Stuff Finder</span>
+          <span style="background:rgba(0,224,150,.14);border:1px solid rgba(0,224,150,.28);border-radius:8px;padding:5px 16px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--g)">Scan</span>
+          <span style="background:rgba(0,224,150,.14);border:1px solid rgba(0,224,150,.28);border-radius:8px;padding:5px 16px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--g)">Read</span>
+          <span style="background:rgba(0,224,150,.14);border:1px solid rgba(0,224,150,.28);border-radius:8px;padding:5px 16px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--g)">Settings</span>
+        </div>
+      </div>
+
+      <!-- Tier 1 -->
+      <div class="arch-node a3" style="left:0;width:530px;top:156px;height:180px;background:rgba(0,100,52,.28);border:1px solid rgba(0,224,150,.38);box-shadow:inset 0 1px 0 rgba(0,224,150,.15)">
+        <div class="an-label" style="color:var(--g)">Tier 1 · Real-time CV</div>
+        <div class="an-body">Deterministic · sub-70 ms · 15+ FPS<br>Obstacles · traffic · danger signs · finders</div>
+        <div class="an-tag">YOLOv8n / ML Kit · LOCAL</div>
+      </div>
+
+      <!-- Tier 2 -->
+      <div class="arch-node a3" style="left:595px;width:530px;top:156px;height:180px;background:rgba(0,65,38,.32);border:1px solid rgba(0,224,150,.22);box-shadow:inset 0 1px 0 rgba(0,224,150,.10)">
+        <div class="an-label" style="color:var(--g)">Tier 2 · On-device VLM</div>
+        <div class="an-body">Private · fully offline<br>VlmAssistant → ModelRouter</div>
+        <div class="an-tag">MediaPipe Gemma · PRIVATE</div>
+      </div>
+
+      <!-- Tier 3 -->
+      <div class="arch-node a3" style="left:1190px;width:530px;top:156px;height:180px;background:rgba(0,40,26,.36);border:1px solid rgba(0,224,150,.13);box-shadow:inset 0 1px 0 rgba(0,224,150,.06)">
+        <div class="an-label" style="color:rgba(0,224,150,.70)">Tier 3 · Cloud VLM</div>
+        <div class="an-body">User-permitted only<br>Token streaming via SSE</div>
+        <div class="an-tag" style="color:rgba(0,224,150,.55)">FastAPI + Ollama · FALLBACK</div>
+      </div>
+
+      <!-- Priority Queue -->
+      <div class="arch-node a4" style="left:310px;width:1100px;top:416px;height:78px;background:rgba(0,80,44,.24);border:1px solid rgba(0,224,150,.28);flex-direction:row;align-items:center;gap:14px">
+        <div class="an-label" style="color:var(--g);white-space:nowrap;font-size:var(--tl)">Priority Queue</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="background:rgba(0,224,150,.22);border-radius:6px;padding:4px 14px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--g)">danger</span>
+          <span style="color:var(--t3);font-size:22px">&gt;</span>
+          <span style="background:rgba(255,255,255,.08);border-radius:6px;padding:4px 14px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--t2)">obstacle</span>
+          <span style="color:var(--t3);font-size:22px">&gt;</span>
+          <span style="background:rgba(255,255,255,.08);border-radius:6px;padding:4px 14px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--t2)">nav cue</span>
+          <span style="color:var(--t3);font-size:22px">&gt;</span>
+          <span style="background:rgba(255,255,255,.08);border-radius:6px;padding:4px 14px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--t2)">VLM result</span>
+          <span style="color:var(--t3);font-size:22px">&gt;</span>
+          <span style="background:rgba(255,255,255,.08);border-radius:6px;padding:4px 14px;font-family:var(--fh);font-size:var(--tl);font-weight:700;color:var(--t2)">label</span>
+        </div>
+      </div>
+
+      <!-- TTS Output -->
+      <div class="arch-node a5" style="left:510px;width:700px;top:564px;height:70px;background:linear-gradient(90deg,rgba(0,224,150,.13),rgba(0,224,150,.06));border:1px solid rgba(0,224,150,.38);flex-direction:row;align-items:center;justify-content:center;gap:20px;box-shadow:0 0 30px rgba(0,224,150,.08)">
+        <div class="an-label" style="color:var(--g);font-size:var(--ts)">TTS (EN / AR) + Haptics + Spatial Audio</div>
+      </div>
+
+      <!-- Native bridges -->
+      <div class="a6" style="position:absolute;left:0;right:0;top:656px;text-align:center;font-family:var(--fh);font-size:var(--tl);font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--t3)">
+        Native bridges (Kotlin / Swift) &nbsp;·&nbsp; camera &nbsp;·&nbsp; audio &amp; haptics &nbsp;·&nbsp; battery / thermal &nbsp;·&nbsp; AI runtime
+      </div>
+
+      <!-- SVG connectors -->
+      <svg style="position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:2" viewBox="0 0 1720 700" width="1720" height="700">
+        <defs>
+          <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(0,224,150,.6)"/>
+          </marker>
+        </defs>
+        <path d="M 265,80 L 265,156"   class="flow-line" marker-end="url(#ah)" style="animation-delay:.1s"/>
+        <path d="M 860,80 L 860,156"   class="flow-line" marker-end="url(#ah)" style="animation-delay:.2s"/>
+        <path d="M 1455,80 L 1455,156" class="flow-line" marker-end="url(#ah)" style="animation-delay:.3s"/>
+        <path d="M 265,336 Q 265,376 310,416"    class="flow-line" marker-end="url(#ah)" style="animation-delay:.55s"/>
+        <path d="M 860,336 L 860,416"            class="flow-line" marker-end="url(#ah)" style="animation-delay:.65s"/>
+        <path d="M 1455,336 Q 1455,376 1410,416" class="flow-line" marker-end="url(#ah)" style="animation-delay:.75s"/>
+        <path d="M 860,494 L 860,564" class="flow-line" marker-end="url(#ah)" style="animation-delay:.95s"/>
+        <path d="M 860,634 L 860,656" class="flow-line" style="animation-delay:1.1s;opacity:.35"/>
+      </svg>
+
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     12 · TOOLS & TECHNOLOGIES
+─────────────────────────────────────── -->
+<section data-label="12 · Tools & Technologies">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>12 · Tools &amp; Technologies</span></div>
+  <div class="sb">
+    <div class="a1 lbl">The implementation stack</div>
+    <h2 class="stitle a2">Built with purpose-fit tools</h2>
+    <div style="flex:1;display:flex;flex-direction:column;gap:22px">
+      <div class="stack-grid a3" style="flex:1">
+
+        <!-- Frontend -->
+        <div class="stack-card">
+          <div class="stack-head">
+            <div class="stack-ic"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="18.5" x2="14" y2="18.5"/></svg></div>
+            <div><div class="stack-kicker">Layer 01</div><div class="stack-title">Frontend</div></div>
+          </div>
+          <div class="stack-lead"><strong>Flutter / Dart (SDK 3.12)</strong> — one bilingual codebase shipping to Android &amp; iOS.</div>
+          <div class="chips">
+            <span class="tchip key">camera</span><span class="tchip key">flutter_tts</span><span class="tchip key">ultralytics_yolo</span>
+            <span class="tchip">sensors_plus</span><span class="tchip">geolocator</span><span class="tchip">permission_handler</span>
+          </div>
+          <div class="stack-foot">Kotlin / Swift native bridges</div>
+        </div>
+
+        <!-- AI Models -->
+        <div class="stack-card">
+          <div class="stack-head">
+            <div class="stack-ic"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><line x1="12" y1="3" x2="12" y2="7"/><circle cx="12" cy="3" r="1.4" fill="#00FFB3" stroke="none"/><circle cx="9" cy="13" r="1.3" fill="#00FFB3" stroke="none"/><circle cx="15" cy="13" r="1.3" fill="#00FFB3" stroke="none"/></svg></div>
+            <div><div class="stack-kicker">Layer 02</div><div class="stack-title">AI Models</div></div>
+          </div>
+          <div class="stack-rows">
+            <div class="r"><b>On-device VLM</b><span>Gemma via MediaPipe — fully offline</span></div>
+            <div class="r"><b>Cloud VLM</b><span>self-hosted Gemma via Ollama</span></div>
+            <div class="r"><b>Local CV</b><span>YOLOv8n / LiteRT · ML Kit fallback</span></div>
+            <div class="r"><b>Custom EGP</b><span>on-device banknote detector · 94%</span></div>
+          </div>
+          <div class="stack-foot">Three-tier routing, privacy-first</div>
+        </div>
+
+        <!-- Backend -->
+        <div class="stack-card">
+          <div class="stack-head">
+            <div class="stack-ic"><svg viewBox="0 0 24 24"><path d="M6 16a4 4 0 0 1 .5-7.97A5.5 5.5 0 0 1 17.5 8.5 3.5 3.5 0 0 1 18 16z"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg></div>
+            <div><div class="stack-kicker">Layer 03</div><div class="stack-title">Backend</div></div>
+          </div>
+          <div class="stack-lead"><strong>FastAPI (Python)</strong> — a thin VLM relay, only when the user opts in.</div>
+          <div class="chips">
+            <span class="tchip key">POST /vlm/generate</span><span class="tchip">SSE streaming</span>
+            <span class="tchip">uvicorn</span><span class="tchip">Ollama</span>
+          </div>
+          <div class="stack-foot">Self-hosted · token-by-token speech</div>
+        </div>
+
+      </div>
+
+      <!-- Device & Persistence band -->
+      <div class="a4" style="display:flex;align-items:center;gap:22px;padding:18px 26px;border-radius:16px;background:linear-gradient(90deg,rgba(0,224,150,.08),rgba(0,224,150,.02));border:1px solid rgba(0,224,150,.18)">
+        <div class="stack-ic" style="width:46px;height:46px"><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><rect x="8" y="3" width="6" height="5"/><rect x="8" y="13" width="8" height="5"/></svg></div>
+        <div class="stack-title" style="font-size:24px;white-space:nowrap">Device &amp; Persistence</div>
+        <div class="chips" style="flex:1">
+          <span class="tchip">TTS</span><span class="tchip">camera</span><span class="tchip">GPS</span><span class="tchip">accelerometer</span><span class="tchip">haptics</span>
+          <span class="tchip key">phone dialer</span><span class="tchip key">SMS</span><span class="tchip key">WhatsApp SOS link</span>
+          <span class="tchip">SharedPreferences</span><span class="tchip">battery / thermal</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     13 · RESULTS — Animated bar charts
+─────────────────────────────────────── -->
+<section data-label="13 · Results">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>13 · Results</span></div>
+  <div class="sb">
+    <div class="a1 lbl">Capability &amp; speed vs. leading assistants</div>
+    <h2 class="stitle a2">Where Wareeny stands</h2>
+    <div class="g2 a3" style="flex:1;gap:48px;align-items:stretch">
+
+      <!-- Left: bar charts -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="lbl" style="font-size:var(--txs)">Detection speed (higher = faster)</div>
+        <div class="bar-row">
+          <div class="bar-label">Wareeny</div>
+          <div class="bar-track"><div class="bar-fill gg" data-w="100%" data-bar>sub-70ms</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">E3rafli</div>
+          <div class="bar-track"><div class="bar-fill bg" data-w="20%" data-bar></div><div class="bar-end">~350ms</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Seeing AI</div>
+          <div class="bar-track"><div class="bar-fill bg" data-w="5%" data-bar></div><div class="bar-end">~1.5 s</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Lookout</div>
+          <div class="bar-track"><div class="bar-fill bg" data-w="3.5%" data-bar></div><div class="bar-end">~2 s</div></div>
+        </div>
+
+        <div class="lbl" style="font-size:var(--txs);margin-top:10px">Feature breadth (out of 8 key capabilities)</div>
+        <div class="bar-row">
+          <div class="bar-label">Wareeny</div>
+          <div class="bar-track"><div class="bar-fill gg" data-w="100%" data-bar>8 / 8</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Seeing AI</div>
+          <div class="bar-track"><div class="bar-fill bg" data-w="50%" data-bar></div><div class="bar-end">4 / 8</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Lookout</div>
+          <div class="bar-track"><div class="bar-fill bg" data-w="37.5%" data-bar></div><div class="bar-end">3 / 8</div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">E3rafli</div>
+          <div class="bar-track"><div class="bar-fill bg" data-w="25%" data-bar></div><div class="bar-end">2 / 8</div></div>
+        </div>
+      </div>
+
+      <!-- Right: stat cards -->
+      <div style="display:flex;flex-direction:column;gap:16px;justify-content:center">
+        <div class="card" style="gap:8px;border-color:rgba(0,224,150,.28);box-shadow:0 0 40px rgba(0,224,150,.07)">
+          <div class="cnum" style="font-size:72px" id="r1">94%</div>
+          <div class="ctitle" style="font-size:var(--ts)">EGP Currency Accuracy</div>
+          <div class="cbody">Custom on-device banknote detector — fully offline, outperforms transfer-learned models (72%).</div>
+        </div>
+        <div class="card" style="gap:8px">
+          <div class="cnum" style="font-size:72px">sub-70ms</div>
+          <div class="ctitle" style="font-size:var(--ts)">Real-time CV Latency</div>
+          <div class="cbody">YOLOv8n on-device: 15+ FPS obstacle detection — safe for continuous assistive alerts.</div>
+        </div>
+        <div class="card" style="gap:8px">
+          <div class="cnum" style="font-size:72px" id="r2">706</div>
+          <div class="ctitle" style="font-size:var(--ts)">Automated Unit Tests</div>
+          <div class="cbody">Covering the deterministic core. Formal benchmarks and user studies are future work.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     14 · CONCLUSION & FUTURE WORK
+─────────────────────────────────────── -->
+<section data-label="14 · Conclusion">
+  <div class="rh"><svg class="logo-svg" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/><circle cx="45" cy="45" r="16" fill="white"/><circle cx="45" cy="45" r="9" fill="#00E096"/><circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/></svg><span class="g">Wareeny</span><span class="sep">·</span><span>14 · Conclusion &amp; Future Work</span></div>
+  <div class="sb">
+    <div class="a1 lbl">A credible foundation, with a clear road ahead</div>
+    <div class="g2 a2" style="flex:1;gap:40px">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="lbl" style="font-size:var(--txs)">What we delivered</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:2px">✦</span><span class="cbody" style="color:rgba(255,255,255,.85)">Accessibility-first shell — gestures, semantics, spoken cues throughout</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:2px">✦</span><span class="cbody" style="color:rgba(255,255,255,.85)">Hybrid tiered understanding via a single VlmAssistant + router</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:2px">✦</span><span class="cbody" style="color:rgba(255,255,255,.85)">Accurate, fully-offline Egyptian-pound banknote reading (94%)</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:2px">✦</span><span class="cbody" style="color:rgba(255,255,255,.85)">Real-time YOLO detection — sub-70 ms assistive feedback loop</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:2px">✦</span><span class="cbody" style="color:rgba(255,255,255,.85)">Background Emergency SOS: shake → countdown → call + GPS SMS</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--g);font-size:24px;flex-shrink:0;margin-top:2px">✦</span><span class="cbody" style="color:rgba(255,255,255,.85)">Bilingual EN/AR, persisted personalisation, 706 automated core tests</span></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="lbl" style="font-size:var(--txs)">Future work</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--t3);font-size:24px;flex-shrink:0;margin-top:2px">◇</span><span class="cbody">Surface scene-description &amp; ask-image as full accessible flows</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--t3);font-size:24px;flex-shrink:0;margin-top:2px">◇</span><span class="cbody">Production on-device VLM runtime for private, offline scanning</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--t3);font-size:24px;flex-shrink:0;margin-top:2px">◇</span><span class="cbody">Voice Q&amp;A via speech-to-text — one-shot spoken questions</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--t3);font-size:24px;flex-shrink:0;margin-top:2px">◇</span><span class="cbody">SQLite persistence for saved items, logs &amp; model registry</span></div>
+          <div class="card" style="flex-direction:row;align-items:flex-start;gap:14px;padding:16px 22px"><span style="color:var(--t3);font-size:24px;flex-shrink:0;margin-top:2px">◇</span><span class="cbody">Formal benchmarks &amp; user studies with blind participants</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────────────────
+     15 · THANK YOU
+─────────────────────────────────────── -->
+<section data-label="15 · Thank You" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;text-align:center">
+
+  <!-- Background Arabic watermark -->
+  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:0;overflow:hidden;pointer-events:none">
+    <span style="font-family:var(--fh);font-size:380px;font-weight:900;color:var(--g);opacity:.018;letter-spacing:-12px;white-space:nowrap;user-select:none">وارَيني</span>
+  </div>
+
+  <!-- Floating dots decoration -->
+  <div style="position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden" id="dotsBg"></div>
+
+  <!-- Logo + rings -->
+  <div style="position:relative;width:140px;height:140px;display:flex;align-items:center;justify-content:center;z-index:1">
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <svg class="logo-svg-lg af" width="106" height="106" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:relative;z-index:2">
+      <path d="M45 18C24 18 8 45 8 45C8 45 24 72 45 72C66 72 82 45 82 45C82 45 66 18 45 18Z" fill="#00E096"/>
+      <circle cx="45" cy="45" r="16" fill="white"/>
+      <circle cx="45" cy="45" r="9" fill="#00E096"/>
+      <circle cx="39" cy="39" r="4" fill="white" opacity="0.8"/>
+    </svg>
+  </div>
+
+  <!-- Heading -->
+  <div class="af" style="display:flex;flex-direction:column;gap:10px;position:relative;z-index:1">
+    <h1 style="font-family:var(--fh);font-size:96px;font-weight:900;color:#fff;letter-spacing:-3px;line-height:.95;text-shadow:0 0 80px rgba(0,224,150,.15)">Thank You</h1>
+    <p style="font-family:var(--fh);font-size:44px;font-weight:600;color:var(--g);text-shadow:0 0 40px rgba(0,224,150,.5)">Questions &amp; Discussion</p>
+  </div>
+
+  <!-- Decorative divider -->
+  <div class="af" style="display:flex;align-items:center;gap:20px;position:relative;z-index:1;width:500px">
+    <div style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(0,224,150,.35))"></div>
+    <div style="width:6px;height:6px;background:var(--g);border-radius:50%;box-shadow:0 0 12px rgba(0,224,150,.8)"></div>
+    <div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(0,224,150,.35),transparent)"></div>
+  </div>
+
+  <!-- Footer -->
+  <p class="af" style="font-family:var(--fh);font-size:var(--txs);letter-spacing:.08em;text-transform:uppercase;color:var(--t3);position:relative;z-index:1">
+    Wareeny &nbsp;·&nbsp; وارَيني &nbsp;·&nbsp; Future University in Egypt &nbsp;·&nbsp; 2025–2026
+  </p>
+
+</section>
+
+</deck-stage>
+<script src="deck-stage.js"></script>
+<script>
+/* ── Soundwave injector ── */
+(function(){
+  const hs = [12,20,34,24,42,38,22,16,30,46,40,26,18,32,44,48,34,20,24,34,42,46,28,22,14,36,28,22,38,50,42,28,16,26,40,36,20,30,44,22];
+  document.querySelectorAll('deck-stage section').forEach(s => {
+    const w = document.createElement('div');
+    w.className = 'wave-dec';
+    w.setAttribute('aria-hidden','true');
+    hs.forEach((h,i) => {
+      const sp = document.createElement('span');
+      sp.style.cssText = `height:${h}px;animation-delay:${(i*0.055).toFixed(2)}s;animation-duration:${(0.85+(i%7)*0.12).toFixed(2)}s`;
+      w.appendChild(sp);
+    });
+    s.appendChild(w);
+  });
+})();
+
+/* ── Thank-you floating dots ── */
+(function(){
+  const c = document.getElementById('dotsBg');
+  if(!c) return;
+  for(let i=0;i<38;i++){
+    const d = document.createElement('div');
+    const sz = 2 + Math.random()*4;
+    const x = Math.random()*100, y = Math.random()*100;
+    const dur = 4 + Math.random()*6, delay = Math.random()*4;
+    d.style.cssText = `
+      position:absolute;left:${x}%;top:${y}%;
+      width:${sz}px;height:${sz}px;
+      background:var(--g);border-radius:50%;
+      opacity:${0.04 + Math.random()*0.08};
+      box-shadow:0 0 ${sz*4}px rgba(0,224,150,.4);
+      animation:dotFloat ${dur}s ease-in-out ${delay}s infinite alternate;
+    `;
+    c.appendChild(d);
+  }
+  const st = document.createElement('style');
+  st.textContent = '@keyframes dotFloat{from{transform:translateY(0)}to{transform:translateY(-18px)}}';
+  document.head.appendChild(st);
+})();
+
+/* ── Animated bar chart ── */
+(function(){
+  const bars = document.querySelectorAll('[data-bar]');
+  bars.forEach(b => {
+    const target = b.dataset.w;
+    b.style.width = '0';
+    const sec = b.closest('section');
+    const fill = () => { setTimeout(()=>{ b.style.transition='width 1.2s cubic-bezier(.16,1,.3,1)'; b.style.width=target; }, 300); };
+    const reset = () => { b.style.transition='none'; b.style.width='0'; };
+    const mo = new MutationObserver(() => {
+      if(sec.hasAttribute('data-deck-active')) fill(); else reset();
+    });
+    mo.observe(sec, {attributes:true, attributeFilter:['data-deck-active']});
+    // run if this slide is already the active one once the deck has initialised
+    setTimeout(()=>{ if(sec.hasAttribute('data-deck-active')) fill(); }, 400);
+  });
+})();
+
+/* ── Number counter animation ── */
+(function(){
+  function animCount(el, end, dec, suf){
+    const dur = 1500;
+    const t0 = performance.now();
+    function tick(now){
+      const p = Math.min((now-t0)/dur, 1);
+      const e = 1-Math.pow(1-p, 3);
+      el.textContent = (end*e).toFixed(dec) + suf;
+      if(p<1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  const counters = [
+    {id:'r1', end:94, dec:0, suf:'%'},
+    {id:'r2', end:706, dec:0, suf:''},
+  ];
+  counters.forEach(({id,end,dec,suf}) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const sec = el.closest('section');
+    const mo = new MutationObserver(() => {
+      if(sec.hasAttribute('data-deck-active')) animCount(el,end,dec,suf);
+    });
+    mo.observe(sec,{attributes:true,attributeFilter:['data-deck-active']});
+    // run if this slide is already the active one once the deck has initialised
+    setTimeout(()=>{ if(sec.hasAttribute('data-deck-active')) animCount(el,end,dec,suf); }, 400);
+  });
+})();
+</script>
+</body>
+</html>
+

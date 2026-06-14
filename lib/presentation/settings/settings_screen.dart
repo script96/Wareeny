@@ -423,26 +423,30 @@ class _HapticsToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      toggled: settings.hapticsEnabled,
-      label: l10n.settingsHaptics,
-      hint: l10n.settingsHapticsHint,
-      child: Row(
-        children: [
-          _SectionLabel(
-            icon: Icons.vibration_outlined,
-            label: l10n.settingsHaptics,
-          ),
-          const Spacer(),
-          Switch(
-            value: settings.hapticsEnabled,
-            onChanged: (val) => settings.setHapticsEnabled(val),
-            activeThumbColor: AppColors.electricGreen,
-            activeTrackColor: AppColors.electricGreenDim,
-            inactiveThumbColor: Colors.white38,
-            inactiveTrackColor: AppColors.glassBorder,
-          ),
-        ],
+    // Single control: merge the label and switch into one operable toggle node
+    // so TalkBack/VoiceOver read "Haptic Feedback, on/off" as one item.
+    return MergeSemantics(
+      child: Semantics(
+        toggled: settings.hapticsEnabled,
+        label: l10n.settingsHaptics,
+        hint: l10n.settingsHapticsHint,
+        child: Row(
+          children: [
+            _SectionLabel(
+              icon: Icons.vibration_outlined,
+              label: l10n.settingsHaptics,
+            ),
+            const Spacer(),
+            Switch(
+              value: settings.hapticsEnabled,
+              onChanged: (val) => settings.setHapticsEnabled(val),
+              activeThumbColor: AppColors.electricGreen,
+              activeTrackColor: AppColors.electricGreenDim,
+              inactiveThumbColor: Colors.white38,
+              inactiveTrackColor: AppColors.glassBorder,
+            ),
+          ],
+        ),
       ),
     );
   }

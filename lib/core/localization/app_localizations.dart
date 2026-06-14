@@ -101,6 +101,89 @@ class AppLocalizations {
 
   String get settingsExitHint =>
       isArabic ? 'مرّر بإصبعين للخروج من الإعدادات' : 'Swipe with two fingers to exit settings';
+
+  // ── Camera side actions ─────────────────────────────────────────────────────
+
+  String get flash => isArabic ? 'الإضاءة' : 'Flash';
+  String get capture => isArabic ? 'التقاط' : 'Capture';
+  String get info => isArabic ? 'معلومات' : 'Info';
+
+  // ── Stuff Finder ────────────────────────────────────────────────────────────
+
+  String get sfTitle => isArabic ? 'البحث عن الأشياء' : 'Stuff Finder';
+
+  String get sfChooseToStart => isArabic
+      ? 'اختر شيئاً لبدء الكاميرا والكاشف.'
+      : 'Choose an object to start the camera and detector.';
+
+  String get sfModelUnavailableTitle =>
+      isArabic ? 'نموذج البحث غير متاح' : 'Stuff Finder model unavailable';
+
+  String sfModelUnavailableMsg(Object error) => isArabic
+      ? 'اختر شيئاً آخر أو حاول مرة أخرى. $error'
+      : 'Choose another object or try again. $error';
+
+  String get sfDetectorUnavailableTitle =>
+      isArabic ? 'الكاشف غير متاح' : 'Detector unavailable';
+
+  String get sfDetectorUnavailableMsg => isArabic
+      ? 'يتطلب البحث عن الأشياء كاشف YOLO المتدفق.'
+      : 'Stuff Finder requires the YOLO streaming detector.';
+
+  String get sfChooseObject => isArabic ? 'اختر شيئاً' : 'Choose object';
+
+  String get sfChooseObjectToFind =>
+      isArabic ? 'اختر الشيء للبحث عنه' : 'Choose object to find';
+
+  String sfChangeTargetFrom(String target) =>
+      isArabic ? 'تغيير الهدف من $target' : 'Change target from $target';
+
+  String sfFinding(String target) =>
+      isArabic ? 'يبحث عن $target' : 'Finding $target';
+
+  String get sfPickerTitle =>
+      isArabic ? 'ماذا تريد أن تجد؟' : 'What do you want to find?';
+
+  String get sfMoreObjects =>
+      isArabic ? 'المزيد من الأشياء' : 'More objects';
+
+  // ── Sub-mode toggles (single double-tap control) ────────────────────────────
+
+  String navTypeToggle(String current, String next) => isArabic
+      ? 'نوع التنقل: $current. انقر مرتين للتبديل إلى $next.'
+      : 'Navigation type: $current. Double tap to switch to $next.';
+
+  String get readModeScan => isArabic ? 'مسح' : 'Scan';
+  String get readModeRead => isArabic ? 'قراءة' : 'Read';
+
+  String readModeToggle(String current, String next) => isArabic
+      ? 'وضع القراءة: $current. انقر مرتين للتبديل إلى $next.'
+      : 'Reading mode: $current. Double tap to switch to $next.';
+
+  // ── Stuff Finder status (screen-reader live region) ─────────────────────────
+
+  String get sfStatusIdle =>
+      isArabic ? 'اختر شيئاً لبدء البحث' : 'Choose an object to start searching';
+
+  String sfStatusStarting(String detector) =>
+      isArabic ? 'جارٍ تشغيل $detector' : 'Starting $detector';
+
+  String sfStatusSearching(String target) =>
+      isArabic ? 'يبحث عن $target' : 'Searching for $target';
+
+  String sfStatusMatches(int count) => isArabic
+      ? '$count نتيجة'
+      : '$count ${count == 1 ? "match" : "matches"} found';
+
+  String get sfStatusPluginMissing => isArabic
+      ? 'مكوّن كاشف الأشياء غير مثبَّت'
+      : 'Object detector plugin is not installed';
+
+  String get sfStatusUnavailable =>
+      isArabic ? 'الكاشف غير متاح' : 'Detector unavailable';
+
+  String get sfStatusStreamError =>
+      isArabic ? 'خطأ في بثّ الكاشف' : 'Detector stream error';
 }
 
 // ── Delegate ──────────────────────────────────────────────────────────────────

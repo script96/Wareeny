@@ -170,16 +170,7 @@ class _NavigationScreenState extends State<NavigationScreen>
                     const SizedBox(height: AppSpacing.sm),
                     _NavSubModeToggle(
                       subMode: _navSubMode,
-                      onSelect: (mode) {
-                        setState(() => _navSubMode = mode);
-                        final l10n = AppLocalizations.of(context);
-                        SemanticsService.announce(
-                          widget.settings.isArabic
-                              ? '${mode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
-                              : l10n.activeMode(mode.labelFor(l10n)),
-                          widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
-                        );
-                      },
+                      onToggle: _cycleNavigationSubMode,
                     ),
                   ],
                 ),
@@ -243,32 +234,36 @@ class _NavigationScreenState extends State<NavigationScreen>
       );
     }
 
-    return YOLOView(
-      modelPath: source.modelPathForMode('navigation'),
-      task: YOLOTask.detect,
-      controller: _yoloController,
-      cameraResolution: '720p',
-      confidenceThreshold: 0.45,
-      iouThreshold: 0.45,
-      useGpu: true,
-      lensFacing: LensFacing.back,
-      streamingConfig: const YOLOStreamingConfig(
-        includeDetections: true,
-        includeClassifications: false,
-        includeProcessingTimeMs: true,
-        includeFps: true,
-        maxFPS: 15,
-        inferenceFrequency: 15,
+    // The platform view is a raw camera/detector surface with no readable
+    // content; hide it from TalkBack/VoiceOver so focus stays on the overlays.
+    return ExcludeSemantics(
+      child: YOLOView(
+        modelPath: source.modelPathForMode('navigation'),
+        task: YOLOTask.detect,
+        controller: _yoloController,
+        cameraResolution: '720p',
+        confidenceThreshold: 0.45,
+        iouThreshold: 0.45,
+        useGpu: true,
+        lensFacing: LensFacing.back,
+        streamingConfig: const YOLOStreamingConfig(
+          includeDetections: true,
+          includeClassifications: false,
+          includeProcessingTimeMs: true,
+          includeFps: true,
+          maxFPS: 15,
+          inferenceFrequency: 15,
+        ),
+        onStreamingData: source.processStreamingData,
+        onModelLoad: (_, _) {
+          if (mounted && _modelError != null) {
+            setState(() => _modelError = null);
+          }
+        },
+        onModelError: (error, _, _) {
+          if (mounted) setState(() => _modelError = error);
+        },
       ),
-      onStreamingData: source.processStreamingData,
-      onModelLoad: (_, _) {
-        if (mounted && _modelError != null) {
-          setState(() => _modelError = null);
-        }
-      },
-      onModelError: (error, _, _) {
-        if (mounted) setState(() => _modelError = error);
-      },
     );
   }
 
@@ -312,89 +307,93 @@ class _NavigationScreenState extends State<NavigationScreen>
 
 // ── Navigation sub-mode toggle ────────────────────────────────────────────────
 
+/// A single, easy-to-reach control that cycles the navigation type. Screen
+/// readers focus it as one button ("Navigation type: Indoor. Double tap to
+/// switch to Outdoor.") and a double-tap toggles between Indoor and Outdoor.
 class _NavSubModeToggle extends StatelessWidget {
-  const _NavSubModeToggle({required this.subMode, required this.onSelect});
+  const _NavSubModeToggle({required this.subMode, required this.onToggle});
 
   final NavigationSubMode subMode;
-  final void Function(NavigationSubMode) onSelect;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final nextMode = subMode == NavigationSubMode.indoor
+        ? NavigationSubMode.outdoor
+        : NavigationSubMode.indoor;
     return Semantics(
-      label: l10n.navTypeSelectorHint,
-      hint: l10n.subModeSwipeHint,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.xs + 2,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.glassWhite,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.glassBorder),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: NavigationSubMode.values.map((mode) {
-                final active = mode == subMode;
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.xs),
-                  child: Semantics(
-                    button: true,
-                    selected: active,
-                    label: mode.labelFor(l10n),
-                    child: GestureDetector(
-                      onTap: () => onSelect(mode),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm + 2,
-                          vertical: AppSpacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: active
-                              ? AppColors.electricGreenDim
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          border: active
-                              ? Border.all(
-                                  color: AppColors.electricGreen, width: 1)
-                              : null,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              mode.icon,
+      button: true,
+      label: l10n.navTypeToggle(
+        subMode.labelFor(l10n),
+        nextMode.labelFor(l10n),
+      ),
+      child: GestureDetector(
+        onTap: onToggle,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs + 2,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.glassWhite,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.glassBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: NavigationSubMode.values.map((mode) {
+                  final active = mode == subMode;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.xs),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm + 2,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? AppColors.electricGreenDim
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: active
+                            ? Border.all(
+                                color: AppColors.electricGreen, width: 1)
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            mode.icon,
+                            color: active
+                                ? AppColors.electricGreen
+                                : Colors.white54,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            mode.labelFor(l10n).toUpperCase(),
+                            style: TextStyle(
                               color: active
                                   ? AppColors.electricGreen
                                   : Colors.white54,
-                              size: 14,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              mode.labelFor(l10n).toUpperCase(),
-                              style: TextStyle(
-                                color: active
-                                    ? AppColors.electricGreen
-                                    : Colors.white54,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ),

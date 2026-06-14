@@ -1,5 +1,27 @@
 const customStuffFinderClasses = <String>['wallet', 'glasses', 'keys'];
 
+/// A short, screen-reader-friendly shortlist of the objects blind/low-vision
+/// users search for most often. Shown first in the picker so TalkBack/VoiceOver
+/// users reach common targets in a few swipes; the full [stuffFinderClasses]
+/// list stays reachable via the picker's "More objects" action.
+const commonStuffFinderClasses = <String>[
+  'wallet',
+  'glasses',
+  'keys',
+  'cell phone',
+  'remote',
+  'bottle',
+  'cup',
+  'backpack',
+  'handbag',
+  'book',
+  'laptop',
+  'chair',
+  'umbrella',
+  'scissors',
+  'toothbrush',
+];
+
 const popularCocoClasses = <String>[
   // Personal items and electronics.
   'bottle',
