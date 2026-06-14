@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:wareeny/shared/navigation/navigation_feedback.dart';
 import 'package:wareeny/shared/navigation/navigation_models.dart';
 import 'package:wareeny/shared/navigation/navigation_risk_engine.dart';
+import 'package:wareeny/shared/camera/light_condition_service.dart';
 import 'package:wareeny/shared/object_detection/detection_coordinate_mapper.dart';
 import 'package:wareeny/shared/object_detection/detection_models.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
@@ -58,8 +59,6 @@ class NavigationController extends ChangeNotifier {
   static const cautionSpeechCooldown = Duration(seconds: 7);
   static const dangerHapticCooldown = Duration(milliseconds: 450);
   static const cautionHapticCooldown = Duration(milliseconds: 900);
-  static const lowLightConfirmation = Duration(seconds: 1);
-  static const lowLightSpeechCooldown = Duration(seconds: 10);
   static const pathClearSpeechCooldown = Duration(seconds: 12);
 
   StreamSubscription<ObjectDetectionFrame>? _subscription;
@@ -67,8 +66,6 @@ class NavigationController extends ChangeNotifier {
   String? _pendingFingerprint;
   DateTime? _pendingSince;
   DateTime? _lastHapticAt;
-  DateTime? _lowLightSince;
-  DateTime? _lastLowLightSpeechAt;
   DateTime? _lastPathClearSpeechAt;
   DateTime? _lastFrameAt;
   ObjectDetectionFrame? _latestIndoorFrame;
@@ -78,6 +75,10 @@ class NavigationController extends ChangeNotifier {
   int framesWithDetections = 0;
   int totalDetections = 0;
   double? sceneLuminance;
+  double? darkPixelRatio;
+  LightCondition lightCondition = LightCondition.normal;
+  Duration darkDuration = Duration.zero;
+  bool flashRequested = false;
   bool torchEnabled = false;
   String activeDetectorSource = 'indoor';
   bool _started = false;
@@ -172,12 +173,7 @@ class NavigationController extends ChangeNotifier {
       );
     }
 
-    if (rawFrame.isLowLight && nextAssessment.selected == null) {
-      _handleLowLight();
-    } else {
-      _lowLightSince = null;
-      _handleCandidate(nextAssessment.selected);
-    }
+    _handleCandidate(nextAssessment.selected);
     notifyListeners();
   }
 
@@ -285,29 +281,6 @@ class NavigationController extends ChangeNotifier {
     );
   }
 
-  void _handleLowLight() {
-    final now = _clock();
-    _lowLightSince ??= now;
-    if (now.difference(_lowLightSince!) < lowLightConfirmation) {
-      cooldownStatus = 'Confirming low light';
-      return;
-    }
-    if (_lastLowLightSpeechAt != null &&
-        now.difference(_lastLowLightSpeechAt!) < lowLightSpeechCooldown) {
-      cooldownStatus = 'Low-light speech cooldown active';
-      return;
-    }
-    _lastLowLightSpeechAt = now;
-    latestMessage = 'الرؤية مش واضحة';
-    cooldownStatus = 'Spoke low-light warning';
-    _log('tts="$latestMessage"; reason=low light signal');
-    unawaited(
-      _feedback.speak(latestMessage).catchError((Object error) {
-        _log('low-light speech failed: $error');
-      }),
-    );
-  }
-
   String _messageFor(NavigationObjectRisk candidate) {
     if (_indoorMode && candidate.isIndoorSlipHazard) {
       return 'خلي بالك، في حذاء أو شبشب على الأرض وممكن يسبب انزلاق';
@@ -356,10 +329,33 @@ class NavigationController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void reportLighting({required double luminance, required bool torchOn}) {
-    sceneLuminance = luminance;
+  void reportLighting({
+    required LightConditionResult result,
+    required bool torchOn,
+  }) {
+    sceneLuminance = result.averageBrightness;
+    darkPixelRatio = result.darkPixelRatio;
+    lightCondition = result.condition;
+    darkDuration = result.darkDuration;
+    flashRequested = result.flashRequested;
     torchEnabled = torchOn;
     notifyListeners();
+  }
+
+  void announceLowLight({required bool flashEnabled}) {
+    latestMessage = flashEnabled
+        ? 'الإضاءة ضعيفة، هفتح الفلاش عشان الكشف يكون أوضح'
+        : 'الإضاءة ضعيفة، افتح الفلاش عشان أقدر أشوف الطريق';
+    cooldownStatus = flashEnabled
+        ? 'Auto-flash enabled'
+        : 'Torch unavailable; asked user to enable it';
+    _log('tts="$latestMessage"; flashEnabled=$flashEnabled');
+    notifyListeners();
+    unawaited(
+      _feedback.speak(latestMessage).catchError((Object error) {
+        _log('low-light speech failed: $error');
+      }),
+    );
   }
 
   void reportActiveDetectorSource(String source) {

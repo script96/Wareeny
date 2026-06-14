@@ -68,6 +68,11 @@ class NavigationDebugPanel extends StatelessWidget {
                     'Model FPS: ${frame!.framesPerSecond!.toStringAsFixed(1)}',
                   if (controller.sceneLuminance != null)
                     'Light: ${controller.sceneLuminance!.toStringAsFixed(0)} / 255',
+                  if (controller.darkPixelRatio != null)
+                    'Dark pixels: ${(controller.darkPixelRatio! * 100).toStringAsFixed(0)}%',
+                  'Light state: ${controller.lightCondition.name}',
+                  'Dark for: ${(controller.darkDuration.inMilliseconds / 1000).toStringAsFixed(1)} s',
+                  'Flash requested: ${controller.flashRequested ? "YES" : "NO"}',
                   'Torch: ${controller.torchEnabled ? "ON" : "OFF"}',
                   'Risk: ${controller.assessment.highestRisk.name}',
                   if (enabled) 'Feedback: ${controller.cooldownStatus}',

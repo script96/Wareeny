@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
-import 'package:image/image.dart' as img;
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
@@ -22,6 +21,7 @@ import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
+import 'package:wareeny/shared/camera/light_condition_service.dart';
 import 'package:wareeny/shared/navigation/navigation_feedback.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
@@ -73,10 +73,9 @@ class _NavigationScreenState extends State<NavigationScreen>
   bool _initialized = false;
   Timer? _modelCycleTimer;
   Timer? _lightCheckTimer;
+  final LightConditionService _lightService = LightConditionService();
   bool _modelSwitchInProgress = false;
   bool _lightCheckInProgress = false;
-  int _darkSamples = 0;
-  int _lightSamples = 0;
   String _activeModelSource = 'indoor';
   NavigationSubMode _navSubMode = NavigationSubMode.indoor;
 
@@ -315,6 +314,7 @@ class _NavigationScreenState extends State<NavigationScreen>
   Future<void> _pause() async {
     _modelCycleTimer?.cancel();
     _lightCheckTimer?.cancel();
+    _lightService.reset();
     await _setTorch(false);
     try {
       await _yoloController.pause();
@@ -393,7 +393,7 @@ class _NavigationScreenState extends State<NavigationScreen>
   void _startLightMonitoring() {
     _lightCheckTimer?.cancel();
     _lightCheckTimer = Timer.periodic(
-      const Duration(seconds: 2),
+      const Duration(milliseconds: 500),
       (_) => unawaited(_checkSceneLighting()),
     );
   }
@@ -404,28 +404,37 @@ class _NavigationScreenState extends State<NavigationScreen>
     try {
       final bytes = await _yoloController.captureFrame();
       if (bytes == null || bytes.isEmpty) return;
-      final luminance = await compute(_estimateLuminance, bytes);
-      if (luminance == null || !mounted) return;
+      final rawStats = await compute(analyzeEncodedLightFrame, {
+        'bytes': bytes,
+        'darkPixelThreshold': _lightService.config.darkPixelThreshold,
+        'sampleStride': _lightService.config.sampleStride,
+        'pathWeight': _navSubMode == NavigationSubMode.indoor
+            ? _lightService.config.pathWeight
+            : 1,
+      });
+      if (rawStats == null || !mounted) return;
+      final result = _lightService.addSample(
+        LightFrameStats(
+          averageBrightness: rawStats['averageBrightness']!.toDouble(),
+          darkPixelRatio: rawStats['darkPixelRatio']!.toDouble(),
+          sampleCount: rawStats['sampleCount']!.toInt(),
+        ),
+      );
 
-      if (luminance < 45) {
-        _darkSamples++;
-        _lightSamples = 0;
-      } else if (luminance > 190) {
-        _lightSamples++;
-        _darkSamples = 0;
-      } else {
-        _darkSamples = 0;
-        _lightSamples = 0;
+      var torchEnabled = _yoloController.isTorchEnabled;
+      if (result.flashRequested && !torchEnabled) {
+        torchEnabled = await _setTorch(true);
+        if (result.shouldSpeak) {
+          _navigation?.announceLowLight(flashEnabled: torchEnabled);
+        }
       }
-
-      if (_darkSamples >= 2 && !_yoloController.isTorchEnabled) {
-        await _setTorch(true);
-      } else if (_lightSamples >= 3 && _yoloController.isTorchEnabled) {
-        await _setTorch(false);
-      }
-      _navigation?.reportLighting(
-        luminance: luminance,
-        torchOn: _yoloController.isTorchEnabled,
+      _navigation?.reportLighting(result: result, torchOn: torchEnabled);
+      debugPrint(
+        '[LightCondition] average=${result.averageBrightness.toStringAsFixed(1)} '
+        'darkRatio=${result.darkPixelRatio.toStringAsFixed(2)} '
+        'state=${result.condition.name} '
+        'darkFor=${result.darkDuration.inMilliseconds}ms '
+        'flashRequested=${result.flashRequested} torchOn=$torchEnabled',
       );
     } on MissingPluginException {
       _lightCheckTimer?.cancel();
@@ -436,35 +445,17 @@ class _NavigationScreenState extends State<NavigationScreen>
     }
   }
 
-  Future<void> _setTorch(bool enabled) async {
+  Future<bool> _setTorch(bool enabled) async {
     try {
       await _yoloController.setTorchMode(enabled);
     } on MissingPluginException {
-      return;
+      return false;
+    } catch (error) {
+      debugPrint('[LightCondition] Torch change failed: $error');
+      return false;
     }
-    if (!enabled) {
-      _darkSamples = 0;
-      _lightSamples = 0;
-    }
+    return _yoloController.isTorchEnabled;
   }
-}
-
-double? _estimateLuminance(Uint8List bytes) {
-  final image = img.decodeImage(bytes);
-  if (image == null) return null;
-
-  var luminanceTotal = 0.0;
-  var samples = 0;
-  final xStride = (image.width / 32).ceil().clamp(1, image.width);
-  final yStride = (image.height / 32).ceil().clamp(1, image.height);
-  for (var y = 0; y < image.height; y += yStride) {
-    for (var x = 0; x < image.width; x += xStride) {
-      final pixel = image.getPixel(x, y);
-      luminanceTotal += 0.2126 * pixel.r + 0.7152 * pixel.g + 0.0722 * pixel.b;
-      samples++;
-    }
-  }
-  return samples == 0 ? null : luminanceTotal / samples;
 }
 
 // ── Navigation sub-mode toggle ────────────────────────────────────────────────
