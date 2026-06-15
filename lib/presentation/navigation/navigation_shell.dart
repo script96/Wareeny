@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
@@ -18,6 +20,7 @@ import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
 import 'package:wareeny/presentation/settings/settings_screen.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_screen.dart';
+import 'package:wareeny/presentation/voice/voice_interaction_controller.dart';
 
 class NavigationShell extends StatefulWidget {
   const NavigationShell({required this.settings, super.key});
@@ -31,13 +34,17 @@ class NavigationShell extends StatefulWidget {
 class _NavigationShellState extends State<NavigationShell> {
   var _selectedIndex = 0;
   late EmergencyController _emergencyController;
+  late VoiceInteractionController _voiceInteractionController;
 
   static const _modes = AppMode.values;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _emergencyController = AppScope.of(context).emergencyController;
+    final services = AppScope.of(context);
+    _emergencyController = services.emergencyController;
+    _voiceInteractionController = services.voiceInteractionController;
+    _voiceInteractionController.bindModeSelection(_selectModeFromVoice);
   }
 
   @override
@@ -78,6 +85,7 @@ class _NavigationShellState extends State<NavigationShell> {
   @override
   void dispose() {
     _emergencyController.disarm();
+    _voiceInteractionController.clearModeSelection();
     super.dispose();
   }
 
@@ -196,6 +204,18 @@ class _NavigationShellState extends State<NavigationShell> {
   }
 
   void _selectMode(int index) {
+    _selectModeInternal(index, promptForStuffFinder: true);
+  }
+
+  void _selectModeFromVoice(AppMode mode) {
+    _selectModeInternal(
+      AppMode.values.indexOf(mode),
+      promptForStuffFinder: false,
+    );
+  }
+
+  void _selectModeInternal(int index, {required bool promptForStuffFinder}) {
+    final changed = _selectedIndex != index;
     setState(() => _selectedIndex = index);
     final l10n = AppLocalizations.of(context);
     if (MediaQuery.supportsAnnounceOf(context)) {
@@ -204,6 +224,17 @@ class _NavigationShellState extends State<NavigationShell> {
         l10n.activeModeNamed(_currentMode.labelFor(l10n)),
         widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
       );
+    }
+    if (changed &&
+        promptForStuffFinder &&
+        _currentMode == AppMode.stuffFinder) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _currentMode == AppMode.stuffFinder) {
+          unawaited(
+            _voiceInteractionController.beginStuffFinderItemListening(),
+          );
+        }
+      });
     }
   }
 }

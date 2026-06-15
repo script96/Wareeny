@@ -26,12 +26,20 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Wareeny uses the camera to provide live mode-based visual assistance.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Wareeny shares your location with emergency contacts when you trigger SOS mode.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Wareeny shares your location with emergency contacts when you trigger SOS mode.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Wareeny shares your location with emergency contacts when you trigger SOS mode.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Wareeny listens only when you request a voice command or choose a Stuff Finder item.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Wareeny recognizes Arabic voice commands to switch assistance modes and select items.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

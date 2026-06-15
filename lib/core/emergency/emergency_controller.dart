@@ -24,8 +24,8 @@ const _countdownSpeechRate = 0.6;
 ///
 /// 1. Listens to [ShakeDetectorService.onShake].
 /// 2. Plays a 5-second audio countdown (via [AudioHapticsBridge]).
-/// 3. If not cancelled: auto-dials first contact (or 112), sends SMS silently,
-///    then opens WhatsApp with pre-filled message.
+/// 3. If not cancelled: shares an emergency message and calls the first contact
+///    (or 112). Location is included only when the user enabled it.
 ///
 /// Call [arm] to start listening, [disarm] to stop.
 /// [onCountdownStarted] → show overlay
@@ -156,27 +156,37 @@ class EmergencyController {
     );
 
     final contacts = settings.emergencyContacts;
-    final dialNumber =
-        contacts.isNotEmpty ? contacts.first.phone : _fallbackEmergencyNumber;
+    final dialNumber = contacts.isNotEmpty
+        ? contacts.first.phone
+        : _fallbackEmergencyNumber;
 
-    // Fetch GPS + auto-dial simultaneously for speed.
-    final locationFuture = locationService.getCurrentPosition();
-    await _autoCall(dialNumber);
+    final locationFuture = settings.shareLocationWithEmergencyContacts
+        ? locationService.getCurrentPosition()
+        : Future.value(null);
+
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      await _autoCall(dialNumber);
+    }
 
     final position = await locationFuture;
-    final mapsLink =
-        position != null ? locationService.toGoogleMapsLink(position) : null;
+    final mapsLink = position != null
+        ? locationService.toGoogleMapsLink(position)
+        : null;
 
-    // Send SMS silently (Android: SmsManager; iOS: falls back to sms: URI).
     for (final contact in contacts) {
       await _sendSmsAuto(contact, mapsLink);
     }
 
-    // Open WhatsApp for each contact with pre-filled message.
-    // (WhatsApp has no silent-send API — the app will open and the message
-    // is pre-filled; the user taps Send once inside WhatsApp.)
-    for (final contact in contacts) {
-      await _openWhatsApp(contact, mapsLink);
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      // The iOS composer waits for dismissal. Calling last prevents another
+      // external screen from replacing the Phone UI.
+      await _autoCall(dialNumber);
+    } else {
+      // WhatsApp cannot send silently. Keep it as an additional Android action;
+      // iOS uses the native message composer instead.
+      for (final contact in contacts) {
+        await _openWhatsApp(contact, mapsLink);
+      }
     }
   }
 
@@ -187,22 +197,31 @@ class EmergencyController {
   Future<void> _autoCall(String number) async {
     debugPrint('[EmergencyController] Auto-dialing $number');
     try {
-      // Request CALL_PHONE permission if not yet granted.
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final opened = await FlutterPhoneDirectCaller.callNumber(number);
+        if (opened != true) await _openDialer(number);
+        return;
+      }
+
       final status = await Permission.phone.request();
       if (status.isGranted) {
-        await FlutterPhoneDirectCaller.callNumber(number);
+        final called = await FlutterPhoneDirectCaller.callNumber(number);
+        if (called != true) await _openDialer(number);
       } else {
-        // Fallback: open dialer pre-filled (user taps call).
-        debugPrint('[EmergencyController] CALL_PHONE denied — fallback to tel:');
-        final uri = Uri(scheme: 'tel', path: number);
-        if (await canLaunchUrl(uri)) await launchUrl(uri);
+        debugPrint(
+          '[EmergencyController] CALL_PHONE denied — fallback to tel:',
+        );
+        await _openDialer(number);
       }
     } catch (e) {
       debugPrint('[EmergencyController] Call error: $e');
-      // Last-resort fallback.
-      final uri = Uri(scheme: 'tel', path: number);
-      if (await canLaunchUrl(uri)) await launchUrl(uri);
+      await _openDialer(number);
     }
+  }
+
+  Future<void> _openDialer(String number) async {
+    final uri = Uri(scheme: 'tel', path: number);
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   // ── SMS ───────────────────────────────────────────────────────────────────────
@@ -227,7 +246,9 @@ class EmergencyController {
       return;
     } on MissingPluginException {
       // iOS or channel not wired up — fall through to sms: URI.
-      debugPrint('[EmergencyController] Native SMS unavailable — using sms: URI');
+      debugPrint(
+        '[EmergencyController] Native SMS unavailable — using sms: URI',
+      );
     } catch (e) {
       debugPrint('[EmergencyController] Native SMS error: $e — using sms: URI');
     }

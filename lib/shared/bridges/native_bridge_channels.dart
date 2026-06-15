@@ -6,6 +6,7 @@ class NativeBridgeChannels {
   static const objectDetectionEvents =
       'com.wareeny.bridge/object_detection_events';
   static const audioHaptics = 'com.wareeny.bridge/audio_haptics';
+  static const volumeButtonTrigger = 'com.wareeny.bridge/volume_button_trigger';
   static const batteryThermal = 'com.wareeny.bridge/battery_thermal';
   static const fileDownload = 'com.wareeny.bridge/file_download';
   static const localAiRuntime = 'com.wareeny.bridge/local_ai_runtime';

@@ -1,34 +1,24 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
-/// Detects a device shake using the accelerometer stream.
+import 'package:wareeny/core/emergency/emergency_motion_detector.dart';
+
+/// Detects a hard shake or a fall-and-impact using raw accelerometer data.
 ///
-/// A "shake" is fired when the combined acceleration magnitude exceeds
-/// [_thresholdMs2] for [_requiredSamples] consecutive samples.
 /// After firing, a [cooldownDuration] lockout is enforced.
 class ShakeDetectorService {
-  ShakeDetectorService({
-    this.cooldownDuration = const Duration(seconds: 30),
-  });
+  ShakeDetectorService({this.cooldownDuration = const Duration(seconds: 30)});
 
   /// How long to block re-triggering after a shake event.
   final Duration cooldownDuration;
 
-  // ── Constants ───────────────────────────────────────────────────────────────
-  // 15 m/s² is roughly a firm wrist shake; typical resting device is ~9.8 m/s²
-  static const double _thresholdMs2 = 15.0;
-
-  // A single shake usually shows up across 2–3 consecutive samples.
-  static const int _requiredSamples = 2;
-
   // ── State ───────────────────────────────────────────────────────────────────
-  StreamSubscription<UserAccelerometerEvent>? _subscription;
+  StreamSubscription<AccelerometerEvent>? _subscription;
   final StreamController<void> _shakeController =
       StreamController<void>.broadcast();
-  int _consecutiveSamples = 0;
+  final EmergencyMotionDetector _motionDetector = EmergencyMotionDetector();
   DateTime? _lastShakeTime;
 
   /// Emits an event each time a qualifying shake is detected (after cooldown).
@@ -43,11 +33,15 @@ class ShakeDetectorService {
     if (_subscription != null) return;
     debugPrint('[ShakeDetector] Started.');
 
-    _subscription = userAccelerometerEventStream(
-      samplingPeriod: const Duration(milliseconds: 50),
-    ).listen(_onAccelerometerEvent, onError: (dynamic e) {
-      debugPrint('[ShakeDetector] Error: $e');
-    });
+    _subscription =
+        accelerometerEventStream(
+          samplingPeriod: const Duration(milliseconds: 10),
+        ).listen(
+          _onAccelerometerEvent,
+          onError: (dynamic e) {
+            debugPrint('[ShakeDetector] Error: $e');
+          },
+        );
   }
 
   /// Stop listening. Call this when the app is paused or the feature is no
@@ -55,7 +49,7 @@ class ShakeDetectorService {
   void stop() {
     _subscription?.cancel();
     _subscription = null;
-    _consecutiveSamples = 0;
+    _motionDetector.reset();
     debugPrint('[ShakeDetector] Stopped.');
   }
 
@@ -66,31 +60,27 @@ class ShakeDetectorService {
 
   // ── Internal ────────────────────────────────────────────────────────────────
 
-  void _onAccelerometerEvent(UserAccelerometerEvent event) {
-    final magnitude = sqrt(
-      event.x * event.x + event.y * event.y + event.z * event.z,
+  void _onAccelerometerEvent(AccelerometerEvent event) {
+    final motion = _motionDetector.addSample(
+      x: event.x,
+      y: event.y,
+      z: event.z,
+      timestamp: event.timestamp,
     );
-
-    if (magnitude >= _thresholdMs2) {
-      _consecutiveSamples++;
-      if (_consecutiveSamples >= _requiredSamples) {
-        _consecutiveSamples = 0;
-        _tryFire();
-      }
-    } else {
-      _consecutiveSamples = 0;
+    if (motion != null) {
+      _tryFire(motion);
     }
   }
 
-  void _tryFire() {
+  void _tryFire(EmergencyMotionType motion) {
     final now = DateTime.now();
     if (_lastShakeTime != null &&
         now.difference(_lastShakeTime!) < cooldownDuration) {
-      debugPrint('[ShakeDetector] Cooldown active — ignoring shake.');
+      debugPrint('[ShakeDetector] Cooldown active — ignoring $motion.');
       return;
     }
     _lastShakeTime = now;
-    debugPrint('[ShakeDetector] Shake detected! Emitting event.');
+    debugPrint('[ShakeDetector] Detected $motion. Emitting SOS event.');
     _shakeController.add(null);
   }
 

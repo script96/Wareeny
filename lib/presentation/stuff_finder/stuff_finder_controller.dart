@@ -22,7 +22,7 @@ class BridgeStuffFinderFeedback implements StuffFinderFeedback {
 
   @override
   Future<void> speak(String message) {
-    return _bridge.speak(message, languageCode: 'en-US');
+    return _bridge.speak(message, languageCode: 'ar-EG');
   }
 
   @override
@@ -70,7 +70,7 @@ class StuffFinderController extends ChangeNotifier {
 
   String? selectedTarget;
   UprightDetectionFrame? latestFrame;
-  String status = 'Choose an object to start searching';
+  String status = 'اختار حاجة علشان أبدأ أدور عليها';
 
   int get matchCount => latestFrame?.detections.length ?? 0;
 
@@ -79,6 +79,7 @@ class StuffFinderController extends ChangeNotifier {
     if (!stuffFinderClasses.contains(normalizedTarget)) {
       throw ArgumentError.value(target, 'target', 'Not a Stuff Finder class');
     }
+    final item = stuffFinderItemForLabel(normalizedTarget)!;
 
     final changed = selectedTarget != normalizedTarget;
     selectedTarget = normalizedTarget;
@@ -87,9 +88,9 @@ class StuffFinderController extends ChangeNotifier {
       _hadMatch = false;
       _lastMatchSpeechAt = null;
     }
-    status = 'Starting ${_detectionSource.displayName}';
+    status = 'بجهز البحث عن ${item.arabicLabel}';
     notifyListeners();
-    unawaited(_feedback.speak('Searching for $normalizedTarget'));
+    unawaited(_feedback.speak('تمام، هدور على ${item.arabicLabel}'));
     await start();
   }
 
@@ -103,13 +104,14 @@ class StuffFinderController extends ChangeNotifier {
 
     try {
       await _detectionSource.start(mode: 'stuff_finder');
-      status = 'Searching for $selectedTarget';
+      final item = stuffFinderItemForLabel(selectedTarget!);
+      status = 'بدور على ${item?.arabicLabel ?? selectedTarget}';
     } on MissingPluginException {
-      status = 'Object detector plugin is not installed';
+      status = 'كاشف الأشياء مش متاح على الجهاز';
     } on PlatformException catch (error) {
-      status = 'Detector unavailable: ${error.code}';
+      status = 'كاشف الأشياء مش متاح: ${error.code}';
     } catch (error) {
-      status = 'Detector unavailable: $error';
+      status = 'كاشف الأشياء مش متاح: $error';
     }
     notifyListeners();
   }
@@ -145,10 +147,14 @@ class StuffFinderController extends ChangeNotifier {
       imageSize: uprightFrame.imageSize,
       detections: matches,
     );
+    final item = stuffFinderItemForLabel(target);
+    final arabicLabel = item?.arabicLabel ?? target;
     status = matches.isEmpty
-        ? 'Searching for $target'
-        : '${matches.length} ${matches.length == 1 ? "match" : "matches"} found';
-    _handleMatchSpeech(target, matches.length);
+        ? 'بدور على $arabicLabel'
+        : matches.length == 1
+        ? 'لقيت $arabicLabel'
+        : 'لقيت $arabicLabel في ${matches.length} أماكن';
+    _handleMatchSpeech(arabicLabel, matches.length);
     notifyListeners();
   }
 
@@ -167,13 +173,13 @@ class StuffFinderController extends ChangeNotifier {
     _hadMatch = true;
     _lastMatchSpeechAt = now;
     final message = count == 1
-        ? 'Found $target'
-        : 'Found $count $target matches';
+        ? 'لقيت $target'
+        : 'لقيت $target في $count أماكن';
     unawaited(_feedback.speak(message));
   }
 
   void _onDetectorError(Object error, StackTrace stackTrace) {
-    status = 'Detector stream error: $error';
+    status = 'حصل خطأ في كاشف الأشياء: $error';
     notifyListeners();
   }
 

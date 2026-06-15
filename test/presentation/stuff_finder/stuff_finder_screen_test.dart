@@ -11,7 +11,7 @@ import 'package:wareeny/presentation/stuff_finder/stuff_finder_screen.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  testWidgets('opens common objects followed by the COCO target menu', (
+  testWidgets('opens the curated accessible Arabic object grid', (
     tester,
   ) async {
     final services = await ServiceRegistry.createAsync(AppConfig.dev());
@@ -34,29 +34,23 @@ void main() {
       ),
     );
 
-    expect(find.text('Choose object'), findsOneWidget);
+    expect(find.text('اختار حاجة'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('stuff-finder-target-button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('What do you want to find?'), findsOneWidget);
-    expect(find.text('Search 83 objects'), findsOneWidget);
-    expect(find.text('Wallet'), findsOneWidget);
-    expect(find.text('Glasses'), findsOneWidget);
-    expect(find.text('Keys'), findsOneWidget);
-    expect(find.text('Bottle'), findsOneWidget);
-    expect(find.text('Custom Stuff Finder model'), findsNWidgets(3));
-    expect(find.text('Everyday COCO object'), findsWidgets);
+    expect(find.text('عايز تدور على إيه؟'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('محفظة'), findsOneWidget);
+    expect(find.text('نظارة'), findsOneWidget);
+    expect(find.text('موبايل'), findsOneWidget);
+    expect(find.text('زجاجة'), findsOneWidget);
+    expect(find.byKey(const ValueKey('stuff-finder-wallet')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stuff-finder-person')), findsNothing);
 
-    await tester.enterText(find.byType(TextField), 'bottles');
+    await tester.drag(find.byType(GridView), const Offset(0, -500));
     await tester.pump();
-    expect(find.text('Bottle'), findsOneWidget);
-    expect(find.text('Wallet'), findsNothing);
-
-    await tester.enterText(find.byType(TextField), 'smartphone');
-    await tester.pump();
-    expect(find.text('Cell Phone'), findsOneWidget);
-    expect(find.text('Bottle'), findsNothing);
+    expect(find.text('ميكروويف'), findsOneWidget);
   });
 }
 

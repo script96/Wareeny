@@ -11,6 +11,7 @@ class SettingsController extends ChangeNotifier {
     required this._speechRate,
     required this._hapticsEnabled,
     required List<EmergencyContact> emergencyContacts,
+    required this._shareLocationWithEmergencyContacts,
     required this._hasSeenEmergencyOnboarding,
   }) : _emergencyContacts = List.of(emergencyContacts);
 
@@ -19,18 +20,21 @@ class SettingsController extends ChangeNotifier {
   static const _keySpeechRate = 'settings.speechRate';
   static const _keyHaptics = 'settings.hapticsEnabled';
   static const _keyContacts = 'settings.emergencyContacts';
+  static const _keyShareEmergencyLocation = 'settings.shareEmergencyLocation';
   static const _keyOnboardingSeen = 'settings.emergencyOnboardingSeen';
 
   // Defaults
   static const _defaultLocale = 'en';
   static const _defaultSpeechRate = 0.45;
   static const _defaultHaptics = true;
+  static const _defaultShareEmergencyLocation = true;
 
   // ── State ─────────────────────────────────────────────────────────────────
   Locale _locale;
   double _speechRate;
   bool _hapticsEnabled;
   List<EmergencyContact> _emergencyContacts;
+  bool _shareLocationWithEmergencyContacts;
   bool _hasSeenEmergencyOnboarding;
 
   Locale get locale => _locale;
@@ -38,6 +42,8 @@ class SettingsController extends ChangeNotifier {
   bool get hapticsEnabled => _hapticsEnabled;
   List<EmergencyContact> get emergencyContacts =>
       List.unmodifiable(_emergencyContacts);
+  bool get shareLocationWithEmergencyContacts =>
+      _shareLocationWithEmergencyContacts;
   bool get hasSeenEmergencyOnboarding => _hasSeenEmergencyOnboarding;
 
   bool get isArabic => _locale.languageCode == 'ar';
@@ -52,6 +58,9 @@ class SettingsController extends ChangeNotifier {
     final contacts = contactsJson != null
         ? EmergencyContact.decodeList(contactsJson)
         : <EmergencyContact>[];
+    final shareEmergencyLocation =
+        prefs.getBool(_keyShareEmergencyLocation) ??
+        _defaultShareEmergencyLocation;
     final onboardingSeen = prefs.getBool(_keyOnboardingSeen) ?? false;
 
     return SettingsController._(
@@ -59,6 +68,7 @@ class SettingsController extends ChangeNotifier {
       speechRate: speechRate,
       hapticsEnabled: hapticsEnabled,
       emergencyContacts: contacts,
+      shareLocationWithEmergencyContacts: shareEmergencyLocation,
       hasSeenEmergencyOnboarding: onboardingSeen,
     );
   }
@@ -94,7 +104,17 @@ class SettingsController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        _keyContacts, EmergencyContact.encodeList(_emergencyContacts));
+      _keyContacts,
+      EmergencyContact.encodeList(_emergencyContacts),
+    );
+  }
+
+  Future<void> setShareLocationWithEmergencyContacts(bool enabled) async {
+    if (_shareLocationWithEmergencyContacts == enabled) return;
+    _shareLocationWithEmergencyContacts = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyShareEmergencyLocation, enabled);
   }
 
   Future<void> markEmergencyOnboardingSeen() async {

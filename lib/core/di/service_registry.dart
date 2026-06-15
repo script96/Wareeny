@@ -3,6 +3,8 @@ import 'package:wareeny/core/emergency/emergency_controller.dart';
 import 'package:wareeny/core/emergency/location_service.dart';
 import 'package:wareeny/core/emergency/shake_detector_service.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
+import 'package:wareeny/presentation/voice/voice_command_service.dart';
+import 'package:wareeny/presentation/voice/voice_interaction_controller.dart';
 import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
 import 'package:wareeny/shared/bridges/battery_thermal_bridge.dart';
 import 'package:wareeny/shared/bridges/camera_bridge.dart';
@@ -28,6 +30,7 @@ class ServiceRegistry {
     required this.shakeDetectorService,
     required this.locationService,
     required this.emergencyController,
+    required this.voiceInteractionController,
   });
 
   final AppConfig config;
@@ -42,6 +45,7 @@ class ServiceRegistry {
   final ShakeDetectorService shakeDetectorService;
   final LocationService locationService;
   final EmergencyController emergencyController;
+  final VoiceInteractionController voiceInteractionController;
 
   /// Use [ServiceRegistry.createAsync] during bootstrap instead of this factory,
   /// because [SettingsController] must be loaded from SharedPreferences first.
@@ -56,6 +60,13 @@ class ServiceRegistry {
       locationService: locationService,
       audioHaptics: audioHapticsBridge,
     );
+    final voiceInteractionController = VoiceInteractionController(
+      SpeechToTextVoiceCommandService(),
+      BridgeVoiceInteractionFeedback(
+        audioHapticsBridge,
+        () => settings.speechRate,
+      ),
+    )..startHardwareTrigger();
 
     const localAiRuntimeBridge = LocalAiRuntimeBridge();
     final local = LocalVlmProvider(
@@ -80,6 +91,7 @@ class ServiceRegistry {
       shakeDetectorService: shakeDetector,
       locationService: locationService,
       emergencyController: emergencyController,
+      voiceInteractionController: voiceInteractionController,
     );
   }
 }

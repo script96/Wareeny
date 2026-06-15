@@ -1,14 +1,17 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_phone_direct_caller (0.0.1):
+    - Flutter
   - flutter_tts (0.0.1):
     - Flutter
   - ultralytics_yolo (0.6.0):
     - Flutter
-    - UltralyticsYOLO (< 9.0, >= 8.9.5)
+    - UltralyticsYOLO (< 9.0, >= 8.9.4)
   - UltralyticsYOLO (8.9.7)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_phone_direct_caller (from `.symlinks/plugins/flutter_phone_direct_caller/ios`)
   - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
   - ultralytics_yolo (from `.symlinks/plugins/ultralytics_yolo/ios`)
 
@@ -19,6 +22,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_phone_direct_caller:
+    :path: ".symlinks/plugins/flutter_phone_direct_caller/ios"
   flutter_tts:
     :path: ".symlinks/plugins/flutter_tts/ios"
   ultralytics_yolo:
@@ -26,8 +31,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_phone_direct_caller: 7d5d72794577b96f12b4b6da13a9ef90ba438665
   flutter_tts: 35ac3c7d42412733e795ea96ad2d7e05d0a75113
-  ultralytics_yolo: 3bab5f36454be0b835aaef0b4445126088e0bdcf
+  ultralytics_yolo: b19941dc12a47245d2db81462d4734ac1273e2c8
   UltralyticsYOLO: c0ccbac7cfe65b41f5012f8fe81a4e21cc0d63d0
 
 PODFILE CHECKSUM: 9580a49fa2c095d51100c20f258df867100b916b

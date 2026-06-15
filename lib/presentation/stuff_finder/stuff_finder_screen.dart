@@ -18,10 +18,11 @@ import 'package:wareeny/presentation/reusable/camera_status_view.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
-import 'package:wareeny/presentation/stuff_finder/coco_classes.dart';
+import 'package:wareeny/presentation/stuff_finder/stuff_finder_items.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_controller.dart';
-import 'package:wareeny/presentation/stuff_finder/widgets/coco_object_picker.dart';
+import 'package:wareeny/presentation/stuff_finder/widgets/stuff_finder_item_picker.dart';
 import 'package:wareeny/presentation/stuff_finder/widgets/stuff_finder_overlay.dart';
+import 'package:wareeny/presentation/voice/voice_interaction_controller.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 class StuffFinderScreen extends StatefulWidget {
@@ -51,6 +52,7 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
   late final YOLOViewController _yoloController;
   StuffFinderController? _finder;
   ObjectDetectionSource? _detectionSource;
+  VoiceInteractionController? _voiceInteraction;
   Object? _modelError;
   bool _initialized = false;
 
@@ -69,10 +71,15 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
     final services = AppScope.of(context);
     final source = services.objectDetectionSource;
     _detectionSource = source;
+    _voiceInteraction = services.voiceInteractionController;
     _finder = StuffFinderController(
       detectionSource: source,
       feedback: BridgeStuffFinderFeedback(services.audioHapticsBridge),
     )..addListener(_onFinderChanged);
+    _voiceInteraction!.bindStuffFinderHandlers(
+      onItemSelected: _selectVoiceTarget,
+      onShowAvailableItems: _showAvailableItems,
+    );
     _initialized = true;
   }
 
@@ -94,6 +101,7 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
     _finder
       ?..removeListener(_onFinderChanged)
       ..dispose();
+    _voiceInteraction?.clearStuffFinderHandlers();
     _yoloController.dispose();
     super.dispose();
   }
@@ -254,13 +262,25 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
       backgroundColor: const Color(0xFF101512),
       builder: (context) => FractionallySizedBox(
         heightFactor: 0.88,
-        child: CocoObjectPicker(selectedTarget: finder.selectedTarget),
+        child: StuffFinderItemPicker(selectedTarget: finder.selectedTarget),
       ),
     );
     if (target == null || !mounted) return;
+    await _selectTarget(target);
+  }
+
+  Future<void> _selectTarget(String target) async {
+    final finder = _finder;
+    if (finder == null || !mounted) return;
     setState(() => _modelError = null);
     await finder.selectTarget(target);
   }
+
+  Future<void> _selectVoiceTarget(StuffFinderItem item) {
+    return _selectTarget(item.detectorLabel);
+  }
+
+  Future<void> _showAvailableItems() => _pickTarget();
 
   Future<void> _resume() async {
     final finder = _finder;
@@ -298,17 +318,21 @@ class _TargetButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final target = finder.selectedTarget;
+    final item = target == null ? null : stuffFinderItemForLabel(target);
     return Semantics(
       button: true,
       label: target == null
-          ? 'Choose object to find'
-          : 'Change target from $target',
+          ? 'اختيار شيء للبحث عنه'
+          : 'تغيير البحث من ${item?.arabicLabel ?? target}',
       child: FilledButton.icon(
         key: const ValueKey('stuff-finder-target-button'),
         onPressed: onTap,
         icon: Icon(target == null ? Icons.add : Icons.manage_search),
         label: Text(
-          target == null ? 'Choose object' : 'Finding ${_titleCase(target)}',
+          target == null
+              ? 'اختار حاجة'
+              : 'بدور على ${item?.arabicLabel ?? target}',
+          textDirection: TextDirection.rtl,
         ),
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.electricGreen,
@@ -354,11 +378,4 @@ class _StatusChip extends StatelessWidget {
       ),
     );
   }
-}
-
-String _titleCase(String value) {
-  return value
-      .split(' ')
-      .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
-      .join(' ');
 }

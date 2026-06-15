@@ -16,7 +16,10 @@ class EmergencyOnboardingScreen extends StatelessWidget {
 
   final SettingsController settings;
 
-  Future<void> _proceed(BuildContext context, {required bool goToContacts}) async {
+  Future<void> _proceed(
+    BuildContext context, {
+    required bool goToContacts,
+  }) async {
     await settings.markEmergencyOnboardingSeen();
     if (!context.mounted) return;
     if (goToContacts) {
@@ -105,8 +108,8 @@ class EmergencyOnboardingScreen extends StatelessWidget {
               _StepRow(
                 number: '3',
                 text: isAr
-                    ? 'يتم الاتصال بأول شخص موثوق وإرسال موقعك'
-                    : 'Your trusted contact is called and location is shared',
+                    ? 'يتم الاتصال بأول شخص موثوق، ويمكنك اختيار مشاركة موقعك'
+                    : 'Your trusted contact is called, and location sharing is optional',
                 isArabic: isAr,
               ),
               const SizedBox(height: 12),
@@ -123,7 +126,9 @@ class EmergencyOnboardingScreen extends StatelessWidget {
 
               // ── CTA buttons ───────────────────────────────────────────────
               _PrimaryButton(
-                label: isAr ? 'إضافة جهة اتصال للطوارئ' : 'Add Emergency Contact',
+                label: isAr
+                    ? 'إضافة جهة اتصال للطوارئ'
+                    : 'Add Emergency Contact',
                 icon: Icons.person_add_rounded,
                 onTap: () => _proceed(context, goToContacts: true),
               ),
@@ -211,8 +216,11 @@ class _StepRow extends StatelessWidget {
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
 class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton(
-      {required this.label, required this.icon, required this.onTap});
+  const _PrimaryButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
   final String label;
   final IconData icon;
   final VoidCallback onTap;

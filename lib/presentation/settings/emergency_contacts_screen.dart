@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
 
 import 'package:wareeny/core/emergency/emergency_contact.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
@@ -24,15 +25,22 @@ class EmergencyContactsScreen extends StatefulWidget {
 
 class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   late List<EmergencyContact> _contacts;
+  late bool _shareLocation;
 
   @override
   void initState() {
     super.initState();
     _contacts = List.of(widget.settings.emergencyContacts);
+    _shareLocation = widget.settings.shareLocationWithEmergencyContacts;
   }
 
   Future<void> _save() async {
     await widget.settings.setEmergencyContacts(_contacts);
+  }
+
+  Future<void> _setShareLocation(bool enabled) async {
+    setState(() => _shareLocation = enabled);
+    await widget.settings.setShareLocationWithEmergencyContacts(enabled);
   }
 
   void _addContact() {
@@ -50,20 +58,14 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   }
 
   Future<void> _showEditDialog(int? index, EmergencyContact? existing) async {
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
-    final phoneCtrl = TextEditingController(text: existing?.phone ?? '');
     final isAr = AppLocalizations.of(context).isArabic;
 
     final result = await showDialog<EmergencyContact>(
       context: context,
-      builder: (ctx) => _ContactEditDialog(
-        nameController: nameCtrl,
-        phoneController: phoneCtrl,
-        isArabic: isAr,
-      ),
+      builder: (ctx) => _ContactEditDialog(existing: existing, isArabic: isAr),
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
         if (index == null) {
           _contacts.add(result);
@@ -100,8 +102,10 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
           button: true,
           label: isAr ? 'رجوع' : 'Back',
           child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: AppColors.electricGreen),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.electricGreen,
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -115,6 +119,12 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
             children: [
               // ── Info banner ───────────────────────────────────────────────
               _InfoBanner(isArabic: isAr),
+              const SizedBox(height: AppSpacing.md),
+              _LocationSharingSwitch(
+                isArabic: isAr,
+                value: _shareLocation,
+                onChanged: _setShareLocation,
+              ),
               const SizedBox(height: AppSpacing.lg),
 
               // ── Contact list ──────────────────────────────────────────────
@@ -142,7 +152,9 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                 const SizedBox(height: AppSpacing.md),
                 Semantics(
                   button: true,
-                  label: isAr ? 'إضافة جهة اتصال للطوارئ' : 'Add emergency contact',
+                  label: isAr
+                      ? 'إضافة جهة اتصال للطوارئ'
+                      : 'Add emergency contact',
                   child: GestureDetector(
                     onTap: _addContact,
                     child: Container(
@@ -158,8 +170,11 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.add_rounded,
-                              color: Colors.redAccent, size: 22),
+                          const Icon(
+                            Icons.add_rounded,
+                            color: Colors.redAccent,
+                            size: 22,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             isAr ? 'إضافة جهة اتصال' : 'Add Contact',
@@ -206,14 +221,17 @@ class _InfoBanner extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.info_outline_rounded,
-                  color: Colors.redAccent, size: 20),
+              const Icon(
+                Icons.info_outline_rounded,
+                color: Colors.redAccent,
+                size: 20,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   isArabic
-                      ? 'هزّ الهاتف لفترة 3 ثوانٍ لتشغيل وضع الطوارئ. سيتم الاتصال بأول جهة اتصال وإرسال موقعك.'
-                      : 'Shake the phone to trigger emergency mode. Your first contact will be called and your location will be shared.',
+                      ? 'هزّ الهاتف لتشغيل وضع الطوارئ. سيتم الاتصال بأول جهة اتصال، ويمكنك اختيار مشاركة موقعك أدناه.'
+                      : 'Shake the phone to trigger emergency mode. Your first contact will be called, and you can choose whether to share your location below.',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
@@ -222,6 +240,62 @@ class _InfoBanner extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LocationSharingSwitch extends StatelessWidget {
+  const _LocationSharingSwitch({
+    required this.isArabic,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool isArabic;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      toggled: value,
+      label: isArabic
+          ? 'مشاركة موقعي مع جهات اتصال الطوارئ'
+          : 'Share my location with emergency contacts',
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.glassWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.glassBorder),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          child: SwitchListTile.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: AppColors.electricGreen,
+            title: Text(
+              isArabic ? 'مشاركة موقعي' : 'Share my location',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            subtitle: Text(
+              isArabic
+                  ? 'إضافة رابط خرائط Google إلى رسالة الطوارئ'
+                  : 'Include a Google Maps link in the emergency message',
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
           ),
         ),
       ),
@@ -259,7 +333,9 @@ class _ContactTile extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: AppSpacing.sm + 2),
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
             decoration: BoxDecoration(
               color: AppColors.glassWhite,
               borderRadius: BorderRadius.circular(16),
@@ -316,7 +392,9 @@ class _ContactTile extends StatelessWidget {
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.red.withAlpha(40),
                                 borderRadius: BorderRadius.circular(6),
@@ -348,20 +426,30 @@ class _ContactTile extends StatelessWidget {
                 // Edit button.
                 Semantics(
                   button: true,
-                  label: isArabic ? 'تعديل ${contact.name}' : 'Edit ${contact.name}',
+                  label: isArabic
+                      ? 'تعديل ${contact.name}'
+                      : 'Edit ${contact.name}',
                   child: IconButton(
-                    icon: const Icon(Icons.edit_outlined,
-                        color: Colors.white38, size: 20),
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: Colors.white38,
+                      size: 20,
+                    ),
                     onPressed: onEdit,
                   ),
                 ),
                 // Delete button.
                 Semantics(
                   button: true,
-                  label: isArabic ? 'حذف ${contact.name}' : 'Delete ${contact.name}',
+                  label: isArabic
+                      ? 'حذف ${contact.name}'
+                      : 'Delete ${contact.name}',
                   child: IconButton(
-                    icon:
-                        const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
                     onPressed: onDelete,
                   ),
                 ),
@@ -387,11 +475,16 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.contact_emergency_outlined,
-              size: 64, color: Colors.red.withAlpha(100)),
+          Icon(
+            Icons.contact_emergency_outlined,
+            size: 64,
+            color: Colors.red.withAlpha(100),
+          ),
           const SizedBox(height: 16),
           Text(
-            isArabic ? 'لا توجد جهات اتصال للطوارئ' : 'No emergency contacts yet',
+            isArabic
+                ? 'لا توجد جهات اتصال للطوارئ'
+                : 'No emergency contacts yet',
             style: const TextStyle(
               color: Colors.white54,
               fontSize: 15,
@@ -414,16 +507,67 @@ class _EmptyState extends StatelessWidget {
 
 // ── Edit / Add Dialog ─────────────────────────────────────────────────────────
 
-class _ContactEditDialog extends StatelessWidget {
-  const _ContactEditDialog({
-    required this.nameController,
-    required this.phoneController,
-    required this.isArabic,
-  });
+class _ContactEditDialog extends StatefulWidget {
+  const _ContactEditDialog({required this.existing, required this.isArabic});
 
-  final TextEditingController nameController;
-  final TextEditingController phoneController;
+  final EmergencyContact? existing;
   final bool isArabic;
+
+  @override
+  State<_ContactEditDialog> createState() => _ContactEditDialogState();
+}
+
+class _ContactEditDialogState extends State<_ContactEditDialog> {
+  final FlutterNativeContactPicker _contactPicker =
+      FlutterNativeContactPicker();
+  late final TextEditingController _nameController;
+  late final TextEditingController _phoneController;
+
+  bool get _isArabic => widget.isArabic;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.existing?.name ?? '');
+    _phoneController = TextEditingController(
+      text: widget.existing?.phone ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickContact() async {
+    try {
+      final contact = await _contactPicker.selectPhoneNumber();
+      if (!mounted || contact == null) return;
+
+      final phone =
+          contact.selectedPhoneNumber ??
+          contact.phoneNumbers?.firstOrNull ??
+          '';
+      if (phone.isEmpty) return;
+
+      _phoneController.text = phone;
+      final name = contact.fullName?.trim() ?? '';
+      if (name.isNotEmpty) _nameController.text = name;
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isArabic
+                ? 'تعذّر فتح جهات الاتصال. يمكنك كتابة الرقم يدوياً.'
+                : 'Could not open contacts. You can enter the number manually.',
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -437,29 +581,52 @@ class _ContactEditDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              isArabic ? 'جهة اتصال الطوارئ' : 'Emergency Contact',
+              _isArabic ? 'جهة اتصال الطوارئ' : 'Emergency Contact',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
               ),
             ),
+            const SizedBox(height: 12),
+            Semantics(
+              button: true,
+              label: _isArabic
+                  ? 'اختيار جهة اتصال من الهاتف'
+                  : 'Choose a contact from this phone',
+              child: OutlinedButton.icon(
+                onPressed: _pickContact,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: BorderSide(color: Colors.red.withAlpha(120)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.contacts_outlined, size: 20),
+                label: Text(
+                  _isArabic ? 'اختيار من جهات الاتصال' : 'Choose from contacts',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
             _Field(
-              controller: nameController,
-              label: isArabic ? 'الاسم' : 'Name',
-              hint: isArabic ? 'مثال: أمي' : 'e.g. Mom',
+              controller: _nameController,
+              label: _isArabic ? 'الاسم' : 'Name',
+              hint: _isArabic ? 'مثال: أمي' : 'e.g. Mom',
               icon: Icons.person_outline_rounded,
-              isArabic: isArabic,
+              isArabic: _isArabic,
             ),
             const SizedBox(height: 12),
             _Field(
-              controller: phoneController,
-              label: isArabic ? 'رقم الهاتف' : 'Phone number',
+              controller: _phoneController,
+              label: _isArabic ? 'رقم الهاتف' : 'Phone number',
               hint: '+201234567890',
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
-              isArabic: isArabic,
+              isArabic: _isArabic,
             ),
             const SizedBox(height: 24),
             Row(
@@ -467,11 +634,11 @@ class _ContactEditDialog extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     button: true,
-                    label: isArabic ? 'إلغاء' : 'Cancel',
+                    label: _isArabic ? 'إلغاء' : 'Cancel',
                     child: TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(
-                        isArabic ? 'إلغاء' : 'Cancel',
+                        _isArabic ? 'إلغاء' : 'Cancel',
                         style: const TextStyle(color: Colors.white54),
                       ),
                     ),
@@ -481,7 +648,7 @@ class _ContactEditDialog extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     button: true,
-                    label: isArabic ? 'حفظ' : 'Save',
+                    label: _isArabic ? 'حفظ' : 'Save',
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade800,
@@ -490,17 +657,19 @@ class _ContactEditDialog extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
-                        final name = nameController.text.trim();
-                        final phone = phoneController.text.trim();
+                        final name = _nameController.text.trim();
+                        final phone = _phoneController.text.trim();
                         if (name.isEmpty || phone.isEmpty) return;
-                        Navigator.of(context).pop(
-                          EmergencyContact(name: name, phone: phone),
-                        );
+                        Navigator.of(
+                          context,
+                        ).pop(EmergencyContact(name: name, phone: phone));
                       },
                       child: Text(
-                        isArabic ? 'حفظ' : 'Save',
+                        _isArabic ? 'حفظ' : 'Save',
                         style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w700),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -536,12 +705,15 @@ class _Field extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1,
+          ),
+        ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
@@ -564,8 +736,7 @@ class _Field extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  BorderSide(color: Colors.red.shade400, width: 1.5),
+              borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
             ),
           ),
         ),

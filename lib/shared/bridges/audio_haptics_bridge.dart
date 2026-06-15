@@ -1,6 +1,6 @@
-import 'dart:ui';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -65,21 +65,29 @@ class AudioHapticsBridge {
               .map((v) => Map<String, String>.from(v as Map))
               .toList();
 
-          final arEgVoices = voices.where((v) => v['locale']?.contains('ar-EG') ?? false).toList();
-          final arVoices = voices.where((v) => v['locale']?.startsWith('ar') ?? false).toList();
+          final arEgVoices = voices
+              .where((v) => v['locale']?.contains('ar-EG') ?? false)
+              .toList();
+          final arVoices = voices
+              .where((v) => v['locale']?.startsWith('ar') ?? false)
+              .toList();
 
-          debugPrint('[TTS] Found ${arEgVoices.length} local ar-EG voices and ${arVoices.length} total Arabic voices');
+          debugPrint(
+            '[TTS] Found ${arEgVoices.length} local ar-EG voices and ${arVoices.length} total Arabic voices',
+          );
 
-          Map<String, String>? findBestVoice(List<Map<String, String>> voiceList) {
+          Map<String, String>? findBestVoice(
+            List<Map<String, String>> voiceList,
+          ) {
             if (voiceList.isEmpty) return null;
 
             bool isPremium(String name) {
               final lower = name.toLowerCase();
               return lower.contains('premium') ||
-                     lower.contains('enhanced') ||
-                     lower.contains('wavenet') ||
-                     lower.contains('neural') ||
-                     lower.contains('google');
+                  lower.contains('enhanced') ||
+                  lower.contains('wavenet') ||
+                  lower.contains('neural') ||
+                  lower.contains('google');
             }
 
             bool isOffline(String name) {
@@ -109,9 +117,12 @@ class AudioHapticsBridge {
             return voiceList.first;
           }
 
-          _selectedArabicVoice = findBestVoice(arEgVoices) ?? findBestVoice(arVoices);
+          _selectedArabicVoice =
+              findBestVoice(arEgVoices) ?? findBestVoice(arVoices);
           if (_selectedArabicVoice != null) {
-            debugPrint('[TTS] Selected high-quality local Arabic voice: ${_selectedArabicVoice!['name']} (${_selectedArabicVoice!['locale']})');
+            debugPrint(
+              '[TTS] Selected high-quality local Arabic voice: ${_selectedArabicVoice!['name']} (${_selectedArabicVoice!['locale']})',
+            );
           }
         }
       } catch (voiceError) {
@@ -167,7 +178,31 @@ class AudioHapticsBridge {
     } catch (error) {
       debugPrint('[TTS] speak failed: $error');
       _currentCompletionHandler = null;
+      onComplete?.call();
     }
+  }
+
+  Future<void> speakAndWait(
+    String text, {
+    String? languageCode,
+    double? speechRate,
+  }) async {
+    final completer = Completer<void>();
+    await speak(
+      text,
+      languageCode: languageCode,
+      speechRate: speechRate,
+      onComplete: () {
+        if (!completer.isCompleted) completer.complete();
+      },
+    );
+    final timeout = Duration(seconds: (text.length / 8).ceil().clamp(2, 15));
+    await completer.future.timeout(
+      timeout,
+      onTimeout: () {
+        debugPrint('[TTS] Completion timeout for text="$text"');
+      },
+    );
   }
 
   Future<void> stopSpeech() async {
