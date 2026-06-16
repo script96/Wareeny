@@ -23,6 +23,7 @@
 \usepackage{float}
 \usepackage{csquotes}
 \usepackage{mathptmx}
+\usepackage{tikz}
 
 % --- Listing style for Dart code ---
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -77,7 +78,7 @@
 % Title-page header style: faculty logo banner, no rules
 \fancypagestyle{titlepage}{%
   \fancyhf{}%
-  \fancyhead[C]{\raisebox{-1.5\height}{\includegraphics[width=0.38\textwidth]{figures/Faculty Logo.png}}}%
+  \fancyhead[C]{\raisebox{-2.5\height}{\includegraphics[width=0.38\textwidth]{figures/Faculty Logo.png}}}%
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
 }
@@ -149,8 +150,7 @@
     \thispagestyle{titlepage}
 
     \centering
-    \setlength{\parskip}{0pt}
-    \vspace{0.8cm}
+    \vspace*{\fill}
     % University information
     {\large\textbf{Future University in Egypt}\par}
     {\large Faculty of Computers \& Information Technology\par}
@@ -195,10 +195,13 @@
 
     \vfill
 
-    % Copyright footer band (full text width, no tikz overlay)
-    \noindent\colorbox{black!20}{\makebox[\textwidth][c]{%
-        \rule[-0.35cm]{0pt}{1cm}%
-        {\Large\textcolor[HTML]{cc323b}{\textcopyright\ FUE 2025--2026}}}}
+    % Copyright footer with grey background filling entire width
+    \noindent\begin{tikzpicture}[remember picture,overlay]
+        \fill[black!20] (current page.south west) rectangle ([yshift=1cm] current page.south east);
+        \node[anchor=center] at ([yshift=0.5cm] current page.south) {
+            {\Large\textcolor[HTML]{cc323b}{\textcopyright\ FUE 2025--2026}}
+        };
+    \end{tikzpicture}
 
 \end{titlepage}
 
@@ -651,6 +654,7 @@ Connectivity & Active internet connection (Wi-Fi or 4G/5G) required for cloud-ba
 \bottomrule
 \end{tabular}
 \end{table}
+\newpage
 
 \subsection{Software Environment}
 
@@ -689,6 +693,7 @@ Flutter (Dart) & Used to develop a cross-platform mobile application compatible 
 \bottomrule
 \end{tabular}
 \end{table}
+\newpage
 
 \section{System Architecture}
 
@@ -700,6 +705,7 @@ The system architecture illustrates the high-level design of the Wareeny applica
 \caption{System Architecture Diagram.}
 \label{fig:system-arch}
 \end{figure}
+\newpage
 
 \section{Class Diagram}
 
@@ -711,6 +717,7 @@ The class diagram illustrates the structural design of the Wareeny system, depic
 \caption{Class Diagram.}
 \label{fig:class-diagram}
 \end{figure}
+\newpage
 
 \section{Use Case Diagram}
 
@@ -722,6 +729,7 @@ The use case diagram illustrates the interactions between the user and the Waree
 \caption{Use Case Diagram.}
 \label{fig:use-case}
 \end{figure}
+\newpage
 
 \section{Sequence Diagrams}
 
@@ -750,6 +758,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 \caption{General Flow 3: Navigation Processing.}
 \label{fig:seq-genflow3}
 \end{figure}
+\newpage
 
 \subsection{Indoor Features}
 
@@ -773,6 +782,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 \caption{Sequence Diagram: Brand and Currency Detection.}
 \label{fig:seq-brand-currency}
 \end{figure}
+\newpage
 
 \subsection{Outdoor Features}
 
@@ -810,6 +820,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 \caption{Sequence Diagram: Traffic Light Status Detection.}
 \label{fig:seq-traffic-light}
 \end{figure}
+\newpage
 
 \subsection{OCR Features}
 
@@ -833,6 +844,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 \caption{Sequence Diagram: Danger Word Alerts.}
 \label{fig:seq-danger-words}
 \end{figure}
+\newpage
 
 \subsection{Safety and Emergency Features}
 
@@ -856,6 +868,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 \caption{Sequence Diagram: Privacy Mode (Secure Shutdown).}
 \label{fig:seq-privacy-mode}
 \end{figure}
+\newpage
 
 \subsection{Audio and Haptics Features}
 
@@ -865,6 +878,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 \caption{Sequence Diagram: Directional Audio.}
 \label{fig:seq-directional-audio}
 \end{figure}
+\newpage
 
 \section{Entity-Relationship Diagram}
 
@@ -876,7 +890,7 @@ The Entity-Relationship Diagram (ERD) illustrates the database schema and data m
 \caption{Entity-Relationship Diagram.}
 \label{fig:erd}
 \end{figure}
-
+\newpage
 
 
 \chaptercover{4}{Chapter Four}{System Design}
