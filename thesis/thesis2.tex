@@ -3,11 +3,12 @@
 % rewritten to match the implemented repository (mode-driven Flutter app,
 % hybrid VLM reading pipeline, on-device YOLO detection, on-device EGP
 % banknote detector, SharedPreferences persistence).
-\documentclass[12pt,a4paper]{report}
+\documentclass[a4paper]{report}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{geometry}
 \usepackage{setspace}
+\usepackage{tocloft}
 \usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{graphicx}
@@ -20,7 +21,7 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{float}
-\usepackage[autostyle]{csquotes}
+\usepackage{csquotes}
 \usepackage{mathptmx}
 
 % --- Listing style for Dart code ---
@@ -51,8 +52,44 @@
 }
 \lstset{style=dartstyle}
 \geometry{margin=1in}
-\setstretch{1.2}
+\usepackage{fancyhdr}
+% --- Spacing to match the prior thesis revision ---
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{12pt}
 \renewcommand{\arraystretch}{1.2}
+% --- Running headers: chapter name (left) + page number (right) ---
+\setlength{\headheight}{92pt}
+\addtolength{\topmargin}{-77pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\thepage}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyhead[R]{\thepage}%
+  \fancyhead[L]{\nouppercase{\leftmark}}%
+  \renewcommand{\headrulewidth}{0.4pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+% Title-page header style: faculty logo banner, no rules
+\fancypagestyle{titlepage}{%
+  \fancyhf{}%
+  \fancyhead[C]{\raisebox{-1.5\height}{\includegraphics[width=0.38\textwidth]{figures/Faculty Logo.png}}}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+% Section heading sizes (match prior revision)
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+% Table of Contents heading style
+\setlength{\cftbeforechapskip}{10pt}
+\renewcommand{\cftchapfont}{\bfseries}
+\renewcommand{\cftchappagefont}{\bfseries}
+\graphicspath{{figures/}{figures/sequence diagrams/}}
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 \hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue}
@@ -109,44 +146,80 @@
 \begin{document}
 
 \begin{titlepage}
-\centering
-\setlength{\parskip}{0pt}
-\includegraphics[width=0.62\textwidth]{figures/faculty_logo.png}\par
-\vspace{0.2cm}
-{\large Department of Computer Science\par}
-\vspace{0.5cm}
-\includegraphics[width=0.18\textwidth]{figures/app_logo.png}\par
-\vspace{0.35cm}
-{\Huge\bfseries Wareeny\par}
-\vspace{0.3cm}
-{\Large An AI-Powered Mobile Assistive System for Visually Impaired Users\par}
-\vspace{0.5cm}
-{\large Thesis Submitted in Partial Fulfillment of the Requirements for the Degree of Bachelor of Science in Computer Science\par}
-\vspace{0.6cm}
-{\begin{tabular}{c}
-Youssef Amr -- 20221949 \\
-Mohamed Moataz -- 20223394 \\
-Omar Ahmed Said -- 20225281 \\
-Ahmed Mohamed -- 20223031 \\
-Mohamed Wael -- 20223960 \\
-Mohamed Khaled -- 20224727 \\
-\end{tabular}\par}
-\vspace{0.55cm}
-{\begin{tabular}{l}
-Professor: Prof. Abeer El Korany \\
-Teaching Assistant: Linah Mohamed \\
-\end{tabular}\par}
-\vspace{0.55cm}
-{\large 2025--2026\par}
+    \thispagestyle{titlepage}
+
+    \centering
+    \setlength{\parskip}{0pt}
+    \vspace{0.8cm}
+    % University information
+    {\large\textbf{Future University in Egypt}\par}
+    {\large Faculty of Computers \& Information Technology\par}
+    {\large Department of Computer Science\par}
+
+    \vspace{1cm}
+
+    % App Logo
+    \includegraphics[width=0.12\textwidth]{figures/app logo.png}
+
+    % Title
+    {\Huge\bfseries Wareeny\par}
+    \vspace{0.2cm}
+    {\LARGE An AI-Powered Mobile Assistive System\par}
+    {\LARGE for Visually Impaired Users\par}
+
+    \vspace{0.4cm}
+    {\large\textbf{Thesis Submitted in Partial Fulfillment of the Requirements for the Degree of Bachelor of Science in Computer Science}\par}
+    \vspace{0.4cm}
+
+    % Authors
+    {\large\textbf{By:}\par}
+    \vspace{0.2cm}
+    \begin{tabular}{lr}
+        {\large Youssef Amr} & {\large 20221949} \\[0.2cm]
+        {\large Mohamed Moataz} & {\large 20223394} \\[0.2cm]
+        {\large Omar Ahmed Said} & {\large 20225281} \\[0.2cm]
+        {\large Ahmed Mohamed} & {\large 20223031} \\[0.2cm]
+        {\large Mohamed Wael} & {\large 20223960} \\[0.2cm]
+        {\large Mohamed Khaled} & {\large 20224727} \\
+    \end{tabular}
+
+    \vspace{0.3cm}
+
+    % Supervision
+    {\large\textbf{Under the Supervision of:}\par}
+    \vspace{0.2cm}
+    \begin{tabular}{c}
+        {\large\textbf{Professor:} Prof. Abeer El Korany} \\[0.3cm]
+        {\large\textbf{Teaching Assistant:} Linah Mohamed} \\
+    \end{tabular}
+
+    \vfill
+
+    % Copyright footer band (full text width, no tikz overlay)
+    \noindent\colorbox{black!20}{\makebox[\textwidth][c]{%
+        \rule[-0.35cm]{0pt}{1cm}%
+        {\Large\textcolor[HTML]{cc323b}{\textcopyright\ FUE 2025--2026}}}}
+
 \end{titlepage}
 
 \pagenumbering{roman}
 \chapter*{Abstract}
+\markboth{Abstract}{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
 This thesis presents Wareeny, an AI-assisted mobile application intended to support blind and low-vision users through camera-based perception, spoken feedback, and accessible interaction patterns. In its current implemented form, Wareeny is a Flutter-based mobile system organized around a mode-driven interface that includes home, navigation, stuff-finder, scan, read, and settings flows. The reading and scanning modules combine still-image capture with a routed vision-language pipeline, while the navigation and object-finding modules rely on on-device YOLOv8-based streaming detection. Currency reading is exposed as a dedicated task within the vision-language pipeline, and the architecture is explicitly designed to accept a specialized on-device Egyptian-pound banknote detector as a drop-in provider in future work. The application also provides bilingual English--Arabic interaction, text-to-speech output, haptic feedback, an active background emergency-and-safety subsystem, and persisted user preferences for language, speech rate, and haptics. Architecturally, the system separates presentation, feature controllers, shared AI services, backend integration, and lightweight persistence, producing a codebase that is both assistive in purpose and extensible in structure. The implemented repository therefore represents a credible functional foundation for an accessibility-oriented mobile assistant, while a dedicated offline banknote detector, broader Arabic-domain evaluation, formal accuracy benchmarking, and large-scale user studies remain future work.
 
+\tableofcontents
+
+\newpage
+\listoffigures
+\markboth{List of Figures}{List of Figures}
+
+\listoftables
+\markboth{List of Tables}{List of Tables}
+
 \chapter*{List of Abbreviations}
+\markboth{List of Abbreviations}{List of Abbreviations}
 \addcontentsline{toc}{chapter}{List of Abbreviations}
 \begin{description}[style=nextline,leftmargin=2.5cm]
   \item[AI] Artificial Intelligence
@@ -171,8 +244,6 @@ This thesis presents Wareeny, an AI-assisted mobile application intended to supp
   \item[WHO] World Health Organization
   \item[YOLO] You Only Look Once
 \end{description}
-
-\tableofcontents
 
 \clearpage
 \pagenumbering{arabic}
@@ -625,7 +696,7 @@ The system architecture illustrates the high-level design of the Wareeny applica
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/system_arch.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/system arch.png}
 \caption{System Architecture Diagram.}
 \label{fig:system-arch}
 \end{figure}
@@ -636,7 +707,7 @@ The class diagram illustrates the structural design of the Wareeny system, depic
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/class_diagram.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/Class Diagram.png}
 \caption{Class Diagram.}
 \label{fig:class-diagram}
 \end{figure}
@@ -647,7 +718,7 @@ The use case diagram illustrates the interactions between the user and the Waree
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/use_case.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/use case.png}
 \caption{Use Case Diagram.}
 \label{fig:use-case}
 \end{figure}
@@ -661,21 +732,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_genflow1_ocr.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/General Flow 1 - OCR.png}
 \caption{General Flow 1: OCR Processing.}
 \label{fig:seq-genflow1}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_genflow2_objdet.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/General Flow 2 - Object Detection.png}
 \caption{General Flow 2: Object Detection Processing.}
 \label{fig:seq-genflow2}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_genflow3_nav.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/General Flow 3 - Navigation.png}
 \caption{General Flow 3: Navigation Processing.}
 \label{fig:seq-genflow3}
 \end{figure}
@@ -684,21 +755,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_indoor_objdet_distance.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Indoor Object Detection and Distance.png}
 \caption{Sequence Diagram: Indoor Object Detection and Distance Estimation.}
 \label{fig:seq-indoor-objdet}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_inhand.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/In-Hand Object Detection.png}
 \caption{Sequence Diagram: In-Hand Object Detection.}
 \label{fig:seq-inhand}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_brand_currency.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Brand and Currency Detection.png}
 \caption{Sequence Diagram: Brand and Currency Detection.}
 \label{fig:seq-brand-currency}
 \end{figure}
@@ -707,35 +778,35 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_outdoor_objdet.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Detect Object fig.2.png}
 \caption{Sequence Diagram: Outdoor Object Detection.}
 \label{fig:seq-outdoor-objdet}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_outdoor_finder.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Outdoor Object and Finder.png}
 \caption{Sequence Diagram: Outdoor Object Finder.}
 \label{fig:seq-outdoor-finder}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_outdoor_reader.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Outdoor Reader (Signs).png}
 \caption{Sequence Diagram: Outdoor Reader for Signs.}
 \label{fig:seq-outdoor-reader}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_outdoor_nav.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Outdoor Navigation fig.3.png}
 \caption{Sequence Diagram: Outdoor Navigation.}
 \label{fig:seq-outdoor-nav}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_traffic_light.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Traffic Light Status.png}
 \caption{Sequence Diagram: Traffic Light Status Detection.}
 \label{fig:seq-traffic-light}
 \end{figure}
@@ -744,21 +815,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_read_document.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Read Document fig.1.png}
 \caption{Sequence Diagram: Read Document.}
 \label{fig:seq-read-document}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_qa_mode.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/QA Mode (Visual Query).png}
 \caption{Sequence Diagram: QA Mode (Visual Query).}
 \label{fig:seq-qa-mode}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_danger_words.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Danger Word Alerts.png}
 \caption{Sequence Diagram: Danger Word Alerts.}
 \label{fig:seq-danger-words}
 \end{figure}
@@ -767,21 +838,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_danger_mode.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Danger Mode (Hazard Detection).png}
 \caption{Sequence Diagram: Danger Mode (Hazard Detection).}
 \label{fig:seq-danger-mode}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_emergency_call.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Emergency Auto Call and Location.png}
 \caption{Sequence Diagram: Emergency Auto Call and Location Sharing.}
 \label{fig:seq-emergency-call}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_privacy_mode.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Privacy Mode (Secure Shutdown).png}
 \caption{Sequence Diagram: Privacy Mode (Secure Shutdown).}
 \label{fig:seq-privacy-mode}
 \end{figure}
@@ -790,7 +861,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/seq_directional_audio.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Directional Audio.png}
 \caption{Sequence Diagram: Directional Audio.}
 \label{fig:seq-directional-audio}
 \end{figure}
@@ -801,7 +872,7 @@ The Entity-Relationship Diagram (ERD) illustrates the database schema and data m
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth]{figures/erd.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/ERD Diagram.png}
 \caption{Entity-Relationship Diagram.}
 \label{fig:erd}
 \end{figure}
