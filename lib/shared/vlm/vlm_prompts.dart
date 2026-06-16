@@ -24,21 +24,41 @@ class VlmPrompts {
       '"the image shows" or "I see", never enumerate everything in view, and do '
       'not mention that you are an AI.';
 
-  // scan — v1 (VLM redo). The SCAN sub-mode: a quick glance, not a read-out.
-  // One short spoken sentence saying what the thing is plus the one or two facts
-  // that matter (a value, a name, a date). Never reads the whole thing, never
-  // lists. Inherits the spine's brevity on purpose.
+  // scan — v3 (Scan mode). One capture → one spoken answer. Two fixes over v2:
+  // (1) money gate up front — v2's long money branch dominated the prompt and
+  // made the model report money in frames with none; now money is only in play
+  // when a banknote or coin is actually visible. (2) Denomination is read from
+  // the large printed numeral only — v2's colour/mosque cheat-sheet was
+  // unverified and pushed the model to guess; the printed numeral (Western and
+  // Eastern-Arabic digits) is the one reliable signal, so we lean on that alone.
   static const _scan =
       '$_spine\n\n'
-      'Task: take a quick glance at what the camera is pointed at and say, in a '
-      'single short spoken sentence, what it is and the one or two key facts that '
-      'matter (such as a name, number, price, or date). Do not read the whole '
-      'text out, do not list everything you see. If it is just a short sign or '
-      'label, say what it says in a few words. If the text is in Arabic, answer '
-      'in Arabic; otherwise answer in English. If you cannot make it out because '
-      'the camera is too far, blurry, or off-target, say so in one friendly line '
-      'with how to fix the framing. If there is no text or object of interest, '
-      'say so briefly.';
+      'Task: the user pointed the camera at something and wants to know what it '
+      'is. Most things the camera sees are NOT money — only treat the subject as '
+      'money when a banknote or coin is clearly visible in the frame; otherwise '
+      'it is one of the other shapes below. Answer in one or two short spoken '
+      'sentences, choosing the right shape:\n'
+      '- Money (only if a note or coin is actually visible): identify each note '
+      'by its value. The English side shows the value in Western digits; the '
+      'Arabic side shows it in Eastern-Arabic digits (٥ = 5, ١٠ = 10, ٢٠ = 20, '
+      '٥٠ = 50, ١٠٠ = 100, ٢٠٠ = 200) AND spelled out in large Arabic words — '
+      'read those words, they are clearer than the small digits: خمسة جنيهات = 5, '
+      'عشرة جنيهات = 10, عشرون جنيهاً = 20, خمسون جنيهاً = 50, مائة جنيه = 100, '
+      'مائتا جنيه = 200. Egyptian pound notes are only 5, 10, 20, 50, 100, or '
+      '200, so the value must be one of those. State the TOTAL in Egyptian pounds '
+      'first, then the breakdown if there is more than one note, like "250 '
+      'pounds: a 200 and a 50". If you cannot read a note\'s value from either '
+      'side, say which note you cannot read instead of guessing.\n'
+      '- A packaged product: read the text printed on the packaging and say the '
+      'brand and product name, the variant or flavour, and the size if printed. '
+      'Go by the printed words, not by what the logo or colours remind you of.\n'
+      '- A document, sign, or label: say what it is plus the one or two facts that '
+      'matter (a name, number, price, or date). Do not read it all out.\n'
+      '- Anything else: name the object plainly; if unsure, say what it most looks '
+      'like ("this looks like...").\n'
+      'If the text on it is in Arabic, answer in Arabic; otherwise answer in '
+      'English. If you cannot make it out because the camera is too far, blurry, '
+      'or off-target, say so in one friendly line with how to fix the framing.';
 
   // read — v3 (VLM redo). The READ sub-mode: read the document aloud the way a
   // person would — faithful but condensed, NOT a summary. Reads the whole main
@@ -77,24 +97,6 @@ class VlmPrompts {
       'people present, and anything notable or in their path. Keep it to a few '
       'spoken sentences. Do not list every object or colour.';
 
-  // Phase B tasks — placeholders so the router/assistant compile and the enum is
-  // fully covered. Tuned wording lands in Phase B (in-hand, currency, brand).
-  static const _inHand =
-      '$_spine\n\n'
-      'Task: tell the user what object they are holding. Name it plainly. If you '
-      'are unsure, say what it most looks like ("this looks like…"). Mention any '
-      'text or label on it only if it helps identify it.';
-
-  static const _currency =
-      '$_spine\n\n'
-      'Task: identify the banknote or coin in view and state its value clearly. '
-      'If you cannot be certain of the denomination, say so rather than guess.';
-
-  static const _brand =
-      '$_spine\n\n'
-      'Task: name the product or brand in view. Give the product name and brand '
-      'plainly; add the variant only if it is clear.';
-
   static const _askImage =
       '$_spine\n\n'
       'Task: answer the user\'s spoken question about what is in front of them, '
@@ -106,9 +108,6 @@ class VlmPrompts {
         VlmTask.scan => _scan,
         VlmTask.read => _read,
         VlmTask.describeScene => _describeScene,
-        VlmTask.inHand => _inHand,
-        VlmTask.currency => _currency,
-        VlmTask.brand => _brand,
         VlmTask.askImage => _askImage,
       };
 

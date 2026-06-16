@@ -3,8 +3,8 @@ import 'package:wareeny/shared/vlm/vlm_task.dart';
 
 /// Task-aware routing policy. Returns the providers to try, in preference order.
 ///
-/// - `read`, `inHand`, `currency`, `brand` → on-device first (private, offline),
-///   cloud fallback when the local model is missing/unsupported and network is up.
+/// - `scan`, `read` → on-device first (private, offline), cloud fallback when
+///   the local model is missing/unsupported and network is up.
 /// - `askImage`, `describeScene` → cloud first (heavier reasoning), local fallback
 ///   when offline.
 ///
@@ -23,12 +23,7 @@ class ModelRouter {
 
   /// Providers to attempt for [task], in order of preference.
   List<VlmProvider> providersFor(VlmTask task) => switch (task) {
-        VlmTask.scan ||
-        VlmTask.read ||
-        VlmTask.inHand ||
-        VlmTask.currency ||
-        VlmTask.brand =>
-          [_local, _cloud],
+        VlmTask.scan || VlmTask.read => [_local, _cloud],
         VlmTask.askImage || VlmTask.describeScene => [_cloud, _local],
       };
 }

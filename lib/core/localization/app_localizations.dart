@@ -23,7 +23,7 @@ class AppLocalizations {
   String get modeHome => isArabic ? 'الرئيسية' : 'Home';
   String get modeNavigation => isArabic ? 'التنقل' : 'Navigation';
   String get modeStuffFinder => isArabic ? 'البحث عن الأشياء' : 'Stuff Finder';
-  String get modeInHand => isArabic ? 'في اليد' : 'In-Hand';
+  String get modeScan => isArabic ? 'المسح' : 'Scan';
   String get modeRead => isArabic ? 'القراءة' : 'Read';
   String get modeSettings => isArabic ? 'الإعدادات' : 'Settings';
 
@@ -31,13 +31,6 @@ class AppLocalizations {
 
   String get navIndoor => isArabic ? 'داخلي' : 'Indoor';
   String get navOutdoor => isArabic ? 'خارجي' : 'Outdoor';
-
-  // ── OCR sub-modes ─────────────────────────────────────────────────────────
-
-  String get ocrDocument => isArabic ? 'قارئ المستندات' : 'Document Reader';
-  String get ocrCurrency => isArabic ? 'قارئ العملة' : 'Currency Reader';
-  String get ocrBrand => isArabic ? 'كاشف العلامات' : 'Brand Detector';
-  String get ocrQa => isArabic ? 'وضع السؤال والجواب' : 'Q&A Mode';
 
   // ── Semantic hints ────────────────────────────────────────────────────────
 
@@ -79,6 +72,25 @@ class AppLocalizations {
 
   String get noTextFound =>
       isArabic ? 'لم يُعثر على نص. وجّه الكاميرا نحو مستند وحاول مرة أخرى.' : 'No text found. Aim at a document and try again.';
+
+  // ── Scan + Read status / actions ─────────────────────────────────────────
+
+  /// Pill shown while the Read mode VLM works before the first token arrives.
+  String get readingStatus => isArabic ? 'جارٍ القراءة…' : 'Reading…';
+
+  /// Pill shown while the Scan mode VLM works before the first token arrives.
+  String get scanningStatus => isArabic ? 'جارٍ التعرف…' : 'Identifying…';
+
+  /// Screen-reader action to re-speak the last scan result.
+  String get repeatResult => isArabic ? 'إعادة النتيجة' : 'Repeat result';
+
+  String get readUnavailable => isArabic
+      ? 'القراءة غير متاحة. ثبّت النموذج على الجهاز أو اتصل بالإنترنت ثم حاول مرة أخرى.'
+      : 'Reading is unavailable. Install the on-device model or connect to the internet, then try again.';
+
+  String get scanUnavailable => isArabic
+      ? 'المسح غير متاح. ثبّت النموذج على الجهاز أو اتصل بالإنترنت ثم حاول مرة أخرى.'
+      : 'Scan is unavailable. Install the on-device model or connect to the internet, then try again.';
 
   // ── Settings screen ───────────────────────────────────────────────────────
 

@@ -26,9 +26,11 @@ APP_ENV = os.getenv("APP_ENV", "dev")
 # Default output cap; overridable per task below. Spoken answers are short, but a
 # full document READ needs room so it isn't truncated mid-page.
 NUM_PREDICT = int(os.getenv("NUM_PREDICT", "320"))
-# Per-task output budgets. `scan` is a one-liner; `read` reads a whole document.
+# Per-task output budgets. `scan` is a short identification (object, or a money
+# total + breakdown of several notes — needs more than a one-liner); `read` reads
+# a whole document.
 NUM_PREDICT_BY_TASK = {
-    "scan": int(os.getenv("NUM_PREDICT_SCAN", "80")),
+    "scan": int(os.getenv("NUM_PREDICT_SCAN", "200")),
     "read": int(os.getenv("NUM_PREDICT_READ", "1200")),
 }
 
@@ -109,7 +111,7 @@ def app_config():
     return {
         "cloudModelId": GEMMA_MODEL,
         "streaming": True,
-        "tasks": ["read", "describeScene", "inHand", "currency", "brand", "askImage"],
+        "tasks": ["scan", "read", "describeScene", "askImage"],
     }
 
 
