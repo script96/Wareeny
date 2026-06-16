@@ -2,3 +2,14 @@
 *.txt
 .latex/
 .references/
+
+# Flutter
+.dart_tool/
+.flutter-plugins-dependencies
+android/
+ios/
+build/
+backend/
+
+# macOS
+.DS_Store
