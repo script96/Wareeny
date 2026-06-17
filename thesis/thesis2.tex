@@ -4,12 +4,16 @@
 % hybrid VLM reading pipeline, on-device YOLO detection, on-device EGP
 % banknote detector, SharedPreferences persistence).
 \documentclass[a4paper]{report}
-\usepackage[utf8]{inputenc}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[utf8]{inputenc}
+\fi
 \usepackage[T1]{fontenc}
+\usepackage{microtype}
 \usepackage{geometry}
 \usepackage{setspace}
 \usepackage{tocloft}
-\usepackage{hyperref}
+\usepackage[hidelinks,hypertexnames=false,plainpages=false,pdfpagelabels]{hyperref}
 \usepackage{enumitem}
 \usepackage{graphicx}
 \usepackage{titlesec}
@@ -17,13 +21,26 @@
 \usepackage{array}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{ragged2e}
+% Raggedright fixed-width column: avoids underfull/overfull from justified narrow cells
+\newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 \usepackage{xurl}
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{float}
 \usepackage{csquotes}
-\usepackage{mathptmx}
+\usepackage{newtxtext} % Times text with full bold/smallcaps shape coverage
+\usepackage{newtxmath}
+\ifPDFTeX
+  \usepackage[zerostyle=b,scaled=0.85]{newtxtt} % monospace with real bold (for code/\texttt); pdfTeX has the T1 .fd
+\fi
 \usepackage{tikz}
+% Allow long \texttt identifiers (e.g. NavigationRiskEngine) to hyphenate/break,
+% preventing under/overfull lines in identifier-dense paragraphs.
+\makeatletter
+\g@addto@macro\ttfamily{\hyphenchar\font=`\-}
+\makeatother
 
 % --- Listing style for Dart code ---
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -58,10 +75,13 @@
 \onehalfspacing
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{12pt}
+\setlength{\emergencystretch}{4em}
+\tolerance=3000
+\hbadness=4500 % ignore negligible underfull looseness in identifier-dense lines
 \renewcommand{\arraystretch}{1.2}
 % --- Running headers: chapter name (left) + page number (right) ---
-\setlength{\headheight}{92pt}
-\addtolength{\topmargin}{-77pt}
+\setlength{\headheight}{144.45422pt}
+\addtolength{\topmargin}{-52.45422pt}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[R]{\thepage}
@@ -78,14 +98,14 @@
 % Title-page header style: faculty logo banner, no rules
 \fancypagestyle{titlepage}{%
   \fancyhf{}%
-  \fancyhead[C]{\raisebox{-2.5\height}{\includegraphics[width=0.38\textwidth]{figures/Faculty Logo.png}}}%
+  \fancyhead[C]{\raisebox{-2.5\height}{\includegraphics[width=0.38\textwidth]{figures/faculty_logo.png}}}%
   \renewcommand{\headrulewidth}{0pt}%
   \renewcommand{\footrulewidth}{0pt}%
 }
 % Section heading sizes (match prior revision)
-\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
-\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
-\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+\titleformat{\section}{\normalfont\Large\bfseries\raggedright}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\raggedright}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries\raggedright}{\thesubsubsection}{1em}{}
 % Table of Contents heading style
 \setlength{\cftbeforechapskip}{10pt}
 \renewcommand{\cftchapfont}{\bfseries}
@@ -159,7 +179,7 @@
     \vspace{1cm}
 
     % App Logo
-    \includegraphics[width=0.12\textwidth]{figures/app logo.png}
+    \includegraphics[width=0.12\textwidth]{figures/app_logo.png}
 
     % Title
     {\Huge\bfseries Wareeny\par}
@@ -447,7 +467,7 @@ Table~\ref{tab:commercial-comparison} provides a comparative analysis of the key
 \caption{Comparison of Commercial Assistive Applications}
 \label{tab:commercial-comparison}
 \small
-\begin{tabular}{@{}p{2.8cm}cp{2.2cm}p{2.2cm}p{2cm}p{3.5cm}@{}}
+\begin{tabular}{@{}R{2.8cm}cR{2.2cm}R{2.2cm}R{2cm}R{3.5cm}@{}}
 \toprule
 \textbf{Application} & \textbf{Year} & \textbf{Platform} & \textbf{Arabic Support} & \textbf{Processing} & \textbf{Key Limitations} \\
 \midrule
@@ -636,7 +656,7 @@ Table~\ref{tab:hardware} summarizes the hardware requirements for the Wareeny sy
 \caption{Hardware Environment Specifications}
 \label{tab:hardware}
 \small
-\begin{tabular}{@{}p{4cm}p{10cm}@{}}
+\begin{tabular}{@{}R{4cm}R{10cm}@{}}
 \toprule
 \textbf{Component} & \textbf{Specification} \\
 \midrule
@@ -665,7 +685,7 @@ Table~\ref{tab:software} presents the software technologies and frameworks utili
 \caption{Software Environment Technologies}
 \label{tab:software}
 \small
-\begin{tabular}{@{}p{4.5cm}p{9.5cm}@{}}
+\begin{tabular}{@{}R{4.5cm}R{9.5cm}@{}}
 \toprule
 \textbf{Component/Tool} & \textbf{Purpose and Description} \\
 \midrule
@@ -701,7 +721,7 @@ The system architecture illustrates the high-level design of the Wareeny applica
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/system arch.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/system_arch.png}
 \caption{System Architecture Diagram.}
 \label{fig:system-arch}
 \end{figure}
@@ -713,7 +733,7 @@ The class diagram illustrates the structural design of the Wareeny system, depic
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/Class Diagram.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/class_diagram.png}
 \caption{Class Diagram.}
 \label{fig:class-diagram}
 \end{figure}
@@ -725,7 +745,7 @@ The use case diagram illustrates the interactions between the user and the Waree
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/use case.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/use_case.png}
 \caption{Use Case Diagram.}
 \label{fig:use-case}
 \end{figure}
@@ -740,21 +760,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/General Flow 1 - OCR.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_general_flow_1_ocr.png}
 \caption{General Flow 1: OCR Processing.}
 \label{fig:seq-genflow1}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/General Flow 2 - Object Detection.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_general_flow_2_object_detection.png}
 \caption{General Flow 2: Object Detection Processing.}
 \label{fig:seq-genflow2}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/General Flow 3 - Navigation.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_general_flow_3_navigation.png}
 \caption{General Flow 3: Navigation Processing.}
 \label{fig:seq-genflow3}
 \end{figure}
@@ -764,21 +784,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Indoor Object Detection and Distance.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_indoor_object_detection_distance.png}
 \caption{Sequence Diagram: Indoor Object Detection and Distance Estimation.}
 \label{fig:seq-indoor-objdet}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/In-Hand Object Detection.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_inhand_object_detection.png}
 \caption{Sequence Diagram: In-Hand Object Detection.}
 \label{fig:seq-inhand}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Brand and Currency Detection.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_brand_currency_detection.png}
 \caption{Sequence Diagram: Brand and Currency Detection.}
 \label{fig:seq-brand-currency}
 \end{figure}
@@ -788,35 +808,35 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Detect Object fig.2.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_detect_object_fig2.png}
 \caption{Sequence Diagram: Outdoor Object Detection.}
 \label{fig:seq-outdoor-objdet}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Outdoor Object and Finder.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_outdoor_object_finder.png}
 \caption{Sequence Diagram: Outdoor Object Finder.}
 \label{fig:seq-outdoor-finder}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Outdoor Reader (Signs).png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_outdoor_reader_signs.png}
 \caption{Sequence Diagram: Outdoor Reader for Signs.}
 \label{fig:seq-outdoor-reader}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Outdoor Navigation fig.3.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_outdoor_navigation_fig3.png}
 \caption{Sequence Diagram: Outdoor Navigation.}
 \label{fig:seq-outdoor-nav}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Traffic Light Status.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_traffic_light_status.png}
 \caption{Sequence Diagram: Traffic Light Status Detection.}
 \label{fig:seq-traffic-light}
 \end{figure}
@@ -826,21 +846,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Read Document fig.1.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_read_document_fig1.png}
 \caption{Sequence Diagram: Read Document.}
 \label{fig:seq-read-document}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/QA Mode (Visual Query).png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_qa_mode_visual_query.png}
 \caption{Sequence Diagram: QA Mode (Visual Query).}
 \label{fig:seq-qa-mode}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Danger Word Alerts.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_danger_word_alerts.png}
 \caption{Sequence Diagram: Danger Word Alerts.}
 \label{fig:seq-danger-words}
 \end{figure}
@@ -850,21 +870,21 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Danger Mode (Hazard Detection).png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_danger_mode_hazard_detection.png}
 \caption{Sequence Diagram: Danger Mode (Hazard Detection).}
 \label{fig:seq-danger-mode}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Emergency Auto Call and Location.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_emergency_auto_call_location.png}
 \caption{Sequence Diagram: Emergency Auto Call and Location Sharing.}
 \label{fig:seq-emergency-call}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Privacy Mode (Secure Shutdown).png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_privacy_mode_secure_shutdown.png}
 \caption{Sequence Diagram: Privacy Mode (Secure Shutdown).}
 \label{fig:seq-privacy-mode}
 \end{figure}
@@ -874,7 +894,7 @@ The three general flows summarize the dominant interaction patterns of the syste
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/sequence diagrams/Directional Audio.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/seq_directional_audio.png}
 \caption{Sequence Diagram: Directional Audio.}
 \label{fig:seq-directional-audio}
 \end{figure}
@@ -886,7 +906,7 @@ The Entity-Relationship Diagram (ERD) illustrates the database schema and data m
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/ERD Diagram.png}
+\includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{figures/erd_diagram.png}
 \caption{Entity-Relationship Diagram.}
 \label{fig:erd}
 \end{figure}
@@ -959,7 +979,7 @@ Role in final design & Retained for latency-critical, closed-set tasks (navigati
 \centering
 \caption{Numerical Performance Comparison: Classical Pipeline vs.\ Wareeny's Hybrid Approach}
 \label{tab:vlm-stats}
-\begin{tabular}{|l|c|c|c|c|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|C{2.2cm}|C{2.6cm}|C{1.4cm}|C{1.5cm}|}
 \hline
 \textbf{Metric} & \textbf{Classical Pipeline} & \textbf{Wareeny Approach} & \textbf{Gain} & \textbf{Ref.} \\
 \hline
@@ -975,7 +995,7 @@ Currency recognition -- worn notes (\%) & 72 & 87 (localized model) & +15 pp & [
 \hline
 User task completion vs.\ static captioning & baseline & +40\% & +40\% & [1] \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 Table~\ref{tab:vlm-stats} therefore compares the two directions more directly. The classical pipeline remains strong in one area: speed. That is why Wareeny keeps detector-based processing for navigation and preserves the real-time 12.8--15.2 FPS operating range reported in the literature [4], [5]. Where the adopted Wareeny design improves is in understanding quality and user usefulness. Instead of relying on an OCR-only path whose robustness can fall to 68\% on challenging Arabic text [2], the system shifts reading into a contextual VLM pipeline, motivated by Arabic-reading results that rise from 68\% to 89\%, or by 21 percentage points, when moving beyond the generic OCR baseline [2]. Instead of depending on generalized visual models for region-specific tasks, the architecture leaves room for localized Egyptian-currency recognition, where published results rise from 72\% to 94\% in controlled conditions [3]. Most importantly, the interaction model aligns with evidence that interactive VQA-style assistance can improve task completion by 40\% over static captioning [1]. This is the numerical reason the project adopts a hybrid architecture rather than a purely classical one.
@@ -1030,26 +1050,23 @@ The visual layer uses a dark full-screen camera background with glassmorphism ov
 \subsection{Screen Designs}
 Figures~\ref{fig:ui-home}--\ref{fig:ui-settings} present the principal screen designs of the implemented application.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
-% \includegraphics[width=0.32\textwidth]{figures/ui_home.png}
-\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Home / Scan screen]}}
+\includegraphics[width=0.32\textwidth]{figures/ui_home.png}
 \caption{Home and Scan entry surface with the camera preview, mode carousel, and top status bar.}
 \label{fig:ui-home}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
-% \includegraphics[width=0.32\textwidth]{figures/ui_navigation.png}
-\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Navigation screen]}}
+\includegraphics[width=0.32\textwidth]{figures/ui_navigation.png}
 \caption{Navigation mode showing live detection overlays and directional status indicators.}
 \label{fig:ui-navigation}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
-% \includegraphics[width=0.32\textwidth]{figures/ui_settings.png}
-\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Settings screen]}}
+\includegraphics[width=0.32\textwidth]{figures/ui_settings.png}
 \caption{Settings mode with language, speech-rate, and haptics configuration cards.}
 \label{fig:ui-settings}
 \end{figure}
@@ -1134,11 +1151,11 @@ The approach is incremental. Shared application concerns---environment configura
 \section{System Tools}
 Table~\ref{tab:system-tools} lists the principal tools and packages used in the implementation, with the versions resolved in the project's \texttt{pubspec.lock}.
 
-\begin{table}[h]
+\begin{table}[ht]
 \centering
 \caption{Implementation Tools and Versions}
 \label{tab:system-tools}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.30\textwidth}|>{\raggedright\arraybackslash}p{0.18\textwidth}|>{\raggedright\arraybackslash}X|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.34\textwidth}|>{\raggedright\arraybackslash}p{0.15\textwidth}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Tool / Package} & \textbf{Version} & \textbf{Role} \\
 \hline
@@ -1224,26 +1241,23 @@ Accessibility semantics are integrated directly into the interface. Mode switchi
 \subsection{Documented Screens}
 Figures~\ref{fig:impl-scan}--\ref{fig:impl-stufffinder} document the implemented screens captured from the running application.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
-% \includegraphics[width=0.32\textwidth]{figures/impl_scan.png}
-\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Scan result overlay]}}
+\includegraphics[width=0.32\textwidth]{figures/impl_scan.png}
 \caption{Scan mode after a capture, showing the spoken-result overlay and repeat action.}
 \label{fig:impl-scan}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
-% \includegraphics[width=0.32\textwidth]{figures/impl_read.png}
-\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Read controls]}}
+\includegraphics[width=0.32\textwidth]{figures/impl_read.png}
 \caption{Read mode with stop, repeat, skip, and cancel controls during progressive speech.}
 \label{fig:impl-read}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
-% \includegraphics[width=0.32\textwidth]{figures/impl_stufffinder.png}
-\framebox[0.32\textwidth]{\rule{0pt}{0.45\textwidth}\textbf{[Stuff Finder target picker]}}
+\includegraphics[width=0.32\textwidth]{figures/impl_stufffinder.png}
 \caption{Stuff Finder target picker merging custom assistive classes with COCO classes.}
 \label{fig:impl-stufffinder}
 \end{figure}
@@ -1402,7 +1416,7 @@ Interaction model & Visual-first & Visual-first & Basic audio & Accessibility-fi
 \centering
 \caption{Numerical Performance Comparison Across Key Metrics}
 \label{tab:numerical-comparison}
-\begin{tabular}{|l|c|c|c|c|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|c|c|c|C{2.8cm}|}
 \hline
 \textbf{Metric} & \textbf{Seeing AI} & \textbf{Lookout} & \textbf{E3rafli} & \textbf{Wareeny / Literature} \\
 \hline
@@ -1420,7 +1434,7 @@ VQA task completion vs.\ captioning & baseline & baseline & N/A & +40\% [1] \\
 \hline
 Emergency auto-call & --- & --- & --- & Implemented \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 The comparison highlights four areas where Wareeny's implemented design is differentiated. First, its hybrid model keeps latency-critical detection on-device through YOLOv8n streaming while reserving the vision-language pipeline for deliberate understanding tasks; the literature supporting this choice places comparable assistive detection pipelines in the 12.8--15.2 FPS range on mobile hardware [4], [5]. Second, bilingual English--Arabic interaction with an Egyptian-Arabic voice addresses a geo-linguistic gap that the global applications leave open, and the Arabic-reading literature cited earlier shows why this matters technically, reporting an improvement from 68\% to 89\% when moving from a generic to a specialized Arabic-reading approach [2]. Third, the vision-language reading pipeline interprets text in context and supports visual question answering rather than emitting verbatim transcriptions; this aligns with Huh et al. (2024) [1], who reported a 40\% improvement in task completion for interactive VQA-style assistance over static captioning. Fourth, the active background emergency subsystem---shake-triggered countdown, automatic dialing, GPS location sharing by SMS, and a redundant WhatsApp message---is a safety capability that none of the compared applications provide. Table~\ref{tab:numerical-comparison} quantifies these differentiators: the currency row alone shows a jump from 72\% (generalized transfer learning) to 94\% controlled and 87\% worn-note accuracy for localized Egyptian-pound models [3], which numerically justifies the dedicated provider path reserved in the Wareeny architecture.
