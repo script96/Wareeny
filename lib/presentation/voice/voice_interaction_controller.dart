@@ -393,7 +393,7 @@ class VoiceInteractionController extends ChangeNotifier {
     AppMode.home => 'الرئيسية',
     AppMode.navigation => 'التنقل',
     AppMode.stuffFinder => 'البحث عن الأشياء',
-    AppMode.inHand => 'في اليد',
+    AppMode.scan => 'المسح',
     AppMode.read => 'القراءة',
     AppMode.settings => 'الإعدادات',
   };

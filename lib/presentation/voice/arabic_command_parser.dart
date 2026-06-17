@@ -58,7 +58,9 @@ class ArabicCommandParser {
       'الحاجات',
       'البحث',
     ],
-    AppMode.inHand: [
+    AppMode.scan: [
+      'المسح',
+      'وضع المسح',
       'اعرف اللي في ايدي',
       'اللي في ايدي',
       'اعرف الفلوس',
