@@ -12,7 +12,11 @@ class DangerLabelMapper {
     final value = _normalized(mapped);
     if (value.isEmpty || value == 'unknown') return null;
 
-    if (_containsAny(value, const ['fire', 'flame', 'smoke'])) {
+    if (_containsAny(value, const ['smoke'])) {
+      _log('ignoring smoke-only label raw="$label" normalized="$value"');
+      return null;
+    }
+    if (_containsAny(value, const ['fire', 'flame'])) {
       return DangerKind.fire;
     }
     if (_containsAny(value, const ['stop', 'stop sign'])) {

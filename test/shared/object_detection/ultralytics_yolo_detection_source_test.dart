@@ -31,11 +31,21 @@ void main() {
       UltralyticsYoloDetectionSource.stuffFinderAndroidModelPath,
       'assets/models/stuff_finder/stuff_finder_int8.tflite',
     );
+    expect(
+      UltralyticsYoloDetectionSource.stuffFinderAndroidFloatModelPath,
+      'assets/models/stuff_finder/stuff_finder_float32.tflite',
+    );
+    expect(
+      UltralyticsYoloDetectionSource.stuffFinderIosModelPath,
+      'assets/models/stuff_finder/stuff_finder.mlpackage.zip',
+    );
 
     final source = UltralyticsYoloDetectionSource();
     expect(
       source.modelPathForMode('stuff_finder', useCustomModel: true),
-      UltralyticsYoloDetectionSource.stuffFinderAndroidModelPath,
+      Platform.isIOS
+          ? UltralyticsYoloDetectionSource.stuffFinderIosModelPath
+          : UltralyticsYoloDetectionSource.stuffFinderAndroidFloatModelPath,
     );
     expect(
       source.modelPathForMode('navigation_indoor'),

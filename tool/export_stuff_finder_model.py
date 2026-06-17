@@ -111,6 +111,13 @@ def newest_tflite(candidates: Iterable[Path]) -> Path:
     return max(files, key=lambda path: path.stat().st_mtime)
 
 
+def needs_refresh(output: Path, *, inputs: Iterable[Path]) -> bool:
+    if not output.exists():
+        return True
+    output_mtime = output.stat().st_mtime
+    return any(path.stat().st_mtime > output_mtime for path in inputs if path.exists())
+
+
 def inspect_tflite(tf, model_path: Path) -> dict[str, object]:
     interpreter = tf.lite.Interpreter(model_path=str(model_path))
     interpreter.allocate_tensors()
@@ -175,7 +182,8 @@ def main() -> int:
     labels_path.write_text("\n".join(label_names) + "\n", encoding="utf-8")
 
     float_dest = output_dir / "stuff_finder_float32.tflite"
-    if args.force or not float_dest.exists():
+    float_inputs = (weights,)
+    if args.force or needs_refresh(float_dest, inputs=float_inputs):
         float_path = export_once(
             YOLO,
             weights,
@@ -192,7 +200,8 @@ def main() -> int:
         print(f"Reusing existing correctness model: {float_dest}")
 
     int8_dest = output_dir / "stuff_finder_int8.tflite"
-    if args.force or not int8_dest.exists():
+    int8_inputs = (weights, data_yaml)
+    if args.force or needs_refresh(int8_dest, inputs=int8_inputs):
         with tempfile.TemporaryDirectory(prefix="wareeny-stuff-finder-data-") as temp_dir:
             export_data_yaml = absolute_data_yaml(data_yaml, Path(temp_dir))
             int8_path = export_once(

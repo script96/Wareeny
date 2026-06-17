@@ -32,6 +32,7 @@ abstract interface class VoiceCommandService {
     required void Function(double level) onSoundLevel,
     required Duration listenFor,
     required Duration pauseFor,
+    ListenMode listenMode = ListenMode.confirmation,
   });
 
   Future<void> stop();
@@ -79,6 +80,7 @@ class SpeechToTextVoiceCommandService implements VoiceCommandService {
     required void Function(double level) onSoundLevel,
     required Duration listenFor,
     required Duration pauseFor,
+    ListenMode listenMode = ListenMode.confirmation,
   }) async {
     await _speech.listen(
       onResult: (SpeechRecognitionResult result) {
@@ -93,7 +95,7 @@ class SpeechToTextVoiceCommandService implements VoiceCommandService {
       listenOptions: SpeechListenOptions(
         cancelOnError: true,
         partialResults: true,
-        listenMode: ListenMode.confirmation,
+        listenMode: listenMode,
         listenFor: listenFor,
         pauseFor: pauseFor,
         localeId: localeId,

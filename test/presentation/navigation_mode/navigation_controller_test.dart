@@ -95,7 +95,7 @@ void main() {
     );
 
     controller.processFrame(_emptyFrame());
-    expect(controller.detectorStatus, 'Indoor + COCO navigation active');
+    expect(controller.detectorStatus, 'Indoor navigation model active');
 
     controller.setIndoorMode(false);
     expect(controller.detectorStatus, 'Loading outdoor navigation model');
@@ -132,6 +132,52 @@ void main() {
     );
     expect(controller.latestFrame!.source.modelSource, 'indoor+coco');
   });
+
+  test('ignores outdoor COCO labels while indoor mode is active', () {
+    final controller = NavigationController(
+      detectionSource: _FakeDetectionSource(),
+      feedback: _FakeFeedback(),
+    );
+    final timestamp = DateTime(2026);
+
+    controller.processFrame(
+      _frameWithDetection(label: 'car', source: 'coco', timestamp: timestamp),
+    );
+    controller.processFrame(
+      _frameWithDetection(
+        label: 'chair',
+        source: 'coco',
+        timestamp: timestamp.add(const Duration(milliseconds: 100)),
+      ),
+    );
+
+    expect(
+      controller.latestFrame!.source.detections.map((item) => item.label),
+      ['chair'],
+    );
+  });
+
+  test('ignores indoor COCO labels while outdoor mode is active', () {
+    final controller = NavigationController(
+      detectionSource: _FakeDetectionSource(),
+      feedback: _FakeFeedback(),
+    );
+    controller.setIndoorMode(false);
+    final timestamp = DateTime(2026);
+
+    controller.processFrame(
+      _frameWithDetections(
+        labels: ['chair', 'bench'],
+        source: 'coco',
+        timestamp: timestamp,
+      ),
+    );
+
+    expect(
+      controller.latestFrame!.source.detections.map((item) => item.label),
+      ['bench'],
+    );
+  });
 }
 
 ObjectDetectionFrame _frameWithDetection({
@@ -139,16 +185,30 @@ ObjectDetectionFrame _frameWithDetection({
   required String source,
   required DateTime timestamp,
 }) {
+  return _frameWithDetections(
+    labels: [label],
+    source: source,
+    timestamp: timestamp,
+  );
+}
+
+ObjectDetectionFrame _frameWithDetections({
+  required List<String> labels,
+  required String source,
+  required DateTime timestamp,
+}) {
   return ObjectDetectionFrame(
     frameId: source == 'indoor' ? 10 : 11,
     sourceSize: const Size(100, 100),
-    detections: [
-      ObjectDetection(
-        label: label,
-        confidence: 0.9,
-        boundingBox: const Rect.fromLTWH(40, 50, 20, 20),
-      ),
-    ],
+    detections: labels
+        .map(
+          (label) => ObjectDetection(
+            label: label,
+            confidence: 0.9,
+            boundingBox: const Rect.fromLTWH(40, 50, 20, 20),
+          ),
+        )
+        .toList(growable: false),
     timestamp: timestamp,
     modelSource: source,
   );

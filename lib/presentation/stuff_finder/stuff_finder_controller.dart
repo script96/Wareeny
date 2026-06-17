@@ -77,7 +77,7 @@ class StuffFinderController extends ChangeNotifier {
 
   String? selectedTarget;
   UprightDetectionFrame? latestFrame;
-  String status = 'اختار حاجة علشان أبدأ أدور عليها';
+  String status = 'اختار حاجة عشان أبدأ أدور عليها';
 
   int get matchCount => latestFrame?.detections.length ?? 0;
 
@@ -145,7 +145,7 @@ class StuffFinderController extends ChangeNotifier {
     final uprightFrame = _coordinateMapper.orient(rawFrame);
     final matches = uprightFrame.detections
         .where(
-          (detection) => detection.source.label.trim().toLowerCase() == target,
+          (detection) => _matchesTargetLabel(detection.source.label, target),
         )
         .toList(growable: false);
 
@@ -188,6 +188,17 @@ class StuffFinderController extends ChangeNotifier {
   void _onDetectorError(Object error, StackTrace stackTrace) {
     status = 'حصل خطأ في كاشف الأشياء: $error';
     notifyListeners();
+  }
+
+  bool _matchesTargetLabel(String detectedLabel, String target) {
+    final normalizedDetected = detectedLabel.trim().toLowerCase();
+    if (normalizedDetected == target) return true;
+
+    final item = stuffFinderItemForLabel(target);
+    if (item == null) return false;
+    return item.aliases.any(
+      (alias) => alias.trim().toLowerCase() == normalizedDetected,
+    );
   }
 
   @override

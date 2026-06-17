@@ -13,7 +13,6 @@ import 'package:wareeny/presentation/read/vlm_read_controller.dart';
 import 'package:wareeny/presentation/read/widgets/ocr_controls_bar.dart';
 import 'package:wareeny/presentation/read/widgets/reading_status_pill.dart';
 import 'package:wareeny/presentation/read/widgets/scan_result_view.dart';
-import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
@@ -163,7 +162,6 @@ class _ReadScreenState extends State<ReadScreen> {
                 ),
               ),
             _TopHud(subMode: _read.subMode, onToggle: _toggleSubMode),
-            const _RightActions(),
             _BottomArea(
               read: _read,
               previousMode: widget.previousMode,
@@ -355,20 +353,6 @@ class _Pill extends StatelessWidget {
           letterSpacing: 1.5,
         ),
       ),
-    );
-  }
-}
-
-class _RightActions extends StatelessWidget {
-  const _RightActions();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      right: 16,
-      top: 0,
-      bottom: 0,
-      child: Center(child: SafeArea(child: const CameraSideActions())),
     );
   }
 }

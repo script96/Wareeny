@@ -20,7 +20,7 @@ class DangerModeConfig {
       'assets/models/danger/danger_model_float32.tflite';
 
   static const fireConfidence =
-      int.fromEnvironment('DANGER_FIRE_CONFIDENCE_PERCENT', defaultValue: 45) /
+      int.fromEnvironment('DANGER_FIRE_CONFIDENCE_PERCENT', defaultValue: 70) /
       100.0;
   static const stopSignConfidence =
       int.fromEnvironment('DANGER_STOP_CONFIDENCE_PERCENT', defaultValue: 50) /

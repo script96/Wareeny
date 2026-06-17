@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -19,8 +21,9 @@ class VlmReadController extends ChangeNotifier {
   VlmReadController({
     required VlmAssistant assistant,
     required AudioHapticsBridge audioHaptics,
-  })  : _assistant = assistant,
-        _audioHaptics = audioHaptics {
+  }) : _assistant = assistant,
+       _audioHaptics = audioHaptics,
+       _speech = SpeechQueue(audioHaptics) {
     // Reading is "active" until generation finishes AND the queued audio has
     // actually been spoken — generation outruns playback, so the controls must
     // outlive the stream. The queue tells us when it has drained.
@@ -29,7 +32,7 @@ class VlmReadController extends ChangeNotifier {
 
   final VlmAssistant _assistant;
   final AudioHapticsBridge _audioHaptics;
-  final SpeechQueue _speech = SpeechQueue();
+  final SpeechQueue _speech;
 
   ReadSubMode subMode = ReadSubMode.scan;
   bool isThinking = false;
@@ -67,18 +70,22 @@ class VlmReadController extends ChangeNotifier {
 
     // Tactile "thinking" cue while we wait for the first token. (A dedicated
     // audio earcon is a native TODO; the haptic pulse is the non-visual stand-in.)
-    unawaited(_audioHaptics.playHaptic(HapticSignal.confirmation).catchError((_) {}));
+    unawaited(
+      _audioHaptics.playHaptic(HapticSignal.confirmation).catchError((_) {}),
+    );
 
     // SCAN = quick gist; READ = full document read. Different tuned prompts.
     final task = withControls ? VlmTask.read : VlmTask.scan;
     final request = VlmRequest(imagePath: imagePath, task: task);
-    _sub = _assistant.run(request).listen(
-      (event) => _onEvent(event, withControls: withControls),
-      onError: (Object e) {
-        debugPrint('VlmReadController stream error: $e');
-        _finishUnavailable();
-      },
-    );
+    _sub = _assistant
+        .run(request)
+        .listen(
+          (event) => _onEvent(event, withControls: withControls),
+          onError: (Object e) {
+            debugPrint('VlmReadController stream error: $e');
+            _finishUnavailable();
+          },
+        );
   }
 
   void _onEvent(VlmEvent event, {required bool withControls}) {

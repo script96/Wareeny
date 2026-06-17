@@ -252,6 +252,7 @@ class _NavigationOverlayPainter extends CustomPainter {
       return;
     }
     for (final detection in dangerFrame.detections) {
+      if (!detection.isAlertCandidate) continue;
       final normalized = Rect.fromLTRB(
         detection.boundingBox.left / dangerFrame.sourceSize.width,
         detection.boundingBox.top / dangerFrame.sourceSize.height,

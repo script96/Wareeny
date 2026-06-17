@@ -13,7 +13,6 @@ import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
 import 'package:wareeny/presentation/onboarding/emergency_onboarding_screen.dart';
 import 'package:wareeny/presentation/read/read_screen.dart';
-import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/hold_to_listen_detector.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
@@ -190,7 +189,6 @@ class _NavigationShellState extends State<NavigationShell> {
             children: [
               const CameraFeedView(),
               _TopOverlay(currentMode: _currentMode),
-              const _RightSideOverlay(),
               _BottomModeMenu(
                 previousMode: _previousMode,
                 currentMode: _currentMode,
@@ -266,20 +264,6 @@ class _TopOverlay extends StatelessWidget {
         minimum: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: CameraTopBar(currentMode: currentMode),
       ),
-    );
-  }
-}
-
-class _RightSideOverlay extends StatelessWidget {
-  const _RightSideOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      right: 16,
-      top: 0,
-      bottom: 0,
-      child: Center(child: SafeArea(child: const CameraSideActions())),
     );
   }
 }

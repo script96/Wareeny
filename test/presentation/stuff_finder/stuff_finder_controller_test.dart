@@ -55,6 +55,26 @@ void main() {
     expect(controller.status, 'لقيت محفظة');
   });
 
+  test('matches detector aliases for the selected target', () async {
+    final source = _FakeDetectionSource();
+    final controller = StuffFinderController(detectionSource: source);
+
+    await controller.selectTarget('wallet');
+    controller.processFrame(
+      _frame([
+        const ObjectDetection(
+          label: 'wallets',
+          confidence: 0.71,
+          boundingBox: Rect.fromLTWH(40, 50, 140, 120),
+        ),
+      ]),
+    );
+
+    expect(controller.matchCount, 1);
+    expect(controller.latestFrame!.detections.single.source.label, 'wallets');
+    expect(controller.status, 'لقيت محفظة');
+  });
+
   test('speaks when searching starts and when target is found', () async {
     final source = _FakeDetectionSource();
     final feedback = _FakeStuffFinderFeedback();

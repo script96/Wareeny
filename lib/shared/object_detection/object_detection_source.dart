@@ -85,8 +85,10 @@ class UltralyticsYoloDetectionSource
   static const dangerLabelsPath = 'assets/models/danger/danger_labels.txt';
   static const stuffFinderAndroidModelPath =
       'assets/models/stuff_finder/stuff_finder_int8.tflite';
+  static const stuffFinderAndroidFloatModelPath =
+      'assets/models/stuff_finder/stuff_finder_float32.tflite';
   static const stuffFinderIosModelPath =
-      'assets/models/stuff_finder/stuff_finder_int8.tflite';
+      'assets/models/stuff_finder/stuff_finder.mlpackage.zip';
 
   final StreamController<ObjectDetectionFrame> _frames =
       StreamController<ObjectDetectionFrame>.broadcast();
@@ -101,7 +103,7 @@ class UltralyticsYoloDetectionSource
     if (mode == 'stuff_finder' && useCustomModel) {
       return Platform.isIOS
           ? stuffFinderIosModelPath
-          : stuffFinderAndroidModelPath;
+          : stuffFinderAndroidFloatModelPath;
     }
     if (mode == 'navigation_indoor') {
       return Platform.isIOS

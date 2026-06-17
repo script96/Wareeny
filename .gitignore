@@ -33,6 +33,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.venv-tts/
+tool/tts_reference/
 
 # Symbolication related
 app.*.symbols

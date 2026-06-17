@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -13,43 +15,45 @@ enum TtsPriority { normal, critical }
 class AudioHapticsBridge {
   AudioHapticsBridge()
     : _channel = const MethodChannel(NativeBridgeChannels.audioHaptics),
+      _player = AudioPlayer(),
       _tts = FlutterTts();
 
   final MethodChannel _channel;
+  final AudioPlayer _player;
   final FlutterTts _tts;
   bool _ttsReady = false;
+  bool _phraseAudioReady = false;
   String _arabicLanguage = 'ar';
   Map<String, String>? _selectedArabicVoice;
+  Map<String, String> _phraseAssetByText = const <String, String>{};
+  Map<String, String> _normalizedPhraseAssetByText = const <String, String>{};
   VoidCallback? _currentCompletionHandler;
   TtsPriority? _currentPriority;
   DateTime? _normalSpeechSuppressedUntil;
+  StreamSubscription<void>? _playerCompleteSubscription;
 
   static const playHapticMethod = 'haptics.play';
   static const criticalSpeechSuppression = Duration(seconds: 2);
+  static const phraseIndexAsset = 'assets/audio/tts/egyptian_phrase_index.json';
 
   /// Call once at app startup to eagerly configure TTS for Arabic.
   Future<void> init() async {
     if (_ttsReady) return;
     try {
+      await _initializePhraseAudio();
+
       // Configure global callbacks
       _tts.setCompletionHandler(() {
         debugPrint('[TTS] Speech completed');
-        final handler = _currentCompletionHandler;
-        _currentCompletionHandler = null;
-        _currentPriority = null;
-        handler?.call();
+        _completeCurrentSpeech();
       });
       _tts.setCancelHandler(() {
         debugPrint('[TTS] Speech cancelled');
-        _currentCompletionHandler = null;
-        _currentPriority = null;
+        _completeCurrentSpeech();
       });
       _tts.setErrorHandler((message) {
         debugPrint('[TTS] Speech error: $message');
-        final handler = _currentCompletionHandler;
-        _currentCompletionHandler = null;
-        _currentPriority = null;
-        handler?.call();
+        _completeCurrentSpeech();
       });
 
       // Try Egyptian Arabic first, fall back to generic Arabic.
@@ -154,6 +158,93 @@ class AudioHapticsBridge {
     }
   }
 
+  Future<void> _initializePhraseAudio() async {
+    if (_phraseAudioReady) return;
+    try {
+      final raw = await rootBundle.loadString(phraseIndexAsset);
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final phrases =
+          (decoded['phrases'] as List<dynamic>? ?? const <dynamic>[])
+              .whereType<Map<String, dynamic>>();
+      _phraseAssetByText = {
+        for (final phrase in phrases)
+          (phrase['text'] as String).trim(): (phrase['asset'] as String).trim(),
+      };
+      _normalizedPhraseAssetByText = {
+        for (final entry in _phraseAssetByText.entries)
+          _normalizePhraseKey(entry.key): entry.value,
+      };
+      await _player.setReleaseMode(ReleaseMode.stop);
+      _playerCompleteSubscription ??= _player.onPlayerComplete.listen((_) {
+        debugPrint('[Audio] Phrase playback completed');
+        _completeCurrentSpeech();
+      });
+      _phraseAudioReady = true;
+      debugPrint(
+        '[Audio] Loaded ${_phraseAssetByText.length} Egyptian phrase assets',
+      );
+    } catch (error) {
+      debugPrint('[Audio] Phrase asset index unavailable: $error');
+      _phraseAssetByText = const <String, String>{};
+      _normalizedPhraseAssetByText = const <String, String>{};
+      _phraseAudioReady = true;
+    }
+  }
+
+  void _resetCurrentSpeech() {
+    _currentCompletionHandler = null;
+    _currentPriority = null;
+  }
+
+  void _completeCurrentSpeech() {
+    final handler = _currentCompletionHandler;
+    _resetCurrentSpeech();
+    handler?.call();
+  }
+
+  VoidCallback? _takeCurrentSpeechHandler() {
+    final handler = _currentCompletionHandler;
+    _resetCurrentSpeech();
+    return handler;
+  }
+
+  String _normalizePhraseKey(String text) {
+    const tashkeel = [
+      '\u064B',
+      '\u064C',
+      '\u064D',
+      '\u064E',
+      '\u064F',
+      '\u0650',
+      '\u0651',
+      '\u0652',
+      '\u0670',
+    ];
+    var normalized = text.trim().toLowerCase();
+    for (final mark in tashkeel) {
+      normalized = normalized.replaceAll(mark, '');
+    }
+    normalized = normalized
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ٱ', 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه');
+    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
+    normalized = normalized.replaceAll(' ...', '...');
+    normalized = normalized.replaceAll(' ،', '،');
+    return normalized;
+  }
+
+  String? _phraseAssetFor(String text, String? languageCode) {
+    final normalizedLanguage = (languageCode ?? _arabicLanguage).toLowerCase();
+    if (!normalizedLanguage.startsWith('ar')) return null;
+    final trimmed = text.trim();
+    return _phraseAssetByText[trimmed] ??
+        _normalizedPhraseAssetByText[_normalizePhraseKey(trimmed)];
+  }
+
   Future<void> speak(
     String text, {
     bool interrupt = true,
@@ -179,13 +270,33 @@ class AudioHapticsBridge {
       }
 
       if (interrupt) {
-        _currentCompletionHandler = null;
-        await _tts.stop();
+        final interruptedHandler = _takeCurrentSpeechHandler();
+        try {
+          await _player.stop();
+          await _tts.stop();
+        } finally {
+          interruptedHandler?.call();
+        }
       }
 
       _currentCompletionHandler = onComplete;
       _currentPriority = priority;
       await _tts.setSpeechRate(speechRate ?? 0.45);
+
+      final phraseAsset = _phraseAssetFor(text, languageCode);
+      if (phraseAsset != null) {
+        try {
+          await _player.play(AssetSource(phraseAsset));
+          debugPrint(
+            '[Audio] play asset="$phraseAsset" priority=${priority.name} text="$text"',
+          );
+          return;
+        } catch (assetError) {
+          debugPrint(
+            '[Audio] asset playback failed for "$phraseAsset": $assetError',
+          );
+        }
+      }
 
       if (languageCode == null || languageCode.startsWith('ar')) {
         if (_selectedArabicVoice != null) {
@@ -233,12 +344,14 @@ class AudioHapticsBridge {
   }
 
   Future<void> stopSpeech() async {
+    final interruptedHandler = _takeCurrentSpeechHandler();
     try {
-      _currentCompletionHandler = null;
-      _currentPriority = null;
+      await _player.stop();
       await _tts.stop();
     } catch (error) {
       debugPrint('[TTS] stop failed: $error');
+    } finally {
+      interruptedHandler?.call();
     }
   }
 

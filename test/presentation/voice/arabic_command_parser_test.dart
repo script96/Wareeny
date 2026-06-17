@@ -47,6 +47,14 @@ void main() {
       parser.parseStuffFinderItem('شوف المفاتيح')?.item.detectorLabel,
       'keys',
     );
+    expect(
+      parser.parseStuffFinderItem('find my wallet')?.item.detectorLabel,
+      'wallet',
+    );
+    expect(
+      parser.parseStuffFinderItem('where are my glasses')?.item.detectorLabel,
+      'glasses',
+    );
   });
 
   test('returns null for unsupported items', () {
