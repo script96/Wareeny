@@ -13,20 +13,11 @@ tokens.
 
 import json
 import os
-from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-
-from emergency.database import (
-    close_database,
-    connect_database,
-    database_is_available,
-)
-from emergency.router import router as emergency_router
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 GEMMA_MODEL = os.getenv("GEMMA_MODEL", "gemma4:e4b")
@@ -41,28 +32,7 @@ NUM_PREDICT_BY_TASK = {
     "read": int(os.getenv("NUM_PREDICT_READ", "1200")),
 }
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    await connect_database()
-    yield
-    await close_database()
-
-
-app = FastAPI(title="Wareeny Backend", lifespan=lifespan)
-allowed_origins = [
-    value.strip()
-    for value in os.getenv("ALLOWED_ORIGINS", "").split(",")
-    if value.strip()
-]
-if allowed_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=False,
-        allow_methods=["GET", "POST", "PUT", "DELETE"],
-        allow_headers=["Authorization", "Content-Type"],
-    )
-app.include_router(emergency_router)
+app = FastAPI(title="Wareeny VLM Backend")
 
 
 class VlmGenerateRequest(BaseModel):
@@ -130,13 +100,8 @@ async def vlm_generate(req: VlmGenerateRequest):
 
 
 @app.get("/health")
-async def health():
-    return {
-        "status": "ok",
-        "model": GEMMA_MODEL,
-        "env": APP_ENV,
-        "database": "ok" if await database_is_available() else "unavailable",
-    }
+def health():
+    return {"status": "ok", "model": GEMMA_MODEL, "env": APP_ENV}
 
 
 @app.get("/app-config")

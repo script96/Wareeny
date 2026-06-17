@@ -9,31 +9,24 @@ import 'package:wareeny/shared/object_detection/detection_models.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 void main() {
-  test(
-    'menu prioritizes custom and common objects before all COCO classes',
-    () {
-      expect(cocoClasses, hasLength(80));
-      expect(stuffFinderClasses, hasLength(83));
-      expect(stuffFinderClasses.toSet(), hasLength(83));
-      expect(stuffFinderClasses.take(4), <String>[
-        'wallet',
-        'glasses',
-        'keys',
-        'bottle',
-      ]);
-      expect(
-        popularCocoClasses,
-        containsAll(<String>[
-          'cell phone',
-          'remote',
-          'refrigerator',
-          'toothbrush',
-          'bicycle',
-        ]),
-      );
-      expect(stuffFinderClasses, containsAll(cocoClasses));
-    },
-  );
+  test('menu exposes only the curated detector-backed objects', () {
+    expect(stuffFinderItems, hasLength(10));
+    expect(stuffFinderClasses, hasLength(10));
+    expect(stuffFinderClasses.toSet(), hasLength(10));
+    expect(stuffFinderClasses, <String>[
+      'wallet',
+      'glasses',
+      'cell phone',
+      'bottle',
+      'cup',
+      'chair',
+      'keys',
+      'backpack',
+      'book',
+      'microwave',
+    ]);
+    expect(stuffFinderClasses, isNot(contains('person')));
+  });
 
   test('starts finder mode and keeps only the selected custom class', () async {
     final source = _FakeDetectionSource();
@@ -59,7 +52,7 @@ void main() {
     expect(source.startedMode, 'stuff_finder');
     expect(controller.matchCount, 1);
     expect(controller.latestFrame!.detections.single.source.label, 'Wallet');
-    expect(controller.status, '1 match found');
+    expect(controller.status, 'لقيت محفظة');
   });
 
   test('speaks when searching starts and when target is found', () async {
@@ -82,7 +75,7 @@ void main() {
     );
     await Future<void>.delayed(Duration.zero);
 
-    expect(feedback.spoken, ['Searching for chair', 'Found chair']);
+    expect(feedback.spoken, ['تمام، هدور على كرسي', 'لقيت كرسي']);
   });
 
   test(
@@ -125,7 +118,7 @@ void main() {
     },
   );
 
-  test('accepts COCO targets and rejects unsupported targets', () async {
+  test('accepts curated targets and rejects unsupported targets', () async {
     final controller = StuffFinderController(
       detectionSource: _FakeDetectionSource(),
     );

@@ -9,8 +9,11 @@ class NativeBridgeChannels {
   static const batteryThermal = 'com.wareeny.bridge/battery_thermal';
   static const fileDownload = 'com.wareeny.bridge/file_download';
   static const localAiRuntime = 'com.wareeny.bridge/local_ai_runtime';
+  // Reserved for future Arabic OCR native bridge (iOS Vision / Android cloud ML Kit)
+  static const ocr = 'com.wareeny.bridge/ocr';
+  // Emergency: direct SMS dispatch via Android SmsManager (no UI required)
+  static const emergency = 'com.wareeny.bridge/emergency';
   // Event channel for streamed on-device VLM token deltas (MediaPipe LLM Inference).
   static const localAiRuntimeStream =
       'com.wareeny.bridge/local_ai_runtime/stream';
-  static const emergency = 'com.wareeny.bridge/emergency';
 }

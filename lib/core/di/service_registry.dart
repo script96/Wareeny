@@ -1,19 +1,15 @@
-import 'package:http/http.dart' as http;
 import 'package:wareeny/core/config/app_config.dart';
-import 'package:wareeny/presentation/emergency/emergency_controller.dart';
+import 'package:wareeny/core/emergency/emergency_controller.dart';
+import 'package:wareeny/core/emergency/location_service.dart';
+import 'package:wareeny/core/emergency/shake_detector_service.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
+import 'package:wareeny/presentation/voice/voice_command_service.dart';
+import 'package:wareeny/presentation/voice/voice_interaction_controller.dart';
 import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
 import 'package:wareeny/shared/bridges/battery_thermal_bridge.dart';
 import 'package:wareeny/shared/bridges/camera_bridge.dart';
-import 'package:wareeny/shared/bridges/emergency_call_bridge.dart';
 import 'package:wareeny/shared/bridges/file_download_bridge.dart';
 import 'package:wareeny/shared/bridges/local_ai_runtime_bridge.dart';
-import 'package:wareeny/shared/emergency/emergency_api_client.dart';
-import 'package:wareeny/shared/emergency/emergency_contact_store.dart';
-import 'package:wareeny/shared/emergency/emergency_event_store.dart';
-import 'package:wareeny/shared/emergency/emergency_location_service.dart';
-import 'package:wareeny/shared/emergency/emergency_sync_service.dart';
-import 'package:wareeny/shared/emergency/motion_monitoring_service.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 import 'package:wareeny/shared/vlm/cloud_vlm_provider.dart';
 import 'package:wareeny/shared/vlm/local_vlm_provider.dart';
@@ -31,9 +27,10 @@ class ServiceRegistry {
     required this.localAiRuntimeBridge,
     required this.vlmAssistant,
     required this.objectDetectionSource,
+    required this.shakeDetectorService,
+    required this.locationService,
     required this.emergencyController,
-    required this.emergencySyncService,
-    required this.emergencyCallBridge,
+    required this.voiceInteractionController,
   });
 
   final AppConfig config;
@@ -45,14 +42,31 @@ class ServiceRegistry {
   final LocalAiRuntimeBridge localAiRuntimeBridge;
   final VlmAssistant vlmAssistant;
   final ObjectDetectionSource objectDetectionSource;
+  final ShakeDetectorService shakeDetectorService;
+  final LocationService locationService;
   final EmergencyController emergencyController;
-  final EmergencySyncService emergencySyncService;
-  final EmergencyCallBridge emergencyCallBridge;
+  final VoiceInteractionController voiceInteractionController;
 
   /// Use [ServiceRegistry.createAsync] during bootstrap instead of this factory,
   /// because [SettingsController] must be loaded from SharedPreferences first.
   static Future<ServiceRegistry> createAsync(AppConfig config) async {
     final settings = await SettingsController.load();
+    final audioHapticsBridge = AudioHapticsBridge();
+    final shakeDetector = ShakeDetectorService();
+    final locationService = LocationService();
+    final emergencyController = EmergencyController(
+      settings: settings,
+      shakeDetector: shakeDetector,
+      locationService: locationService,
+      audioHaptics: audioHapticsBridge,
+    );
+    final voiceInteractionController = VoiceInteractionController(
+      SpeechToTextVoiceCommandService(),
+      BridgeVoiceInteractionFeedback(
+        audioHapticsBridge,
+        () => settings.speechRate,
+      ),
+    );
 
     const localAiRuntimeBridge = LocalAiRuntimeBridge();
     final local = LocalVlmProvider(
@@ -64,41 +78,20 @@ class ServiceRegistry {
       modelId: config.cloudModelId,
     );
     final router = ModelRouter(local: local, cloud: cloud);
-    final audioHaptics = AudioHapticsBridge();
-    final eventStore = EmergencyEventStore();
-    final emergencyCallBridge = const EmergencyCallBridge();
-    final emergencySyncService = EmergencySyncService(
-      api: EmergencyApiClient(
-        apiBaseUrl: config.apiBaseUrl,
-        client: http.Client(),
-      ),
-      eventStore: eventStore,
-    );
-    final emergencyController = EmergencyController(
-      contactStore: EmergencyContactStore(),
-      eventStore: eventStore,
-      syncService: emergencySyncService,
-      motionMonitoring: MotionMonitoringService(),
-      callBridge: emergencyCallBridge,
-      audioHaptics: audioHaptics,
-      settings: settings,
-      locationService: const EmergencyLocationService(),
-    );
-    await emergencyController.initialize();
-
     return ServiceRegistry(
       config: config,
       settings: settings,
       cameraBridge: const CameraBridge(),
-      audioHapticsBridge: audioHaptics,
+      audioHapticsBridge: audioHapticsBridge,
       batteryThermalBridge: const BatteryThermalBridge(),
       fileDownloadBridge: const FileDownloadBridge(),
       localAiRuntimeBridge: localAiRuntimeBridge,
       vlmAssistant: VlmAssistant(router: router),
       objectDetectionSource: UltralyticsYoloDetectionSource(),
+      shakeDetectorService: shakeDetector,
+      locationService: locationService,
       emergencyController: emergencyController,
-      emergencySyncService: emergencySyncService,
-      emergencyCallBridge: emergencyCallBridge,
+      voiceInteractionController: voiceInteractionController,
     );
   }
 }

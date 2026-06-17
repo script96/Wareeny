@@ -1,95 +1,56 @@
 package com.wareeny.wareeny
 
-import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import io.flutter.embedding.engine.FlutterEngine
+import android.telephony.SmsManager
+import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+
     private val emergencyChannel = "com.wareeny.bridge/emergency"
-    private val callPermissionRequest = 4102
-    private var pendingPhoneNumber: String? = null
-    private var pendingResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             emergencyChannel,
         ).setMethodCallHandler { call, result ->
-            if (call.method != "call.start") {
-                result.notImplemented()
-                return@setMethodCallHandler
+            when (call.method) {
+                "sms.send" -> {
+                    val phone = call.argument<String>("phone") ?: ""
+                    val body  = call.argument<String>("body")  ?: ""
+                    try {
+                        sendSmsDirectly(phone, body)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("SMS_ERROR", e.message, null)
+                    }
+                }
+                else -> result.notImplemented()
             }
-            val phoneNumber = call.argument<String>("phoneNumber")
-            if (phoneNumber.isNullOrBlank()) {
-                result.error("invalid_phone", "A phone number is required.", null)
-                return@setMethodCallHandler
-            }
-            startEmergencyContactCall(phoneNumber, result)
         }
     }
 
-    private fun startEmergencyContactCall(
-        phoneNumber: String,
-        result: MethodChannel.Result,
-    ) {
-        if (
-            ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) ==
-                PackageManager.PERMISSION_GRANTED
-        ) {
-            result.success(placeCall(phoneNumber))
-            return
-        }
-
-        pendingPhoneNumber = phoneNumber
-        pendingResult = result
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.CALL_PHONE),
-            callPermissionRequest,
-        )
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != callPermissionRequest) return
-
-        val result = pendingResult
-        val phoneNumber = pendingPhoneNumber
-        pendingResult = null
-        pendingPhoneNumber = null
-        if (result == null || phoneNumber == null) return
-
-        if (
-            grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            result.success(placeCall(phoneNumber))
+    /**
+     * Sends an SMS directly using Android [SmsManager] — no user interaction required.
+     * Requires SEND_SMS permission to be granted.
+     */
+    @Suppress("DEPRECATION")
+    private fun sendSmsDirectly(phone: String, body: String) {
+        val smsManager: SmsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            applicationContext.getSystemService(SmsManager::class.java)
         } else {
-            result.success(false)
+            SmsManager.getDefault()
         }
-    }
 
-    private fun placeCall(phoneNumber: String): Boolean {
-        return try {
-            startActivity(
-                Intent(Intent.ACTION_CALL, Uri.parse("tel:$phoneNumber")),
-            )
-            true
-        } catch (_: SecurityException) {
-            false
-        } catch (_: Exception) {
-            false
+        // Split into multiple parts if message is long (> 160 chars).
+        val parts = smsManager.divideMessage(body)
+        if (parts.size == 1) {
+            smsManager.sendTextMessage(phone, null, body, null, null)
+        } else {
+            smsManager.sendMultipartTextMessage(phone, null, parts, null, null)
         }
     }
 }

@@ -1,12 +1,14 @@
-import 'dart:ui';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import 'package:wareeny/shared/bridges/native_bridge_channels.dart';
 
 enum HapticSignal { danger, obstacle, navigationCue, confirmation }
+
+enum TtsPriority { normal, critical }
 
 class AudioHapticsBridge {
   AudioHapticsBridge()
@@ -19,8 +21,11 @@ class AudioHapticsBridge {
   String _arabicLanguage = 'ar';
   Map<String, String>? _selectedArabicVoice;
   VoidCallback? _currentCompletionHandler;
+  TtsPriority? _currentPriority;
+  DateTime? _normalSpeechSuppressedUntil;
 
   static const playHapticMethod = 'haptics.play';
+  static const criticalSpeechSuppression = Duration(seconds: 2);
 
   /// Call once at app startup to eagerly configure TTS for Arabic.
   Future<void> init() async {
@@ -31,16 +36,19 @@ class AudioHapticsBridge {
         debugPrint('[TTS] Speech completed');
         final handler = _currentCompletionHandler;
         _currentCompletionHandler = null;
+        _currentPriority = null;
         handler?.call();
       });
       _tts.setCancelHandler(() {
         debugPrint('[TTS] Speech cancelled');
         _currentCompletionHandler = null;
+        _currentPriority = null;
       });
       _tts.setErrorHandler((message) {
         debugPrint('[TTS] Speech error: $message');
         final handler = _currentCompletionHandler;
         _currentCompletionHandler = null;
+        _currentPriority = null;
         handler?.call();
       });
 
@@ -65,21 +73,29 @@ class AudioHapticsBridge {
               .map((v) => Map<String, String>.from(v as Map))
               .toList();
 
-          final arEgVoices = voices.where((v) => v['locale']?.contains('ar-EG') ?? false).toList();
-          final arVoices = voices.where((v) => v['locale']?.startsWith('ar') ?? false).toList();
+          final arEgVoices = voices
+              .where((v) => v['locale']?.contains('ar-EG') ?? false)
+              .toList();
+          final arVoices = voices
+              .where((v) => v['locale']?.startsWith('ar') ?? false)
+              .toList();
 
-          debugPrint('[TTS] Found ${arEgVoices.length} local ar-EG voices and ${arVoices.length} total Arabic voices');
+          debugPrint(
+            '[TTS] Found ${arEgVoices.length} local ar-EG voices and ${arVoices.length} total Arabic voices',
+          );
 
-          Map<String, String>? findBestVoice(List<Map<String, String>> voiceList) {
+          Map<String, String>? findBestVoice(
+            List<Map<String, String>> voiceList,
+          ) {
             if (voiceList.isEmpty) return null;
 
             bool isPremium(String name) {
               final lower = name.toLowerCase();
               return lower.contains('premium') ||
-                     lower.contains('enhanced') ||
-                     lower.contains('wavenet') ||
-                     lower.contains('neural') ||
-                     lower.contains('google');
+                  lower.contains('enhanced') ||
+                  lower.contains('wavenet') ||
+                  lower.contains('neural') ||
+                  lower.contains('google');
             }
 
             bool isOffline(String name) {
@@ -109,9 +125,12 @@ class AudioHapticsBridge {
             return voiceList.first;
           }
 
-          _selectedArabicVoice = findBestVoice(arEgVoices) ?? findBestVoice(arVoices);
+          _selectedArabicVoice =
+              findBestVoice(arEgVoices) ?? findBestVoice(arVoices);
           if (_selectedArabicVoice != null) {
-            debugPrint('[TTS] Selected high-quality local Arabic voice: ${_selectedArabicVoice!['name']} (${_selectedArabicVoice!['locale']})');
+            debugPrint(
+              '[TTS] Selected high-quality local Arabic voice: ${_selectedArabicVoice!['name']} (${_selectedArabicVoice!['locale']})',
+            );
           }
         }
       } catch (voiceError) {
@@ -140,16 +159,32 @@ class AudioHapticsBridge {
     bool interrupt = true,
     String? languageCode,
     double? speechRate,
+    TtsPriority priority = TtsPriority.normal,
     VoidCallback? onComplete,
   }) async {
     if (!_ttsReady) await init();
     try {
+      final now = DateTime.now();
+      if (priority == TtsPriority.normal) {
+        final suppressedUntil = _normalSpeechSuppressedUntil;
+        if (_currentPriority == TtsPriority.critical ||
+            (suppressedUntil != null && now.isBefore(suppressedUntil))) {
+          debugPrint('[TTS] normal speech suppressed text="$text"');
+          onComplete?.call();
+          return;
+        }
+      } else {
+        interrupt = true;
+        _normalSpeechSuppressedUntil = now.add(criticalSpeechSuppression);
+      }
+
       if (interrupt) {
         _currentCompletionHandler = null;
         await _tts.stop();
       }
 
       _currentCompletionHandler = onComplete;
+      _currentPriority = priority;
       await _tts.setSpeechRate(speechRate ?? 0.45);
 
       if (languageCode == null || languageCode.startsWith('ar')) {
@@ -163,16 +198,44 @@ class AudioHapticsBridge {
       }
 
       final result = await _tts.speak(text);
-      debugPrint('[TTS] speak result=$result text="$text"');
+      debugPrint(
+        '[TTS] speak result=$result priority=${priority.name} text="$text"',
+      );
     } catch (error) {
       debugPrint('[TTS] speak failed: $error');
       _currentCompletionHandler = null;
+      _currentPriority = null;
+      onComplete?.call();
     }
+  }
+
+  Future<void> speakAndWait(
+    String text, {
+    String? languageCode,
+    double? speechRate,
+  }) async {
+    final completer = Completer<void>();
+    await speak(
+      text,
+      languageCode: languageCode,
+      speechRate: speechRate,
+      onComplete: () {
+        if (!completer.isCompleted) completer.complete();
+      },
+    );
+    final timeout = Duration(seconds: (text.length / 8).ceil().clamp(2, 15));
+    await completer.future.timeout(
+      timeout,
+      onTimeout: () {
+        debugPrint('[TTS] Completion timeout for text="$text"');
+      },
+    );
   }
 
   Future<void> stopSpeech() async {
     try {
       _currentCompletionHandler = null;
+      _currentPriority = null;
       await _tts.stop();
     } catch (error) {
       debugPrint('[TTS] stop failed: $error');

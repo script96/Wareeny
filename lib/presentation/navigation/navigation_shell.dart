@@ -1,34 +1,32 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
+import 'package:wareeny/core/emergency/emergency_controller.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/presentation/camera/camera_feed_view.dart';
-import 'package:wareeny/presentation/emergency/emergency_controller.dart';
-import 'package:wareeny/presentation/emergency/emergency_settings_card.dart';
+import 'package:wareeny/presentation/emergency/emergency_overlay.dart';
 import 'package:wareeny/presentation/home/home_detection_screen.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
+import 'package:wareeny/presentation/onboarding/emergency_onboarding_screen.dart';
 import 'package:wareeny/presentation/read/read_screen.dart';
 import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
+import 'package:wareeny/presentation/reusable/hold_to_listen_detector.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
 import 'package:wareeny/presentation/settings/settings_screen.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_screen.dart';
+import 'package:wareeny/presentation/voice/voice_interaction_controller.dart';
 
 class NavigationShell extends StatefulWidget {
-  const NavigationShell({
-    required this.settings,
-    required this.emergencyController,
-    required this.onManageEmergencyContact,
-    super.key,
-  });
+  const NavigationShell({required this.settings, super.key});
 
   final SettingsController settings;
-  final EmergencyController emergencyController;
-  final VoidCallback onManageEmergencyContact;
 
   @override
   State<NavigationShell> createState() => _NavigationShellState();
@@ -36,22 +34,60 @@ class NavigationShell extends StatefulWidget {
 
 class _NavigationShellState extends State<NavigationShell> {
   var _selectedIndex = 0;
+  late EmergencyController _emergencyController;
+  late VoiceInteractionController _voiceInteractionController;
 
   static const _modes = AppMode.values;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final services = AppScope.of(context);
+    _emergencyController = services.emergencyController;
+    _voiceInteractionController = services.voiceInteractionController;
+    _voiceInteractionController.bindModeSelection(_selectModeFromVoice);
+  }
 
   @override
   void initState() {
     super.initState();
     // Speak a greeting in the user's persisted language on first launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final scope = AppScope.of(context);
       final l10n = AppLocalizations.of(context);
-      final tts = AppScope.of(context).audioHapticsBridge;
+      final tts = scope.audioHapticsBridge;
       tts.speak(
         l10n.appGreeting,
         languageCode: widget.settings.locale.languageCode,
         speechRate: widget.settings.speechRate,
       );
+
+      // Arm the emergency controller and wire overlay callback.
+      final emergency = _emergencyController;
+      emergency.onCountdownStarted = () {
+        if (!mounted) return;
+        showEmergencyOverlay(context, emergency);
+      };
+      emergency.arm();
+
+      // Show onboarding on very first launch.
+      if (!widget.settings.hasSeenEmergencyOnboarding) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            fullscreenDialog: true,
+            builder: (_) =>
+                EmergencyOnboardingScreen(settings: widget.settings),
+          ),
+        );
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _emergencyController.disarm();
+    _voiceInteractionController.clearModeSelection();
+    super.dispose();
   }
 
   AppMode get _currentMode => _modes[_selectedIndex];
@@ -68,6 +104,15 @@ class _NavigationShellState extends State<NavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    return HoldToListenDetector(
+      onHoldStart: _voiceInteractionController.startHoldListening,
+      onHoldEnd: _voiceInteractionController.endHoldListening,
+      onHoldCancel: _voiceInteractionController.cancelHoldListening,
+      child: _buildCurrentMode(context),
+    );
+  }
+
+  Widget _buildCurrentMode(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
     // Settings mode: full-screen settings hub (no camera)
@@ -75,10 +120,6 @@ class _NavigationShellState extends State<NavigationShell> {
       return SettingsScreen(
         settings: widget.settings,
         onClose: () => _selectMode(AppMode.values.indexOf(AppMode.home)),
-        emergencySection: EmergencySettingsCard(
-          controller: widget.emergencyController,
-          onManageContact: widget.onManageEmergencyContact,
-        ),
       );
     }
 
@@ -173,6 +214,18 @@ class _NavigationShellState extends State<NavigationShell> {
   }
 
   void _selectMode(int index) {
+    _selectModeInternal(index, promptForStuffFinder: true);
+  }
+
+  void _selectModeFromVoice(AppMode mode) {
+    _selectModeInternal(
+      AppMode.values.indexOf(mode),
+      promptForStuffFinder: false,
+    );
+  }
+
+  void _selectModeInternal(int index, {required bool promptForStuffFinder}) {
+    final changed = _selectedIndex != index;
     setState(() => _selectedIndex = index);
     final l10n = AppLocalizations.of(context);
     if (MediaQuery.supportsAnnounceOf(context)) {
@@ -181,6 +234,17 @@ class _NavigationShellState extends State<NavigationShell> {
         l10n.activeModeNamed(_currentMode.labelFor(l10n)),
         widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
       );
+    }
+    if (changed &&
+        promptForStuffFinder &&
+        _currentMode == AppMode.stuffFinder) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _currentMode == AppMode.stuffFinder) {
+          unawaited(
+            _voiceInteractionController.beginStuffFinderItemListening(),
+          );
+        }
+      });
     }
   }
 }

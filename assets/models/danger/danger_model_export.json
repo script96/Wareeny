@@ -1,0 +1,96 @@
+{
+  "source_weights": "/Users/mac/Documents/kosom_grad/Danger mode/Danger-model.pt",
+  "data_yaml": "/Users/mac/Documents/kosom_grad/Danger-model/combined-danger-dataset/data.yaml",
+  "imgsz": 640,
+  "labels": [
+    "Fire",
+    "Smoke",
+    "Stop",
+    "Emergency exit indicator light",
+    "wet_floor_sign"
+  ],
+  "float32": {
+    "path": "assets/models/danger/danger_model_float32.tflite",
+    "inputs": [
+      {
+        "name": "images",
+        "shape": [
+          1,
+          640,
+          640,
+          3
+        ],
+        "dtype": "<class 'numpy.float32'>"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Identity",
+        "shape": [
+          1,
+          9,
+          8400
+        ],
+        "dtype": "<class 'numpy.float32'>"
+      }
+    ]
+  },
+  "optimized": {
+    "format": "fp16",
+    "path": "assets/models/danger/danger_model.tflite",
+    "inputs": [
+      {
+        "name": "images",
+        "shape": [
+          1,
+          640,
+          640,
+          3
+        ],
+        "dtype": "<class 'numpy.float32'>"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Identity",
+        "shape": [
+          1,
+          9,
+          8400
+        ],
+        "dtype": "<class 'numpy.float32'>"
+      }
+    ]
+  },
+  "runtime": {
+    "format": "fp16",
+    "path": "assets/models/danger/danger_model.tflite",
+    "inputs": [
+      {
+        "name": "images",
+        "shape": [
+          1,
+          640,
+          640,
+          3
+        ],
+        "dtype": "<class 'numpy.float32'>"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "Identity",
+        "shape": [
+          1,
+          9,
+          8400
+        ],
+        "dtype": "<class 'numpy.float32'>"
+      }
+    ]
+  },
+  "ios_runtime": {
+    "format": "coreml",
+    "path": "assets/models/danger/danger_model.mlpackage.zip"
+  }
+}

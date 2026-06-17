@@ -1,11 +1,9 @@
-import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/core/theme/app_theme.dart';
-import 'package:wareeny/presentation/emergency/emergency_app_gate.dart';
+import 'package:wareeny/presentation/navigation/navigation_shell.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
 
 class WareenyApp extends StatelessWidget {
@@ -18,8 +16,7 @@ class WareenyApp extends StatelessWidget {
     return AnimatedBuilder(
       animation: settings,
       builder: (context, _) {
-        final services = AppScope.of(context);
-        final app = MaterialApp(
+        return MaterialApp(
           title: settings.isArabic ? 'ويرني' : 'Wareeny',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
@@ -33,14 +30,7 @@ class WareenyApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: EmergencyAppGate(settings: settings),
-        );
-        if (!services.config.clerkEnabled) return app;
-        return ClerkAuth(
-          config: ClerkAuthConfig(
-            publishableKey: services.config.clerkPublishableKey,
-          ),
-          child: app,
+          home: NavigationShell(settings: settings),
         );
       },
     );
