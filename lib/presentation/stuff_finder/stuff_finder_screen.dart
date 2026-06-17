@@ -74,7 +74,10 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
     _voiceInteraction = services.voiceInteractionController;
     _finder = StuffFinderController(
       detectionSource: source,
-      feedback: BridgeStuffFinderFeedback(services.audioHapticsBridge),
+      feedback: BridgeStuffFinderFeedback(
+        services.audioHapticsBridge,
+        canSpeak: () => !services.voiceInteractionController.isCapturingSpeech,
+      ),
     )..addListener(_onFinderChanged);
     _voiceInteraction!.bindStuffFinderHandlers(
       onItemSelected: _selectVoiceTarget,

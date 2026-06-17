@@ -89,6 +89,75 @@ void main() {
       );
     },
   );
+
+  test('accepts a Stuff Finder item from the regular voice trigger', () async {
+    final speech = _FakeVoiceCommandService(locales: ['ar-EG']);
+    final feedback = _FakeVoiceFeedback();
+    final controller = VoiceInteractionController(speech, feedback);
+    final selectedItems = <StuffFinderItem>[];
+    controller.bindModeSelection((_) {});
+    controller.bindStuffFinderHandlers(
+      onItemSelected: selectedItems.add,
+      onShowAvailableItems: () {},
+    );
+
+    await controller.triggerModeListening();
+    speech.emit('المفاتيح', isFinal: true);
+    await _flushAsync();
+
+    expect(selectedItems.single.detectorLabel, 'keys');
+    expect(feedback.spoken, isNot(contains('مسمعتش الأمر بوضوح، حاول تاني')));
+    expect(controller.state, VoiceInteractionState.idle);
+  });
+
+  test('accepts a mode switch while Stuff Finder is active', () async {
+    final speech = _FakeVoiceCommandService(locales: ['ar-EG']);
+    final feedback = _FakeVoiceFeedback();
+    final controller = VoiceInteractionController(
+      speech,
+      feedback,
+      modeTransitionDelay: Duration.zero,
+    );
+    final selectedModes = <AppMode>[];
+    controller.bindModeSelection(selectedModes.add);
+    controller.bindStuffFinderHandlers(
+      onItemSelected: (_) {},
+      onShowAvailableItems: () {},
+    );
+
+    await controller.triggerModeListening();
+    speech.emit('افتح وضع التنقل', isFinal: true);
+    await _flushAsync();
+
+    expect(selectedModes, [AppMode.navigation]);
+    expect(controller.state, VoiceInteractionState.idle);
+  });
+
+  test('hold listening stops TTS and processes speech on release', () async {
+    final speech = _FakeVoiceCommandService(locales: ['ar-EG']);
+    final feedback = _FakeVoiceFeedback();
+    final controller = VoiceInteractionController(speech, feedback);
+    final selectedItems = <StuffFinderItem>[];
+    controller.bindStuffFinderHandlers(
+      onItemSelected: selectedItems.add,
+      onShowAvailableItems: () {},
+    );
+
+    await controller.startHoldListening();
+    expect(controller.state, VoiceInteractionState.listening);
+    expect(feedback.spoken, isEmpty);
+    expect(feedback.stopSpeechCalls, greaterThanOrEqualTo(1));
+
+    speech.emit('المحفظة', isFinal: false);
+    await _flushAsync();
+    expect(selectedItems, isEmpty);
+
+    await controller.endHoldListening();
+    await _flushAsync();
+
+    expect(selectedItems.single.detectorLabel, 'wallet');
+    expect(controller.state, VoiceInteractionState.idle);
+  });
 }
 
 Future<void> _flushAsync() async {
@@ -153,6 +222,7 @@ class _FakeVoiceFeedback implements VoiceInteractionFeedback {
   final List<String> spoken = [];
   int startedHaptics = 0;
   int stoppedHaptics = 0;
+  int stopSpeechCalls = 0;
 
   @override
   Future<void> playListeningStartedHaptic() async {
@@ -170,5 +240,7 @@ class _FakeVoiceFeedback implements VoiceInteractionFeedback {
   }
 
   @override
-  Future<void> stopSpeech() async {}
+  Future<void> stopSpeech() async {
+    stopSpeechCalls++;
+  }
 }

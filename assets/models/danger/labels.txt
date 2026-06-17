@@ -1,0 +1,5 @@
+Fire
+Smoke
+Stop
+Emergency exit indicator light
+wet_floor_sign

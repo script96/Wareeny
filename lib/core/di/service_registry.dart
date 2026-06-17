@@ -66,7 +66,7 @@ class ServiceRegistry {
         audioHapticsBridge,
         () => settings.speechRate,
       ),
-    )..startHardwareTrigger();
+    );
 
     const localAiRuntimeBridge = LocalAiRuntimeBridge();
     final local = LocalVlmProvider(

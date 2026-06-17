@@ -22,6 +22,9 @@ import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
 import 'package:wareeny/shared/camera/light_condition_service.dart';
+import 'package:wareeny/shared/danger/danger_alert_manager.dart';
+import 'package:wareeny/shared/danger/danger_detection_result.dart';
+import 'package:wareeny/shared/danger/danger_detection_service.dart';
 import 'package:wareeny/shared/navigation/navigation_feedback.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
@@ -67,15 +70,19 @@ class _NavigationScreenState extends State<NavigationScreen>
     with WidgetsBindingObserver {
   late final YOLOViewController _yoloController;
   NavigationController? _navigation;
+  DangerAlertManager? _dangerAlerts;
+  DangerDetectionService? _dangerDetection;
   ObjectDetectionSource? _detectionSource;
   Object? _modelError;
   bool _debugEnabled = false;
   bool _initialized = false;
   Timer? _modelCycleTimer;
   Timer? _lightCheckTimer;
+  Timer? _exitSearchTimer;
   final LightConditionService _lightService = LightConditionService();
   bool _modelSwitchInProgress = false;
   bool _lightCheckInProgress = false;
+  bool _exitSearchActive = false;
   String _activeModelSource = 'indoor';
   NavigationSubMode _navSubMode = NavigationSubMode.indoor;
 
@@ -99,8 +106,21 @@ class _NavigationScreenState extends State<NavigationScreen>
       feedback: BridgeNavigationFeedback(services.audioHapticsBridge),
       diagnosticsEnabled: services.config.enableDiagnostics,
     )..addListener(_onNavigationChanged);
+    _dangerAlerts = DangerAlertManager(
+      feedback: BridgeDangerAlertFeedback(
+        services.audioHapticsBridge,
+        stopVoiceInput:
+            services.voiceInteractionController.interruptForDangerAlert,
+      ),
+      diagnosticsEnabled: services.config.enableDiagnostics,
+    );
+    _dangerDetection = DangerDetectionService(
+      alertManager: _dangerAlerts!,
+      diagnosticsEnabled: services.config.enableDiagnostics,
+    )..addListener(_onDangerChanged);
     _initialized = true;
     unawaited(_navigation!.start());
+    _startDangerDetection();
   }
 
   @override
@@ -125,6 +145,10 @@ class _NavigationScreenState extends State<NavigationScreen>
     _navigation
       ?..removeListener(_onNavigationChanged)
       ..dispose();
+    _dangerDetection
+      ?..removeListener(_onDangerChanged)
+      ..dispose();
+    _dangerAlerts?.dispose();
     _yoloController.dispose();
     super.dispose();
   }
@@ -148,6 +172,10 @@ class _NavigationScreenState extends State<NavigationScreen>
         : 'Toggle Navigation Type';
     modeActions[CustomSemanticsAction(label: toggleSubModeLabel)] =
         _cycleNavigationSubMode;
+    final findExitLabel = widget.settings.isArabic
+        ? 'ابحث عن مخرج'
+        : 'Find Exit';
+    modeActions[CustomSemanticsAction(label: findExitLabel)] = _beginExitSearch;
 
     return TwoFingerSwipeDetector(
       onSwipeLeft: widget.onNext,
@@ -166,6 +194,7 @@ class _NavigationScreenState extends State<NavigationScreen>
                 path: navigation.path,
                 frame: navigation.latestFrame,
                 assessment: navigation.assessment,
+                dangerFrame: _dangerDetection?.latestFrame,
                 showDebug: _debugEnabled,
                 logProjection: _debugEnabled,
               ),
@@ -197,6 +226,7 @@ class _NavigationScreenState extends State<NavigationScreen>
                   alignment: AlignmentDirectional.topStart,
                   child: NavigationDebugPanel(
                     controller: navigation,
+                    dangerDetection: _dangerDetection,
                     enabled: _debugEnabled,
                     onToggle: () {
                       setState(() => _debugEnabled = !_debugEnabled);
@@ -284,6 +314,7 @@ class _NavigationScreenState extends State<NavigationScreen>
         if (_modelError != null) {
           setState(() => _modelError = null);
         }
+        _startDangerDetection();
         _startLightMonitoring();
         if (isIndoor) _startIndoorModelCycle(source);
       },
@@ -299,6 +330,7 @@ class _NavigationScreenState extends State<NavigationScreen>
     try {
       await _yoloController.resume();
       _startLightMonitoring();
+      _startDangerDetection();
       final source = _detectionSource;
       if (_navSubMode == NavigationSubMode.indoor &&
           source is YoloStreamingObjectDetectionSource) {
@@ -314,8 +346,10 @@ class _NavigationScreenState extends State<NavigationScreen>
   Future<void> _pause() async {
     _modelCycleTimer?.cancel();
     _lightCheckTimer?.cancel();
+    _exitSearchTimer?.cancel();
     _lightService.reset();
     await _setTorch(false);
+    await _dangerDetection?.stop();
     try {
       await _yoloController.pause();
     } on MissingPluginException {
@@ -326,6 +360,37 @@ class _NavigationScreenState extends State<NavigationScreen>
 
   void _onNavigationChanged() {
     if (mounted) setState(() {});
+  }
+
+  void _onDangerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _startDangerDetection() {
+    final dangerDetection = _dangerDetection;
+    final source = _detectionSource;
+    if (dangerDetection == null || source == null) return;
+    unawaited(
+      dangerDetection.start(
+        captureFrame: _captureDangerFrame,
+        navigationMode: () => _navSubMode == NavigationSubMode.indoor
+            ? DangerNavigationMode.indoor
+            : DangerNavigationMode.outdoor,
+        exitSearchActive: () => _exitSearchActive,
+      ),
+    );
+  }
+
+  Future<Uint8List?> _captureDangerFrame() async {
+    if (!_yoloController.isInitialized) return null;
+    try {
+      return await _yoloController.captureFrame();
+    } on MissingPluginException {
+      return null;
+    } catch (error) {
+      debugPrint('[DangerDetection] frame capture failed: $error');
+      return null;
+    }
   }
 
   void _cycleNavigationSubMode() {
@@ -340,6 +405,10 @@ class _NavigationScreenState extends State<NavigationScreen>
     setState(() {
       _navSubMode = mode;
       _modelError = null;
+      if (mode == NavigationSubMode.outdoor) {
+        _exitSearchActive = false;
+        _exitSearchTimer?.cancel();
+      }
     });
     _navigation?.setIndoorMode(mode == NavigationSubMode.indoor);
     _modelCycleTimer?.cancel();
@@ -351,6 +420,22 @@ class _NavigationScreenState extends State<NavigationScreen>
       widget.settings.isArabic
           ? '${mode.labelFor(l10n)} ${l10n.activeMode('')}'.trim()
           : l10n.activeMode(mode.labelFor(l10n)),
+      widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
+    );
+  }
+
+  void _beginExitSearch() {
+    if (_navSubMode != NavigationSubMode.indoor) return;
+    setState(() => _exitSearchActive = true);
+    _exitSearchTimer?.cancel();
+    _exitSearchTimer = Timer(const Duration(seconds: 45), () {
+      if (mounted) setState(() => _exitSearchActive = false);
+    });
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      widget.settings.isArabic
+          ? 'تمام، هدور على علامة خروج'
+          : 'Searching for an exit sign',
       widget.settings.isArabic ? TextDirection.rtl : TextDirection.ltr,
     );
   }

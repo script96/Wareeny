@@ -7,7 +7,6 @@ import 'package:wareeny/presentation/stuff_finder/stuff_finder_items.dart';
 import 'package:wareeny/presentation/voice/arabic_command_parser.dart';
 import 'package:wareeny/presentation/voice/voice_command_service.dart';
 import 'package:wareeny/presentation/voice/voice_interaction_feedback.dart';
-import 'package:wareeny/presentation/voice/volume_button_trigger_service.dart';
 
 export 'package:wareeny/presentation/voice/voice_interaction_feedback.dart';
 
@@ -20,7 +19,7 @@ enum VoiceInteractionState {
   error,
 }
 
-enum _ListeningPurpose { mode, stuffFinderItem }
+enum _ListeningPurpose { mode, stuffFinder }
 
 typedef VoiceModeSelection = FutureOr<void> Function(AppMode mode);
 typedef VoiceStuffFinderSelection =
@@ -31,24 +30,22 @@ class VoiceInteractionController extends ChangeNotifier {
   VoiceInteractionController(
     this._commandService,
     this._feedback, {
-    VolumeButtonTriggerService? volumeTrigger,
     ArabicCommandParser? parser,
     this.commandCooldown = const Duration(seconds: 2),
     this.modeTransitionDelay = const Duration(milliseconds: 150),
-  }) : _volumeTrigger = volumeTrigger ?? const VolumeButtonTriggerService(),
-       _parser = parser ?? const ArabicCommandParser();
+  }) : _parser = parser ?? const ArabicCommandParser();
 
   final VoiceCommandService _commandService;
   final VoiceInteractionFeedback _feedback;
-  final VolumeButtonTriggerService _volumeTrigger;
   final ArabicCommandParser _parser;
   final Duration commandCooldown;
   final Duration modeTransitionDelay;
 
   static const _listenFor = Duration(seconds: 8);
   static const _pauseFor = Duration(milliseconds: 2200);
+  static const _holdListenFor = Duration(seconds: 30);
+  static const _holdPauseFor = Duration(seconds: 30);
 
-  StreamSubscription<void>? _volumeSubscription;
   VoiceModeSelection? _onModeSelected;
   VoiceStuffFinderSelection? _onStuffFinderItemSelected;
   ShowStuffFinderItems? _onShowStuffFinderItems;
@@ -60,6 +57,7 @@ class VoiceInteractionController extends ChangeNotifier {
   bool _initialized = false;
   bool _resultHandled = false;
   bool _endingSession = false;
+  bool _holdActive = false;
   double _minimumSoundLevel = double.infinity;
   double _maximumSoundLevel = double.negativeInfinity;
   double _soundLevel = 0;
@@ -68,21 +66,20 @@ class VoiceInteractionController extends ChangeNotifier {
   double get soundLevel => _soundLevel;
   bool get isActive => _state != VoiceInteractionState.idle;
   bool get isHearingSpeech => _state == VoiceInteractionState.hearingSpeech;
+  bool get isListening =>
+      _state == VoiceInteractionState.listening ||
+      _state == VoiceInteractionState.hearingSpeech;
+  bool get isCapturingSpeech =>
+      _state == VoiceInteractionState.prompting || isListening;
 
   String get semanticLabel => switch (_state) {
-    VoiceInteractionState.idle => 'اضغط مرتين أو ضغطة مطولة لإعطاء أمر صوتي',
+    VoiceInteractionState.idle => 'اضغط مطولًا على الشاشة لإعطاء أمر صوتي',
     VoiceInteractionState.prompting => 'التطبيق يستعد للاستماع',
     VoiceInteractionState.listening => 'التطبيق يستمع الآن',
     VoiceInteractionState.hearingSpeech => 'التطبيق يسمع كلامك الآن',
     VoiceInteractionState.processing => 'جاري تنفيذ الأمر الصوتي',
     VoiceInteractionState.error => 'حدث خطأ في الاستماع',
   };
-
-  void startHardwareTrigger() {
-    _volumeSubscription ??= _volumeTrigger.triggers.listen((_) {
-      unawaited(triggerModeListening());
-    });
-  }
 
   void bindModeSelection(VoiceModeSelection handler) {
     _onModeSelected = handler;
@@ -107,7 +104,37 @@ class VoiceInteractionController extends ChangeNotifier {
 
   Future<void> triggerModeListening() async {
     if (isActive || _cooldownIsActive) return;
-    await _beginListening(purpose: _ListeningPurpose.mode, prompt: 'اتكلم');
+    await _beginListening(purpose: _currentPurpose, prompt: 'اتكلم');
+  }
+
+  Future<void> startHoldListening() async {
+    if (_cooldownIsActive) return;
+    if (isActive) {
+      await cancel();
+    }
+    _holdActive = true;
+    await _beginListening(
+      purpose: _currentPurpose,
+      listenFor: _holdListenFor,
+      pauseFor: _holdPauseFor,
+      requiresActiveHold: true,
+    );
+  }
+
+  Future<void> endHoldListening() async {
+    if (!_holdActive) return;
+    _holdActive = false;
+    if (isListening) {
+      await _handleRecognizedText(_latestText);
+    } else if (_state == VoiceInteractionState.prompting) {
+      await cancel();
+    }
+  }
+
+  Future<void> cancelHoldListening() async {
+    if (!_holdActive) return;
+    _holdActive = false;
+    await cancel();
   }
 
   Future<void> beginStuffFinderItemListening() async {
@@ -115,12 +142,13 @@ class VoiceInteractionController extends ChangeNotifier {
       await cancel();
     }
     await _beginListening(
-      purpose: _ListeningPurpose.stuffFinderItem,
+      purpose: _ListeningPurpose.stuffFinder,
       prompt: 'عايز تدور على إيه؟',
     );
   }
 
   Future<void> cancel() async {
+    _holdActive = false;
     _endingSession = true;
     try {
       await _commandService.cancel();
@@ -132,9 +160,26 @@ class VoiceInteractionController extends ChangeNotifier {
     _endingSession = false;
   }
 
+  Future<void> interruptForDangerAlert() async {
+    _holdActive = false;
+    _resultHandled = true;
+    _endingSession = true;
+    try {
+      await _commandService.cancel();
+    } catch (error) {
+      debugPrint('[VoiceInteraction] Danger interrupt failed: $error');
+    }
+    await _feedback.stopSpeech();
+    _setState(VoiceInteractionState.idle);
+    _endingSession = false;
+  }
+
   Future<void> _beginListening({
     required _ListeningPurpose purpose,
-    required String prompt,
+    String? prompt,
+    Duration listenFor = _listenFor,
+    Duration pauseFor = _pauseFor,
+    bool requiresActiveHold = false,
   }) async {
     _purpose = purpose;
     _latestText = '';
@@ -146,19 +191,26 @@ class VoiceInteractionController extends ChangeNotifier {
     _setState(VoiceInteractionState.prompting);
 
     await _feedback.stopSpeech();
-    await _feedback.speakAndWait(prompt);
+    if (prompt != null) {
+      await _feedback.speakAndWait(prompt);
+    }
 
     if (!await _ensureInitialized()) return;
+    if (requiresActiveHold && !_holdActive) {
+      _setState(VoiceInteractionState.idle);
+      return;
+    }
 
     try {
+      await _feedback.stopSpeech();
       await _feedback.playListeningStartedHaptic();
       _setState(VoiceInteractionState.listening);
       await _commandService.listen(
         localeId: _preferredLocaleId,
         onResult: _onSpeechResult,
         onSoundLevel: _onSoundLevel,
-        listenFor: _listenFor,
-        pauseFor: _pauseFor,
+        listenFor: listenFor,
+        pauseFor: pauseFor,
       );
     } catch (error, stackTrace) {
       debugPrint('[VoiceInteraction] Listen failed: $error\n$stackTrace');
@@ -203,7 +255,7 @@ class VoiceInteractionController extends ChangeNotifier {
             _state == VoiceInteractionState.hearingSpeech)) {
       _setState(VoiceInteractionState.hearingSpeech);
     }
-    if (result.isFinal) {
+    if (result.isFinal && !_holdActive) {
       unawaited(_handleRecognizedText(_latestText));
     }
   }
@@ -230,7 +282,7 @@ class VoiceInteractionController extends ChangeNotifier {
   void _onSpeechStatus(String status) {
     debugPrint('[VoiceInteraction] STT status=$status');
     if (_endingSession || _resultHandled) return;
-    if (status == 'done' || status == 'notListening') {
+    if (!_holdActive && (status == 'done' || status == 'notListening')) {
       Future<void>.delayed(const Duration(milliseconds: 250), () {
         if (!_resultHandled && !_endingSession) {
           unawaited(_handleRecognizedText(_latestText));
@@ -262,8 +314,8 @@ class VoiceInteractionController extends ChangeNotifier {
       return;
     }
 
-    if (_purpose == _ListeningPurpose.stuffFinderItem) {
-      await _handleStuffFinderItem(rawText);
+    if (_purpose == _ListeningPurpose.stuffFinder) {
+      await _handleStuffFinderCommand(rawText);
       return;
     }
     await _handleMode(rawText);
@@ -294,8 +346,16 @@ class VoiceInteractionController extends ChangeNotifier {
     _setState(VoiceInteractionState.idle);
   }
 
-  Future<void> _handleStuffFinderItem(String rawText) async {
+  Future<void> _handleStuffFinderCommand(String rawText) async {
     final parsed = _parser.parseStuffFinderItem(rawText);
+    if (parsed == null) {
+      final mode = _parser.parseMode(rawText);
+      if (mode != null && _onModeSelected != null) {
+        await _handleMode(rawText);
+        return;
+      }
+    }
+
     debugPrint(
       '[VoiceInteraction] detected intent='
       '${parsed == null ? "unsupported_item" : "stuff_finder_item"}',
@@ -371,6 +431,10 @@ class VoiceInteractionController extends ChangeNotifier {
     return until != null && DateTime.now().isBefore(until);
   }
 
+  _ListeningPurpose get _currentPurpose => _onStuffFinderItemSelected == null
+      ? _ListeningPurpose.mode
+      : _ListeningPurpose.stuffFinder;
+
   void _setState(VoiceInteractionState next) {
     if (_state == next) return;
     _state = next;
@@ -400,7 +464,6 @@ class VoiceInteractionController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _volumeSubscription?.cancel();
     unawaited(_commandService.cancel());
     super.dispose();
   }

@@ -16,12 +16,17 @@ abstract interface class StuffFinderFeedback {
 }
 
 class BridgeStuffFinderFeedback implements StuffFinderFeedback {
-  const BridgeStuffFinderFeedback(this._bridge);
+  const BridgeStuffFinderFeedback(
+    this._bridge, {
+    this.canSpeak = _alwaysAllowSpeech,
+  });
 
   final AudioHapticsBridge _bridge;
+  final bool Function() canSpeak;
 
   @override
   Future<void> speak(String message) {
+    if (!canSpeak()) return Future<void>.value();
     return _bridge.speak(message, languageCode: 'ar-EG');
   }
 
@@ -30,6 +35,8 @@ class BridgeStuffFinderFeedback implements StuffFinderFeedback {
     return _bridge.stopSpeech();
   }
 }
+
+bool _alwaysAllowSpeech() => true;
 
 class SilentStuffFinderFeedback implements StuffFinderFeedback {
   const SilentStuffFinderFeedback();
