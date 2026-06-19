@@ -174,9 +174,13 @@ class VoiceInteractionController extends ChangeNotifier {
     _setState(VoiceInteractionState.prompting);
 
     await _feedback.stopSpeech();
+    // Warm up STT (engine availability + locale lookup) *while* the prompt is
+    // still being spoken, instead of after — otherwise the first listen waits
+    // out the full init delay once the prompt finishes.
+    final initReady = _ensureInitialized();
     await _feedback.speakAndWait(prompt);
 
-    if (!await _ensureInitialized()) return;
+    if (!await initReady) return;
 
     try {
       await _feedback.playListeningStartedHaptic();

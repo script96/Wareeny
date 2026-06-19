@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/services.dart';
+
 import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
 
 abstract interface class VoiceInteractionFeedback {
@@ -30,6 +34,9 @@ class BridgeVoiceInteractionFeedback implements VoiceInteractionFeedback {
 
   @override
   Future<void> playListeningStartedHaptic() {
+    // Audible "ding" the instant listening begins, so the user knows to speak
+    // even without a screen. Fire-and-forget; the haptic still plays in sync.
+    unawaited(SystemSound.play(SystemSoundType.alert));
     return _bridge.playHaptic(HapticSignal.obstacle);
   }
 
