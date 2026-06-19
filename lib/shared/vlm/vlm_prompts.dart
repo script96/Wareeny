@@ -114,11 +114,22 @@ class VlmPrompts {
   /// Builds the full prompt sent to a provider: the task system prompt plus the
   /// user's spoken question for ask-image.
   static String build(VlmRequest request) {
-    final system = systemFor(request.task);
+    final buffer = StringBuffer(systemFor(request.task));
     final question = request.userQuestion?.trim();
     if (request.task == VlmTask.askImage && question != null && question.isNotEmpty) {
-      return '$system\n\nThe user asks: "$question"';
+      buffer.write('\n\nThe user asks: "$question"');
     }
-    return system;
+    // App in Arabic → force the answer into Arabic, overriding the per-task
+    // content-language rule (e.g. scan's "answer English unless the text is
+    // Arabic"). Excluded for `read`: a reading must follow the document's own
+    // language, not the app's.
+    if (request.answerInArabic && request.task != VlmTask.read) {
+      buffer.write(
+        '\n\nThe user\'s app is set to Arabic. Reply in Arabic (Egyptian / '
+        'Modern Standard Arabic), no matter what language any text in the frame '
+        'is written in.',
+      );
+    }
+    return buffer.toString();
   }
 }

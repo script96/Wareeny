@@ -203,7 +203,7 @@ class _ScanScreenState extends State<ScanScreen> {
     final cam = _camera;
     if (cam == null || !cam.value.isInitialized || _scan.isThinking) return;
     final file = await cam.takePicture();
-    await _scan.scan(file.path);
+    await _scan.scan(file.path, answerInArabic: widget.settings.isArabic);
   }
 
   /// QA: freeze the current frame, listen for a spoken question, then answer it.
@@ -216,7 +216,12 @@ class _ScanScreenState extends State<ScanScreen> {
     final question = await voice.listenForQuestion(l10n.askPrompt);
     if (!mounted) return;
     if (question == null || question.trim().isEmpty) return;
-    await _scan.ask(file.path, question, unavailableMessage: l10n.askUnavailable);
+    await _scan.ask(
+      file.path,
+      question,
+      unavailableMessage: l10n.askUnavailable,
+      answerInArabic: widget.settings.isArabic,
+    );
   }
 }
 

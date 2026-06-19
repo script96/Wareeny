@@ -50,7 +50,9 @@ class VlmReadController extends ChangeNotifier {
   bool _generating = false;
 
   /// One-shot scan: identify the thing, speak one sentence (no controls).
-  Future<void> scan(String imagePath) => _start(imagePath, withControls: false);
+  /// [answerInArabic] forces the answer into Arabic (app in Arabic mode).
+  Future<void> scan(String imagePath, {bool answerInArabic = false}) =>
+      _start(imagePath, withControls: false, answerInArabic: answerInArabic);
 
   /// Full reading with playback controls.
   Future<void> startReading(String imagePath) =>
@@ -63,6 +65,7 @@ class VlmReadController extends ChangeNotifier {
     String imagePath,
     String question, {
     String? unavailableMessage,
+    bool answerInArabic = false,
   }) =>
       _start(
         imagePath,
@@ -70,6 +73,7 @@ class VlmReadController extends ChangeNotifier {
         task: VlmTask.askImage,
         question: question,
         unavailableMessage: unavailableMessage,
+        answerInArabic: answerInArabic,
       );
 
   Future<void> _start(
@@ -78,6 +82,7 @@ class VlmReadController extends ChangeNotifier {
     VlmTask? task,
     String? question,
     String? unavailableMessage,
+    bool answerInArabic = false,
   }) async {
     if (isThinking) return;
     cancel();
@@ -99,6 +104,7 @@ class VlmReadController extends ChangeNotifier {
       imagePath: imagePath,
       task: resolvedTask,
       userQuestion: question,
+      answerInArabic: answerInArabic,
     );
     _sub = _assistant.run(request).listen(
       (event) => _onEvent(event, withControls: withControls),

@@ -196,7 +196,12 @@ class _ReadScreenState extends State<ReadScreen> {
     final question = await voice.listenForQuestion(l10n.askPrompt);
     if (!mounted) return;
     if (question == null || question.trim().isEmpty) return;
-    await _read.ask(file.path, question, unavailableMessage: l10n.askUnavailable);
+    await _read.ask(
+      file.path,
+      question,
+      unavailableMessage: l10n.askUnavailable,
+      answerInArabic: widget.settings.isArabic,
+    );
   }
 }
 

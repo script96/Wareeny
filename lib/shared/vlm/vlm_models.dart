@@ -19,11 +19,17 @@ class VlmRequest {
     required this.imagePath,
     required this.task,
     this.userQuestion,
+    this.answerInArabic = false,
   });
 
   final String imagePath;
   final VlmTask task;
   final String? userQuestion;
+
+  /// True when the app is in Arabic mode — the answer should be spoken in Arabic
+  /// regardless of the language of any text in the frame. Ignored for
+  /// [VlmTask.read], which mirrors the document's own language.
+  final bool answerInArabic;
 }
 
 /// One streamed piece of a VLM answer. Providers emit a sequence of these so
