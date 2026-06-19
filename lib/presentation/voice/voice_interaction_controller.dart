@@ -20,7 +20,7 @@ enum VoiceInteractionState {
   error,
 }
 
-enum _ListeningPurpose { mode, stuffFinderItem }
+enum _ListeningPurpose { mode, stuffFinderItem, freeformQuestion }
 
 typedef VoiceModeSelection = FutureOr<void> Function(AppMode mode);
 typedef VoiceStuffFinderSelection =
@@ -53,6 +53,7 @@ class VoiceInteractionController extends ChangeNotifier {
   VoiceStuffFinderSelection? _onStuffFinderItemSelected;
   ShowStuffFinderItems? _onShowStuffFinderItems;
   _ListeningPurpose _purpose = _ListeningPurpose.mode;
+  Completer<String?>? _questionCompleter;
   VoiceInteractionState _state = VoiceInteractionState.idle;
   DateTime? _cooldownUntil;
   String? _preferredLocaleId;
@@ -120,7 +121,34 @@ class VoiceInteractionController extends ChangeNotifier {
     );
   }
 
+  /// Listens for a free-form spoken utterance and returns the raw recognized
+  /// text — used by the QA feature to capture a question, bypassing the command
+  /// parser. Returns null if nothing was heard, the mic was denied, or STT
+  /// failed (the controller speaks its own feedback in those cases). Cancels any
+  /// in-flight listening session first.
+  Future<String?> listenForQuestion(String prompt) async {
+    if (isActive) {
+      await cancel();
+    }
+    final completer = Completer<String?>();
+    _questionCompleter = completer;
+    await _beginListening(
+      purpose: _ListeningPurpose.freeformQuestion,
+      prompt: prompt,
+    );
+    return completer.future;
+  }
+
+  void _completeQuestion(String? value) {
+    final completer = _questionCompleter;
+    _questionCompleter = null;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(value);
+    }
+  }
+
   Future<void> cancel() async {
+    _completeQuestion(null);
     _endingSession = true;
     try {
       await _commandService.cancel();
@@ -257,6 +285,18 @@ class VoiceInteractionController extends ChangeNotifier {
     debugPrint('[VoiceInteraction] recognized raw="$rawText"');
     debugPrint('[VoiceInteraction] normalized="$normalized"');
 
+    if (_purpose == _ListeningPurpose.freeformQuestion) {
+      final question = rawText.trim();
+      if (question.isEmpty) {
+        await _speakError('مسمعتش سؤالك، حاول تاني');
+        _completeQuestion(null);
+      } else {
+        _setState(VoiceInteractionState.idle);
+        _completeQuestion(question);
+      }
+      return;
+    }
+
     if (rawText.trim().isEmpty) {
       await _speakError('مسمعتش الأمر بوضوح، حاول تاني');
       return;
@@ -350,6 +390,7 @@ class VoiceInteractionController extends ChangeNotifier {
           ? 'لازم تسمح لوريني باستخدام الميكروفون والتعرف على الكلام'
           : 'مسمعتش الأمر بوضوح، حاول تاني',
     );
+    _completeQuestion(null);
     _endingSession = false;
   }
 
@@ -400,6 +441,7 @@ class VoiceInteractionController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _completeQuestion(null);
     _volumeSubscription?.cancel();
     unawaited(_commandService.cancel());
     super.dispose();

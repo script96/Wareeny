@@ -7,13 +7,27 @@ import 'package:wareeny/core/theme/app_spacing.dart';
 
 /// Vertical column of glassmorphism icon action buttons on the camera's right edge.
 class CameraSideActions extends StatelessWidget {
-  const CameraSideActions({super.key});
+  const CameraSideActions({this.onAsk, this.askLabel, super.key});
+
+  /// When set, shows an "Ask a question" (QA) button that triggers this.
+  final VoidCallback? onAsk;
+
+  /// Accessible label / tooltip for the Ask button.
+  final String? askLabel;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (onAsk != null) ...[
+          _GlassIconButton(
+            icon: Icons.mic_none_rounded,
+            tooltip: askLabel ?? 'Ask a question',
+            onTap: onAsk!,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         _GlassIconButton(
           icon: Icons.flashlight_on_outlined,
           tooltip: 'Flash',

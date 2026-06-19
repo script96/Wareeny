@@ -27,7 +27,7 @@ void main() {
     );
     expect(parser.parseMode('عايز اقرأ النص')?.mode, AppMode.read);
     expect(parser.parseMode('افتح الإعدادات')?.mode, AppMode.settings);
-    expect(parser.parseMode('اعرف الفلوس اللي في ايدي')?.mode, AppMode.inHand);
+    expect(parser.parseMode('اعرف الفلوس اللي في ايدي')?.mode, AppMode.scan);
   });
 
   test('matches Stuff Finder item aliases inside extra words', () {

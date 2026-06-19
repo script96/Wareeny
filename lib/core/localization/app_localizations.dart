@@ -92,6 +92,18 @@ class AppLocalizations {
       ? 'المسح غير متاح. ثبّت النموذج على الجهاز أو اتصل بالإنترنت ثم حاول مرة أخرى.'
       : 'Scan is unavailable. Install the on-device model or connect to the internet, then try again.';
 
+  // ── QA (ask a question about the image) ───────────────────────────────────
+
+  /// Spoken prompt before listening for the user's question.
+  String get askPrompt => isArabic ? 'اسأل سؤالك' : 'Ask your question';
+
+  /// Screen-reader label / tooltip for the Ask button.
+  String get askButton => isArabic ? 'اسأل سؤالاً' : 'Ask a question';
+
+  String get askUnavailable => isArabic
+      ? 'الإجابة غير متاحة. ثبّت النموذج على الجهاز أو اتصل بالإنترنت ثم حاول مرة أخرى.'
+      : 'Answering is unavailable. Install the on-device model or connect to the internet, then try again.';
+
   // ── Settings screen ───────────────────────────────────────────────────────
 
   String get settingsTitle => isArabic ? 'الإعدادات' : 'Settings';
