@@ -89,6 +89,7 @@ class _ScanScreenState extends State<ScanScreen> {
     );
     modeActions[CustomSemanticsAction(label: l10n.repeatResult)] =
         _scan.repeatChunk;
+    modeActions[CustomSemanticsAction(label: l10n.askButton)] = _handleAsk;
 
     final scanIndex = AppMode.values.indexOf(AppMode.scan);
 
@@ -110,6 +111,7 @@ class _ScanScreenState extends State<ScanScreen> {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _handleTap,
+                onLongPress: _handleAsk,
                 child: _buildCameraLayer(),
               ),
             ),
@@ -128,7 +130,7 @@ class _ScanScreenState extends State<ScanScreen> {
                 ),
               ),
             const _TopHud(),
-            const _RightActions(),
+            _RightActions(onAsk: _handleAsk, askLabel: l10n.askButton),
             _BottomArea(
               previousMode: widget.previousMode,
               nextMode: widget.nextMode,
@@ -203,6 +205,19 @@ class _ScanScreenState extends State<ScanScreen> {
     final file = await cam.takePicture();
     await _scan.scan(file.path);
   }
+
+  /// QA: freeze the current frame, listen for a spoken question, then answer it.
+  Future<void> _handleAsk() async {
+    final cam = _camera;
+    if (cam == null || !cam.value.isInitialized || _scan.isThinking) return;
+    final l10n = AppLocalizations.of(context);
+    final voice = AppScope.of(context).voiceInteractionController;
+    final file = await cam.takePicture();
+    final question = await voice.listenForQuestion(l10n.askPrompt);
+    if (!mounted) return;
+    if (question == null || question.trim().isEmpty) return;
+    await _scan.ask(file.path, question, unavailableMessage: l10n.askUnavailable);
+  }
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
@@ -225,7 +240,10 @@ class _TopHud extends StatelessWidget {
 }
 
 class _RightActions extends StatelessWidget {
-  const _RightActions();
+  const _RightActions({this.onAsk, this.askLabel});
+
+  final VoidCallback? onAsk;
+  final String? askLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +252,9 @@ class _RightActions extends StatelessWidget {
       top: 0,
       bottom: 0,
       child: Center(
-        child: SafeArea(child: const CameraSideActions()),
+        child: SafeArea(
+          child: CameraSideActions(onAsk: onAsk, askLabel: askLabel),
+        ),
       ),
     );
   }

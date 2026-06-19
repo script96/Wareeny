@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
@@ -79,6 +80,7 @@ class _ReadScreenState extends State<ReadScreen> {
       settings: widget.settings,
       onModeSelect: widget.onModeSelect,
     );
+    modeActions[CustomSemanticsAction(label: l10n.askButton)] = _handleAsk;
 
     return TwoFingerSwipeDetector(
       onSwipeLeft: () => widget.onModeSelect(
@@ -97,6 +99,7 @@ class _ReadScreenState extends State<ReadScreen> {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _handleTap,
+                onLongPress: _handleAsk,
                 child: _buildCameraLayer(),
               ),
             ),
@@ -105,7 +108,7 @@ class _ReadScreenState extends State<ReadScreen> {
                 child: ReadingStatusPill(label: l10n.readingStatus),
               ),
             const _TopHud(),
-            const _RightActions(),
+            _RightActions(onAsk: _handleAsk, askLabel: l10n.askButton),
             _BottomArea(
               read: _read,
               previousMode: widget.previousMode,
@@ -182,6 +185,19 @@ class _ReadScreenState extends State<ReadScreen> {
     final file = await cam.takePicture();
     await _read.startReading(file.path);
   }
+
+  /// QA: freeze the current frame, listen for a spoken question, then answer it.
+  Future<void> _handleAsk() async {
+    final cam = _camera;
+    if (cam == null || !cam.value.isInitialized || _read.isThinking) return;
+    final l10n = AppLocalizations.of(context);
+    final voice = AppScope.of(context).voiceInteractionController;
+    final file = await cam.takePicture();
+    final question = await voice.listenForQuestion(l10n.askPrompt);
+    if (!mounted) return;
+    if (question == null || question.trim().isEmpty) return;
+    await _read.ask(file.path, question, unavailableMessage: l10n.askUnavailable);
+  }
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
@@ -204,7 +220,10 @@ class _TopHud extends StatelessWidget {
 }
 
 class _RightActions extends StatelessWidget {
-  const _RightActions();
+  const _RightActions({this.onAsk, this.askLabel});
+
+  final VoidCallback? onAsk;
+  final String? askLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -213,7 +232,9 @@ class _RightActions extends StatelessWidget {
       top: 0,
       bottom: 0,
       child: Center(
-        child: SafeArea(child: const CameraSideActions()),
+        child: SafeArea(
+          child: CameraSideActions(onAsk: onAsk, askLabel: askLabel),
+        ),
       ),
     );
   }

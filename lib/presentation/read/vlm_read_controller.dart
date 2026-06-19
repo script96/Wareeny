@@ -9,10 +9,12 @@ import 'package:wareeny/shared/vlm/vlm_models.dart';
 import 'package:wareeny/shared/vlm/vlm_task.dart';
 
 /// Drives capture → VLM → streamed speech through the shared [VlmAssistant].
-/// Replaces the old ML Kit `OcrController`. Serves two screens:
+/// Replaces the old ML Kit `OcrController`. Serves three flows:
 ///   - Scan: [scan] runs the one-shot `scan` task (no playback controls).
 ///   - Read: [startReading] runs the full document `read` task (stop / repeat /
 ///     skip / cancel controls).
+///   - QA: [ask] runs the one-shot `askImage` task with a spoken question (no
+///     playback controls).
 /// A short "thinking" cue covers first-token latency.
 class VlmReadController extends ChangeNotifier {
   VlmReadController({
@@ -32,6 +34,9 @@ class VlmReadController extends ChangeNotifier {
   final AudioHapticsBridge _audioHaptics;
   final SpeechQueue _speech = SpeechQueue();
   final String _unavailableMessage;
+  // Per-run override for the "unavailable" line (e.g. QA uses a QA-specific
+  // message). Falls back to [_unavailableMessage] when null.
+  String? _unavailableOverride;
 
   bool isThinking = false;
   bool isReadingActive = false;
@@ -51,9 +56,32 @@ class VlmReadController extends ChangeNotifier {
   Future<void> startReading(String imagePath) =>
       _start(imagePath, withControls: true);
 
-  Future<void> _start(String imagePath, {required bool withControls}) async {
+  /// One-shot QA: answer a spoken [question] about the framed image, speak the
+  /// answer (no controls). Uses the `askImage` task (cloud-first, local fallback).
+  /// [unavailableMessage] overrides the spoken fallback when no provider works.
+  Future<void> ask(
+    String imagePath,
+    String question, {
+    String? unavailableMessage,
+  }) =>
+      _start(
+        imagePath,
+        withControls: false,
+        task: VlmTask.askImage,
+        question: question,
+        unavailableMessage: unavailableMessage,
+      );
+
+  Future<void> _start(
+    String imagePath, {
+    required bool withControls,
+    VlmTask? task,
+    String? question,
+    String? unavailableMessage,
+  }) async {
     if (isThinking) return;
     cancel();
+    _unavailableOverride = unavailableMessage;
     isThinking = true;
     isUnavailable = false;
     streamedText = '';
@@ -64,9 +92,14 @@ class VlmReadController extends ChangeNotifier {
     // audio earcon is a native TODO; the haptic pulse is the non-visual stand-in.)
     unawaited(_audioHaptics.playHaptic(HapticSignal.confirmation).catchError((_) {}));
 
-    // Scan = quick identification; Read = full document read. Tuned prompts.
-    final task = withControls ? VlmTask.read : VlmTask.scan;
-    final request = VlmRequest(imagePath: imagePath, task: task);
+    // Scan = quick identification; Read = full document read; ask = QA. Tuned
+    // prompts. Caller-supplied [task] wins; otherwise derive from withControls.
+    final resolvedTask = task ?? (withControls ? VlmTask.read : VlmTask.scan);
+    final request = VlmRequest(
+      imagePath: imagePath,
+      task: resolvedTask,
+      userQuestion: question,
+    );
     _sub = _assistant.run(request).listen(
       (event) => _onEvent(event, withControls: withControls),
       onError: (Object e) {
@@ -171,7 +204,7 @@ class VlmReadController extends ChangeNotifier {
     isReadingActive = false;
     isUnavailable = true;
     streamedText = '';
-    _speech.enqueue(_unavailableMessage);
+    _speech.enqueue(_unavailableOverride ?? _unavailableMessage);
     notifyListeners();
   }
 
