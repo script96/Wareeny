@@ -16,7 +16,7 @@ void main() {
     const mapper = DangerLabelMapper();
 
     expect(mapper.classify('Fire', labels: labels), DangerKind.fire);
-    expect(mapper.classify('Smoke', labels: labels), DangerKind.fire);
+    expect(mapper.classify('Smoke', labels: labels), isNull);
     expect(mapper.classify('flame', labels: labels), DangerKind.fire);
     expect(mapper.classify('Stop', labels: labels), DangerKind.stopSign);
     expect(
@@ -37,7 +37,7 @@ void main() {
     const mapper = DangerLabelMapper();
 
     expect(mapper.classify('class 0', labels: labels), DangerKind.fire);
-    expect(mapper.classify('class 1', labels: labels), DangerKind.fire);
+    expect(mapper.classify('class 1', labels: labels), isNull);
     expect(mapper.classify('class 2', labels: labels), DangerKind.stopSign);
     expect(mapper.classify('class 3', labels: labels), DangerKind.exitSign);
     expect(mapper.classify('class 4', labels: labels), DangerKind.wetFloorSign);
