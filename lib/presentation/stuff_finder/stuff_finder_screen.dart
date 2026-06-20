@@ -13,7 +13,6 @@ import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/theme/app_colors.dart';
 import 'package:wareeny/core/theme/app_spacing.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
-import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_status_view.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
@@ -74,7 +73,10 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
     _voiceInteraction = services.voiceInteractionController;
     _finder = StuffFinderController(
       detectionSource: source,
-      feedback: BridgeStuffFinderFeedback(services.audioHapticsBridge),
+      feedback: BridgeStuffFinderFeedback(
+        services.audioHapticsBridge,
+        canSpeak: () => !services.voiceInteractionController.isCapturingSpeech,
+      ),
     )..addListener(_onFinderChanged);
     _voiceInteraction!.bindStuffFinderHandlers(
       onItemSelected: _selectVoiceTarget,
@@ -160,12 +162,6 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
               child: SafeArea(
                 child: Center(child: _StatusChip(finder: finder)),
               ),
-            ),
-            const Positioned(
-              right: 16,
-              top: 0,
-              bottom: 0,
-              child: Center(child: SafeArea(child: CameraSideActions())),
             ),
             Positioned(
               left: 16,

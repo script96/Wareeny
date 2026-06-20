@@ -10,6 +10,7 @@ class SettingsController extends ChangeNotifier {
     required this._locale,
     required this._speechRate,
     required this._hapticsEnabled,
+    required this._serverAddress,
     required List<EmergencyContact> emergencyContacts,
     required this._shareLocationWithEmergencyContacts,
     required this._hasSeenEmergencyOnboarding,
@@ -19,6 +20,7 @@ class SettingsController extends ChangeNotifier {
   static const _keyLocale = 'settings.locale';
   static const _keySpeechRate = 'settings.speechRate';
   static const _keyHaptics = 'settings.hapticsEnabled';
+  static const _keyServerAddress = 'settings.serverAddress';
   static const _keyContacts = 'settings.emergencyContacts';
   static const _keyShareEmergencyLocation = 'settings.shareEmergencyLocation';
   static const _keyOnboardingSeen = 'settings.emergencyOnboardingSeen';
@@ -27,12 +29,14 @@ class SettingsController extends ChangeNotifier {
   static const _defaultLocale = 'en';
   static const _defaultSpeechRate = 0.45;
   static const _defaultHaptics = true;
+  static const _defaultServerPort = 8000;
   static const _defaultShareEmergencyLocation = true;
 
   // ── State ─────────────────────────────────────────────────────────────────
   Locale _locale;
   double _speechRate;
   bool _hapticsEnabled;
+  String? _serverAddress;
   List<EmergencyContact> _emergencyContacts;
   bool _shareLocationWithEmergencyContacts;
   bool _hasSeenEmergencyOnboarding;
@@ -40,6 +44,8 @@ class SettingsController extends ChangeNotifier {
   Locale get locale => _locale;
   double get speechRate => _speechRate;
   bool get hapticsEnabled => _hapticsEnabled;
+  String? get serverAddress => _serverAddress;
+  String? get resolvedServerAddress => _normalizeServerAddress(_serverAddress);
   List<EmergencyContact> get emergencyContacts =>
       List.unmodifiable(_emergencyContacts);
   bool get shareLocationWithEmergencyContacts =>
@@ -54,6 +60,7 @@ class SettingsController extends ChangeNotifier {
     final localeCode = prefs.getString(_keyLocale) ?? _defaultLocale;
     final speechRate = prefs.getDouble(_keySpeechRate) ?? _defaultSpeechRate;
     final hapticsEnabled = prefs.getBool(_keyHaptics) ?? _defaultHaptics;
+    final serverAddress = prefs.getString(_keyServerAddress);
     final contactsJson = prefs.getString(_keyContacts);
     final contacts = contactsJson != null
         ? EmergencyContact.decodeList(contactsJson)
@@ -67,6 +74,7 @@ class SettingsController extends ChangeNotifier {
       locale: Locale(localeCode),
       speechRate: speechRate,
       hapticsEnabled: hapticsEnabled,
+      serverAddress: serverAddress,
       emergencyContacts: contacts,
       shareLocationWithEmergencyContacts: shareEmergencyLocation,
       hasSeenEmergencyOnboarding: onboardingSeen,
@@ -99,6 +107,20 @@ class SettingsController extends ChangeNotifier {
     await prefs.setBool(_keyHaptics, enabled);
   }
 
+  Future<void> setServerAddress(String value) async {
+    final trimmed = value.trim();
+    final nextValue = trimmed.isEmpty ? null : trimmed;
+    if (_serverAddress == nextValue) return;
+    _serverAddress = nextValue;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    if (nextValue == null) {
+      await prefs.remove(_keyServerAddress);
+      return;
+    }
+    await prefs.setString(_keyServerAddress, nextValue);
+  }
+
   Future<void> setEmergencyContacts(List<EmergencyContact> contacts) async {
     _emergencyContacts = List.of(contacts);
     notifyListeners();
@@ -124,4 +146,50 @@ class SettingsController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyOnboardingSeen, true);
   }
+
+  String resolveCloudApiBaseUrl(String fallbackBaseUrl) {
+    return resolvedServerAddress ?? _trimTrailingSlash(fallbackBaseUrl.trim());
+  }
+
+  static String? _normalizeServerAddress(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      final uri = Uri.tryParse(trimmed);
+      if (uri == null || uri.host.isEmpty) return _trimTrailingSlash(trimmed);
+      return _trimTrailingSlash(uri.toString());
+    }
+
+    final uri = Uri.tryParse('http://$trimmed');
+    if (uri == null || uri.host.isEmpty) return null;
+
+    final scheme = _shouldDefaultToHttps(uri.host) ? 'https' : 'http';
+    final port = uri.hasPort
+        ? uri.port
+        : scheme == 'http'
+        ? _defaultServerPort
+        : null;
+    final normalized = Uri(
+      scheme: scheme,
+      host: uri.host,
+      port: port,
+      path: uri.path == '/' ? '' : uri.path,
+      query: uri.hasQuery ? uri.query : null,
+      fragment: uri.hasFragment ? uri.fragment : null,
+    );
+    return _trimTrailingSlash(normalized.toString());
+  }
+
+  static bool _shouldDefaultToHttps(String host) {
+    if (host == 'localhost' || host.endsWith('.local')) return false;
+    if (_ipv4Pattern.hasMatch(host)) return false;
+    return host.contains('.');
+  }
+
+  static String _trimTrailingSlash(String value) {
+    return value.endsWith('/') ? value.substring(0, value.length - 1) : value;
+  }
+
+  static final _ipv4Pattern = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$');
 }

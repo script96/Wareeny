@@ -13,6 +13,7 @@ import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
+import 'package:wareeny/presentation/voice/voice_interaction_controller.dart';
 
 class ReadScreen extends StatefulWidget {
   const ReadScreen({
@@ -35,7 +36,9 @@ class ReadScreen extends StatefulWidget {
 class _ReadScreenState extends State<ReadScreen> {
   CameraController? _camera;
   late final VlmReadController _read;
+  VoiceInteractionController? _voiceInteraction;
   bool _readReady = false;
+  bool _wasCapturingSpeech = false;
   Object? _cameraError;
 
   @override
@@ -48,6 +51,8 @@ class _ReadScreenState extends State<ReadScreen> {
         audioHaptics: services.audioHapticsBridge,
         unavailableMessage: AppLocalizations.of(context).readUnavailable,
       )..addListener(_onReadChange);
+      _voiceInteraction = services.voiceInteractionController
+        ..addListener(_onVoiceInteractionChange);
       _readReady = true;
     }
   }
@@ -65,11 +70,20 @@ class _ReadScreenState extends State<ReadScreen> {
         ..removeListener(_onReadChange)
         ..dispose();
     }
+    _voiceInteraction?.removeListener(_onVoiceInteractionChange);
     _camera?.dispose();
     super.dispose();
   }
 
   void _onReadChange() => setState(() {});
+
+  void _onVoiceInteractionChange() {
+    final capturing = _voiceInteraction?.isCapturingSpeech ?? false;
+    if (capturing && !_wasCapturingSpeech) {
+      _read.stopReading();
+    }
+    _wasCapturingSpeech = capturing;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,9 +98,11 @@ class _ReadScreenState extends State<ReadScreen> {
 
     return TwoFingerSwipeDetector(
       onSwipeLeft: () => widget.onModeSelect(
-          (AppMode.values.indexOf(AppMode.read) + 1) % AppMode.values.length),
+        (AppMode.values.indexOf(AppMode.read) + 1) % AppMode.values.length,
+      ),
       onSwipeRight: () => widget.onModeSelect(
-          (AppMode.values.indexOf(AppMode.read) - 1) % AppMode.values.length),
+        (AppMode.values.indexOf(AppMode.read) - 1) % AppMode.values.length,
+      ),
       child: Semantics(
         label: l10n.activeModeNamed(AppMode.read.labelFor(l10n)),
         customSemanticsActions: modeActions,
@@ -133,7 +149,11 @@ class _ReadScreenState extends State<ReadScreen> {
       return const ColoredBox(
         color: Colors.black,
         child: Center(
-          child: Icon(Icons.videocam_off_outlined, color: Colors.white38, size: 48),
+          child: Icon(
+            Icons.videocam_off_outlined,
+            color: Colors.white38,
+            size: 48,
+          ),
         ),
       );
     }

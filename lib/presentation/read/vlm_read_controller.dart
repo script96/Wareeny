@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -21,9 +23,9 @@ class VlmReadController extends ChangeNotifier {
     required VlmAssistant assistant,
     required AudioHapticsBridge audioHaptics,
     required String unavailableMessage,
-  })  : _assistant = assistant,
-        _audioHaptics = audioHaptics,
-        _unavailableMessage = unavailableMessage {
+  }) : _assistant = assistant,
+       _audioHaptics = audioHaptics,
+       _unavailableMessage = unavailableMessage {
     // Reading is "active" until generation finishes AND the queued audio has
     // actually been spoken — generation outruns playback, so the controls must
     // outlive the stream. The queue tells us when it has drained.
@@ -95,7 +97,9 @@ class VlmReadController extends ChangeNotifier {
 
     // Tactile "thinking" cue while we wait for the first token. (A dedicated
     // audio earcon is a native TODO; the haptic pulse is the non-visual stand-in.)
-    unawaited(_audioHaptics.playHaptic(HapticSignal.confirmation).catchError((_) {}));
+    unawaited(
+      _audioHaptics.playHaptic(HapticSignal.confirmation).catchError((_) {}),
+    );
 
     // Scan = quick identification; Read = full document read; ask = QA. Tuned
     // prompts. Caller-supplied [task] wins; otherwise derive from withControls.

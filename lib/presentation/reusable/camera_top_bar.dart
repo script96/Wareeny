@@ -24,39 +24,34 @@ class CameraTopBar extends StatelessWidget {
         button: true,
         liveRegion: voice.isActive,
         label: voice.semanticLabel,
-        hint: voice.isActive ? null : 'اضغط مرتين أو ضغطة مطولة لبدء الاستماع',
+        hint: voice.isActive ? null : 'اضغط مطولًا على الشاشة لبدء الاستماع',
         onTap: voice.triggerModeListening,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onDoubleTap: voice.triggerModeListening,
-          onLongPress: voice.triggerModeListening,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.glassWhite,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.glassBorder, width: 1),
-                ),
-                child: Row(
-                  children: [
-                    _BrandLabel(),
-                    const Spacer(),
-                    const LiveIndicator(),
-                    if (voice.isActive) ...[
-                      const SizedBox(width: AppSpacing.sm),
-                      VoiceListeningIndicator(controller: voice),
-                    ],
-                    const Spacer(),
-                    _ModeIconBadge(mode: currentMode),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.glassWhite,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.glassBorder, width: 1),
+              ),
+              child: Row(
+                children: [
+                  _BrandLabel(),
+                  const Spacer(),
+                  const LiveIndicator(),
+                  if (voice.isActive) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    VoiceListeningIndicator(controller: voice),
                   ],
-                ),
+                  const Spacer(),
+                  _ModeIconBadge(mode: currentMode),
+                ],
               ),
             ),
           ),

@@ -7,12 +7,13 @@ import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 import 'package:wareeny/core/di/app_scope.dart';
 import 'package:wareeny/core/localization/app_localizations.dart';
 import 'package:wareeny/presentation/navigation/app_mode.dart';
-import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_status_view.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
+import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
+import 'package:wareeny/shared/object_detection/detection_models.dart';
 import 'package:wareeny/shared/object_detection/object_detection_source.dart';
 
 class HomeDetectionScreen extends StatefulWidget {
@@ -41,8 +42,18 @@ class _HomeDetectionScreenState extends State<HomeDetectionScreen>
     with WidgetsBindingObserver {
   late final YOLOViewController _yoloController;
   YoloStreamingObjectDetectionSource? _detectionSource;
+  AudioHapticsBridge? _audioHaptics;
+  bool Function()? _canSpeak;
+  StreamSubscription<ObjectDetectionFrame>? _frameSubscription;
   Object? _modelError;
   bool _initialized = false;
+  String? _lastAnnouncedLabel;
+  DateTime? _lastAnnouncementAt;
+
+  static const _announcementCooldown = Duration(seconds: 3);
+  static const _repeatAnnouncementCooldown = Duration(seconds: 7);
+  static const _minimumAnnouncementArea = 0.02;
+  static const _minimumAnnouncementConfidence = 0.45;
 
   @override
   void initState() {
@@ -55,9 +66,13 @@ class _HomeDetectionScreenState extends State<HomeDetectionScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_initialized) return;
-    final source = AppScope.of(context).objectDetectionSource;
+    final services = AppScope.of(context);
+    final source = services.objectDetectionSource;
     if (source is YoloStreamingObjectDetectionSource) {
       _detectionSource = source;
+      _audioHaptics = services.audioHapticsBridge;
+      _canSpeak = () => !services.voiceInteractionController.isCapturingSpeech;
+      _frameSubscription = source.frames.listen(_handleFrame);
       unawaited(source.start(mode: 'home'));
     }
     _initialized = true;
@@ -78,6 +93,7 @@ class _HomeDetectionScreenState extends State<HomeDetectionScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_yoloController.stop());
+    unawaited(_frameSubscription?.cancel());
     unawaited(_detectionSource?.stop());
     _yoloController.dispose();
     super.dispose();
@@ -108,12 +124,6 @@ class _HomeDetectionScreenState extends State<HomeDetectionScreen>
                 minimum: EdgeInsets.only(top: 12),
                 child: CameraTopBar(currentMode: AppMode.home),
               ),
-            ),
-            const Positioned(
-              right: 16,
-              top: 0,
-              bottom: 0,
-              child: Center(child: SafeArea(child: CameraSideActions())),
             ),
             Positioned(
               left: 16,
@@ -202,4 +212,94 @@ class _HomeDetectionScreenState extends State<HomeDetectionScreen>
     }
     await _detectionSource?.stop();
   }
+
+  void _handleFrame(ObjectDetectionFrame frame) {
+    final bridge = _audioHaptics;
+    final canSpeak = _canSpeak;
+    if (bridge == null || canSpeak == null || !canSpeak()) return;
+
+    final closest = _closestDetection(frame);
+    if (closest == null) return;
+
+    final normalizedLabel = closest.label.trim().toLowerCase();
+    final now = DateTime.now();
+    final lastAnnouncementAt = _lastAnnouncementAt;
+    if (lastAnnouncementAt != null) {
+      final elapsed = now.difference(lastAnnouncementAt);
+      if (normalizedLabel == _lastAnnouncedLabel &&
+          elapsed < _repeatAnnouncementCooldown) {
+        return;
+      }
+      if (normalizedLabel != _lastAnnouncedLabel &&
+          elapsed < _announcementCooldown) {
+        return;
+      }
+    }
+
+    final arabicLabel = _arabicObjectLabels[normalizedLabel];
+    final message = arabicLabel == null
+        ? 'أقرب شيء قدامك $normalizedLabel'
+        : 'أقرب شيء قدامك $arabicLabel';
+    _lastAnnouncedLabel = normalizedLabel;
+    _lastAnnouncementAt = now;
+    unawaited(
+      bridge.speak(
+        message,
+        interrupt: true,
+        languageCode: 'ar-EG',
+      ),
+    );
+  }
+
+  ObjectDetection? _closestDetection(ObjectDetectionFrame frame) {
+    ObjectDetection? closest;
+    var bestArea = 0.0;
+    final frameArea = frame.sourceSize.width * frame.sourceSize.height;
+    if (frameArea <= 0) return null;
+
+    for (final detection in frame.detections) {
+      if (detection.confidence < _minimumAnnouncementConfidence) continue;
+      final area =
+          (detection.boundingBox.width * detection.boundingBox.height) /
+          frameArea;
+      if (area < _minimumAnnouncementArea || area <= bestArea) continue;
+      bestArea = area;
+      closest = detection;
+    }
+    return closest;
+  }
 }
+
+const _arabicObjectLabels = <String, String>{
+  'person': 'شخص',
+  'bicycle': 'عجلة',
+  'car': 'عربية',
+  'motorcycle': 'موتوسيكل',
+  'bus': 'أتوبيس',
+  'truck': 'شاحنة',
+  'chair': 'كرسي',
+  'couch': 'كنبة',
+  'sofa': 'كنبة',
+  'bed': 'سرير',
+  'bench': 'مقعد',
+  'dining table': 'طاولة',
+  'table': 'طاولة',
+  'door': 'باب',
+  'window': 'شباك',
+  'bottle': 'زجاجة',
+  'cup': 'كوب',
+  'book': 'كتاب',
+  'backpack': 'شنطة',
+  'handbag': 'حقيبة',
+  'suitcase': 'شنطة سفر',
+  'cell phone': 'موبايل',
+  'phone': 'موبايل',
+  'laptop': 'لاب توب',
+  'tv': 'تلفزيون',
+  'remote': 'ريموت',
+  'keyboard': 'كيبورد',
+  'mouse': 'ماوس',
+  'wallet': 'محفظة',
+  'glasses': 'نظارة',
+  'keys': 'مفاتيح',
+};

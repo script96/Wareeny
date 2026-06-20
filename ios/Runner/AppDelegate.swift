@@ -1,4 +1,3 @@
-import AVFoundation
 import Flutter
 import MessageUI
 import UIKit
@@ -6,8 +5,6 @@ import UIKit
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var emergencySmsBridge: EmergencySmsBridge?
-  private var volumeButtonChannel: FlutterEventChannel?
-  private var volumeButtonHandler: VolumeButtonTriggerHandler?
 
   override func application(
     _ application: UIApplication,
@@ -21,78 +18,6 @@ import UIKit
     emergencySmsBridge = EmergencySmsBridge(
       messenger: engineBridge.applicationRegistrar.messenger()
     )
-    let handler = VolumeButtonTriggerHandler()
-    let channel = FlutterEventChannel(
-      name: "com.wareeny.bridge/volume_button_trigger",
-      binaryMessenger: engineBridge.applicationRegistrar.messenger()
-    )
-    channel.setStreamHandler(handler)
-    volumeButtonHandler = handler
-    volumeButtonChannel = channel
-  }
-}
-
-private final class VolumeButtonTriggerHandler: NSObject, FlutterStreamHandler {
-  private enum Direction {
-    case up
-    case down
-  }
-
-  private let audioSession = AVAudioSession.sharedInstance()
-  private var observation: NSKeyValueObservation?
-  private var eventSink: FlutterEventSink?
-  private var previousVolume: Float = AVAudioSession.sharedInstance().outputVolume
-  private var previousDirection: Direction?
-  private var previousChangeAt: TimeInterval = 0
-  private var lastTriggerAt: TimeInterval = 0
-
-  func onListen(
-    withArguments arguments: Any?,
-    eventSink events: @escaping FlutterEventSink
-  ) -> FlutterError? {
-    eventSink = events
-    previousVolume = audioSession.outputVolume
-    observation = audioSession.observe(
-      \.outputVolume,
-      options: [.new]
-    ) { [weak self] _, change in
-      guard let self, let newVolume = change.newValue else { return }
-      self.handleVolumeChange(newVolume)
-    }
-    return nil
-  }
-
-  func onCancel(withArguments arguments: Any?) -> FlutterError? {
-    observation?.invalidate()
-    observation = nil
-    eventSink = nil
-    previousDirection = nil
-    return nil
-  }
-
-  private func handleVolumeChange(_ newVolume: Float) {
-    guard UIApplication.shared.applicationState == .active else { return }
-    let delta = newVolume - previousVolume
-    previousVolume = newVolume
-    guard abs(delta) > 0.0001 else { return }
-
-    let direction: Direction = delta > 0 ? .up : .down
-    let now = Date().timeIntervalSince1970
-    let oppositePair =
-      previousDirection != nil &&
-      previousDirection != direction &&
-      now - previousChangeAt <= 0.65
-    let outsideCooldown = now - lastTriggerAt > 1.0
-
-    previousDirection = direction
-    previousChangeAt = now
-
-    if oppositePair && outsideCooldown {
-      lastTriggerAt = now
-      DispatchQueue.main.async { [weak self] in
-        self?.eventSink?("both_volume_buttons")
-      }
-    }
   }
 }
 

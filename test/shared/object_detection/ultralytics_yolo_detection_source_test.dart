@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +20,14 @@ void main() {
       'assets/models/navigation/outdoor/outdoor_navigation_int8.tflite',
     );
     expect(
+      UltralyticsYoloDetectionSource.dangerAndroidModelPath,
+      'assets/models/danger/danger_model.tflite',
+    );
+    expect(
+      UltralyticsYoloDetectionSource.dangerIosModelPath,
+      'assets/models/danger/danger_model.mlpackage.zip',
+    );
+    expect(
       UltralyticsYoloDetectionSource.stuffFinderAndroidModelPath,
       'assets/models/stuff_finder/stuff_finder_int8.tflite',
     );
@@ -35,6 +44,12 @@ void main() {
     expect(
       source.modelPathForMode('navigation_outdoor'),
       UltralyticsYoloDetectionSource.outdoorNavigationAndroidModelPath,
+    );
+    expect(
+      source.modelPathForMode('danger'),
+      Platform.isIOS
+          ? UltralyticsYoloDetectionSource.dangerIosModelPath
+          : UltralyticsYoloDetectionSource.dangerAndroidModelPath,
     );
     expect(
       source.modelPathForMode('home'),

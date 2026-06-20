@@ -78,10 +78,15 @@ class UltralyticsYoloDetectionSource
       'assets/models/navigation/outdoor/outdoor_navigation_int8.tflite';
   static const outdoorNavigationIosModelPath =
       'assets/models/navigation/outdoor/outdoor_navigation.mlpackage.zip';
+  static const dangerAndroidModelPath =
+      'assets/models/danger/danger_model.tflite';
+  static const dangerIosModelPath =
+      'assets/models/danger/danger_model.mlpackage.zip';
+  static const dangerLabelsPath = 'assets/models/danger/danger_labels.txt';
   static const stuffFinderAndroidModelPath =
       'assets/models/stuff_finder/stuff_finder_int8.tflite';
   static const stuffFinderIosModelPath =
-      'assets/models/stuff_finder/stuff_finder.mlpackage.zip';
+      'assets/models/stuff_finder/stuff_finder_int8.tflite';
 
   final StreamController<ObjectDetectionFrame> _frames =
       StreamController<ObjectDetectionFrame>.broadcast();
@@ -107,6 +112,9 @@ class UltralyticsYoloDetectionSource
       return Platform.isIOS
           ? outdoorNavigationIosModelPath
           : outdoorNavigationAndroidModelPath;
+    }
+    if (mode == 'danger') {
+      return Platform.isIOS ? dangerIosModelPath : dangerAndroidModelPath;
     }
     return Platform.isIOS ? homeIosModelPath : homeAndroidModelPath;
   }

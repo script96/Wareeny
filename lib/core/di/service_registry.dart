@@ -66,7 +66,7 @@ class ServiceRegistry {
         audioHapticsBridge,
         () => settings.speechRate,
       ),
-    )..startHardwareTrigger();
+    );
 
     const localAiRuntimeBridge = LocalAiRuntimeBridge();
     final local = LocalVlmProvider(
@@ -74,7 +74,8 @@ class ServiceRegistry {
       modelId: config.localModelRegistryName,
     );
     final cloud = CloudVlmProvider(
-      apiBaseUrl: config.apiBaseUrl,
+      apiBaseUrlResolver: () =>
+          settings.resolveCloudApiBaseUrl(config.apiBaseUrl),
       modelId: config.cloudModelId,
     );
     final router = ModelRouter(local: local, cloud: cloud);

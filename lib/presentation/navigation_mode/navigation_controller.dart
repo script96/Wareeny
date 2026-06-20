@@ -137,11 +137,12 @@ class NavigationController extends ChangeNotifier {
   void processFrame(ObjectDetectionFrame rawFrame) {
     framesReceived++;
     _lastFrameAt = rawFrame.timestamp;
-    totalDetections += rawFrame.detections.length;
-    if (rawFrame.detections.isNotEmpty) {
+    final filteredFrame = _filterFrameForMode(rawFrame);
+    totalDetections += filteredFrame.detections.length;
+    if (filteredFrame.detections.isNotEmpty) {
       framesWithDetections++;
     }
-    final mergedFrame = _mergeIndoorFrames(rawFrame);
+    final mergedFrame = _mergeIndoorFrames(filteredFrame);
     latestDetectionLabels = mergedFrame.detections
         .map(
           (item) =>
@@ -158,7 +159,7 @@ class NavigationController extends ChangeNotifier {
       'frame=${rawFrame.frameId} size=${rawFrame.sourceSize} '
       'rotation=${rawFrame.rotationDegrees} mirrored=${rawFrame.mirrored} '
       'source=${rawFrame.modelSource} '
-      'detections=${rawFrame.detections.length} '
+      'detections=${filteredFrame.detections.length} '
       'merged=${mergedFrame.detections.length}',
     );
     for (final item in nextAssessment.objects) {
@@ -369,7 +370,7 @@ class NavigationController extends ChangeNotifier {
       : 'Loading outdoor navigation model';
 
   String get _activeStatus => _indoorMode
-      ? 'Indoor + COCO navigation active'
+      ? 'Indoor navigation model active'
       : 'Outdoor navigation model active';
 
   ObjectDetectionFrame _mergeIndoorFrames(ObjectDetectionFrame incoming) {
@@ -401,6 +402,35 @@ class NavigationController extends ChangeNotifier {
       isLowLight: incoming.isLowLight,
       modelSource: 'indoor+coco',
     );
+  }
+
+  ObjectDetectionFrame _filterFrameForMode(ObjectDetectionFrame frame) {
+    if (!_isCocoFrame(frame.modelSource)) return frame;
+
+    final filtered = frame.detections
+        .where(
+          (detection) =>
+              !isIgnoredCocoLabel(detection.label, indoorMode: _indoorMode),
+        )
+        .toList(growable: false);
+
+    if (filtered.length == frame.detections.length) return frame;
+    return ObjectDetectionFrame(
+      frameId: frame.frameId,
+      sourceSize: frame.sourceSize,
+      detections: filtered,
+      timestamp: frame.timestamp,
+      rotationDegrees: frame.rotationDegrees,
+      mirrored: frame.mirrored,
+      inferenceTime: frame.inferenceTime,
+      framesPerSecond: frame.framesPerSecond,
+      isLowLight: frame.isLowLight,
+      modelSource: frame.modelSource,
+    );
+  }
+
+  bool _isCocoFrame(String modelSource) {
+    return modelSource == 'coco' || modelSource == 'indoor+coco';
   }
 
   bool _isRecent(ObjectDetectionFrame? frame, DateTime now) {

@@ -8,6 +8,56 @@ enum NavigationZone { left, center, right }
 
 const indoorSlipHazardLabels = {'flip_flops', 'shoe_mouth', 'shoes'};
 
+const indoorIgnoredCocoLabels = {
+  'airplane',
+  'bicycle',
+  'boat',
+  'bus',
+  'car',
+  'fire hydrant',
+  'frisbee',
+  'horse',
+  'kite',
+  'motorcycle',
+  'parking meter',
+  'skateboard',
+  'stop sign',
+  'surfboard',
+  'traffic light',
+  'train',
+  'truck',
+};
+
+const outdoorIgnoredCocoLabels = {
+  'bed',
+  'book',
+  'cell phone',
+  'chair',
+  'clock',
+  'couch',
+  'cup',
+  'dining table',
+  'keyboard',
+  'laptop',
+  'microwave',
+  'mouse',
+  'oven',
+  'potted plant',
+  'refrigerator',
+  'remote',
+  'sink',
+  'toaster',
+  'toilet',
+  'tv',
+};
+
+bool isIgnoredCocoLabel(String label, {required bool indoorMode}) {
+  final normalized = label.trim().toLowerCase();
+  return indoorMode
+      ? indoorIgnoredCocoLabels.contains(normalized)
+      : outdoorIgnoredCocoLabels.contains(normalized);
+}
+
 class NavigationPath {
   const NavigationPath({
     this.topY = 0.48,

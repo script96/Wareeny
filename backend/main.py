@@ -13,9 +13,10 @@ tokens.
 
 import json
 import os
+import socket
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -49,8 +50,33 @@ def _sse(data: dict) -> str:
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _server_ip() -> str:
+    override = os.getenv("SERVER_IP", "").strip()
+    if override:
+        return override
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return "127.0.0.1"
+
+
+@app.middleware("http")
+async def attach_server_ip_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Wareeny-Server-IP"] = _server_ip()
+    return response
+
+
 async def _stream_gemma(req: VlmGenerateRequest):
     """Stream token deltas from Ollama's chat API as SSE lines."""
+    yield _sse({"serverIp": _server_ip()})
+
     payload = {
         "model": req.model or GEMMA_MODEL,
         "messages": [
@@ -103,7 +129,12 @@ async def vlm_generate(req: VlmGenerateRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": GEMMA_MODEL, "env": APP_ENV}
+    return {
+        "status": "ok",
+        "model": GEMMA_MODEL,
+        "env": APP_ENV,
+        "serverIp": _server_ip(),
+    }
 
 
 @app.get("/app-config")
@@ -112,6 +143,7 @@ def app_config():
         "cloudModelId": GEMMA_MODEL,
         "streaming": True,
         "tasks": ["scan", "read", "describeScene", "askImage"],
+        "serverIp": _server_ip(),
     }
 
 
@@ -119,6 +151,7 @@ def app_config():
 def model_manifest():
     # On-device model registry for the Phase F install flow. Stubbed for now.
     return {
+        "serverIp": _server_ip(),
         "models": [
             {
                 "id": "wareeny-gemma-4-e4b",

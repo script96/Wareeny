@@ -3,7 +3,7 @@
     <item android:drawable="@color/wareeny_splash_background" />
     <item>
         <bitmap
-            android:gravity="center"
+            android:gravity="fill"
             android:src="@drawable/wareeny_splash_wordmark" />
     </item>
 </layer-list>

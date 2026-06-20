@@ -34,13 +34,15 @@ class AppLocalizations {
 
   // ── Semantic hints ────────────────────────────────────────────────────────
 
-  String get swipeHint =>
-      isArabic ? 'مرر بإصبعين يميناً أو يساراً لتغيير الوضع.' : 'Swipe with two fingers left or right to switch modes.';
+  String get swipeHint => isArabic
+      ? 'مرر بإصبعين يميناً أو يساراً لتغيير الوضع.'
+      : 'Swipe with two fingers left or right to switch modes.';
 
   String get switchTo => isArabic ? 'الانتقال إلى' : 'Switch to';
 
-  String get subModeSwipeHint =>
-      isArabic ? 'مرر بإصبعين للأعلى أو الأسفل لتبديل النوع.' : 'Swipe with two fingers up or down to switch type.';
+  String get subModeSwipeHint => isArabic
+      ? 'مرر بإصبعين للأعلى أو الأسفل لتبديل النوع.'
+      : 'Swipe with two fingers up or down to switch type.';
 
   String get tapToCaptureHint =>
       isArabic ? 'انقر مرتين لالتقاط الصورة.' : 'Double tap to capture.';
@@ -48,30 +50,29 @@ class AppLocalizations {
   String get ocrSelectorHint =>
       isArabic ? 'اختر نوع القراءة.' : 'OCR mode selector.';
 
-  String get navTypeSelectorHint =>
-      isArabic ? 'نوع التنقل الحالي. انقر للتبديل.' : 'Navigation type. Tap to switch.';
+  String get navTypeSelectorHint => isArabic
+      ? 'نوع التنقل الحالي. انقر للتبديل.'
+      : 'Navigation type. Tap to switch.';
 
   // ── Announcements (TTS + screen reader) ──────────────────────────────────
 
   String activeMode(String modeName) =>
       isArabic ? '$modeName نشط' : '$modeName active';
 
-  String activeModeNamed(String name) =>
-      isArabic ? 'وضع $name' : '$name Mode';
+  String activeModeNamed(String name) => isArabic ? 'وضع $name' : '$name Mode';
 
   String get appReady =>
       isArabic ? 'ويرني جاهز. الوضع الرئيسي.' : 'Wareeny active. Home Mode.';
 
-  String get appGreeting =>
-      isArabic
-          ? 'مرحباً بك في ويرني. مرّر بإصبعين للتنقل بين الأوضاع.'
-          : 'Welcome to Wareeny. Swipe with two fingers to navigate between modes.';
+  String get appGreeting => isArabic
+      ? 'مرحباً بك في ويرني. مرّر بإصبعين للتنقل بين الأوضاع.'
+      : 'Welcome to Wareeny. Swipe with two fingers to navigate between modes.';
 
-  String get scanComplete =>
-      isArabic ? 'اكتملت القراءة.' : 'Reading complete.';
+  String get scanComplete => isArabic ? 'اكتملت القراءة.' : 'Reading complete.';
 
-  String get noTextFound =>
-      isArabic ? 'لم يُعثر على نص. وجّه الكاميرا نحو مستند وحاول مرة أخرى.' : 'No text found. Aim at a document and try again.';
+  String get noTextFound => isArabic
+      ? 'لم يُعثر على نص. وجّه الكاميرا نحو مستند وحاول مرة أخرى.'
+      : 'No text found. Aim at a document and try again.';
 
   // ── Scan + Read status / actions ─────────────────────────────────────────
 
@@ -114,17 +115,32 @@ class AppLocalizations {
   String get settingsSpeechRateSlow => isArabic ? 'بطيء' : 'Slow';
   String get settingsSpeechRateFast => isArabic ? 'سريع' : 'Fast';
   String get settingsHaptics => isArabic ? 'الاهتزاز' : 'Haptic Feedback';
-  String get settingsHapticsHint =>
-      isArabic ? 'تفعيل أو إيقاف الاهتزاز عند التنبيهات' : 'Enable or disable vibration on alerts';
+  String get settingsServer => isArabic ? 'الخادم' : 'Server';
+  String get settingsServerAddress =>
+      isArabic ? 'عنوان الخادم' : 'Server Address';
+  String get settingsServerHint => isArabic
+      ? 'أدخل IP الخادم أو رابط النفق. إذا أدخلت IP فقط سيستخدم التطبيق المنفذ 8000.'
+      : 'Enter the server IP or tunnel URL. If you enter only an IP, the app uses port 8000.';
+  String get settingsServerPlaceholder =>
+      isArabic ? 'مثال: 192.168.1.38' : 'Example: 192.168.1.38';
+  String get settingsServerSave => isArabic ? 'حفظ' : 'Save';
+  String get settingsServerSaved =>
+      isArabic ? 'تم حفظ عنوان الخادم' : 'Server address saved';
+  String get settingsServerDefault => isArabic
+      ? 'تم الرجوع إلى خادم التطبيق الافتراضي'
+      : 'Reverted to the default app server';
+  String get settingsHapticsHint => isArabic
+      ? 'تفعيل أو إيقاف الاهتزاز عند التنبيهات'
+      : 'Enable or disable vibration on alerts';
 
   String get settingsLanguageHint =>
       isArabic ? 'اختر لغة التطبيق' : 'Choose app language';
 
-  String get settingsBack =>
-      isArabic ? 'رجوع' : 'Back';
+  String get settingsBack => isArabic ? 'رجوع' : 'Back';
 
-  String get settingsExitHint =>
-      isArabic ? 'مرّر بإصبعين للخروج من الإعدادات' : 'Swipe with two fingers to exit settings';
+  String get settingsExitHint => isArabic
+      ? 'مرّر بإصبعين للخروج من الإعدادات'
+      : 'Swipe with two fingers to exit settings';
 }
 
 // ── Delegate ──────────────────────────────────────────────────────────────────

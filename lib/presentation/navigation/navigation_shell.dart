@@ -14,8 +14,8 @@ import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
 import 'package:wareeny/presentation/onboarding/emergency_onboarding_screen.dart';
 import 'package:wareeny/presentation/read/read_screen.dart';
 import 'package:wareeny/presentation/scan/scan_screen.dart';
-import 'package:wareeny/presentation/reusable/camera_side_actions.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
+import 'package:wareeny/presentation/reusable/hold_to_listen_detector.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
 import 'package:wareeny/presentation/reusable/two_finger_swipe_detector.dart';
 import 'package:wareeny/presentation/settings/settings_controller.dart';
@@ -104,6 +104,15 @@ class _NavigationShellState extends State<NavigationShell> {
 
   @override
   Widget build(BuildContext context) {
+    return HoldToListenDetector(
+      onHoldStart: _voiceInteractionController.startHoldListening,
+      onHoldEnd: _voiceInteractionController.endHoldListening,
+      onHoldCancel: _voiceInteractionController.cancelHoldListening,
+      child: _buildCurrentMode(context),
+    );
+  }
+
+  Widget _buildCurrentMode(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
     // Settings mode: full-screen settings hub (no camera)
@@ -278,12 +287,7 @@ class _RightSideOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      right: 16,
-      top: 0,
-      bottom: 0,
-      child: Center(child: SafeArea(child: const CameraSideActions())),
-    );
+    return const SizedBox.shrink();
   }
 }
 
