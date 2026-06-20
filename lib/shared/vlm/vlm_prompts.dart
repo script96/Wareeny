@@ -24,21 +24,31 @@ class VlmPrompts {
       '"the image shows" or "I see", never enumerate everything in view, and do '
       'not mention that you are an AI.';
 
-  // scan — v3 (Scan mode). One capture → one spoken answer. Two fixes over v2:
-  // (1) money gate up front — v2's long money branch dominated the prompt and
-  // made the model report money in frames with none; now money is only in play
-  // when a banknote or coin is actually visible. (2) Denomination is read from
-  // the large printed numeral only — v2's colour/mosque cheat-sheet was
-  // unverified and pushed the model to guess; the printed numeral (Western and
-  // Eastern-Arabic digits) is the one reliable signal, so we lean on that alone.
+  // scan — v4 (Scan mode). One capture → one spoken answer. Fix over v3: the
+  // money branch was EGP-only and bled Egyptian pounds onto anything money-ish
+  // (a USD payment slip got read as pounds). v4 splits money into two cases —
+  // (a) a physical banknote/coin with no currency code printed, which on this
+  // Egypt-targeted app defaults to Egyptian pounds and keeps the denomination
+  // cheat-sheet; and (b) ANY printed currency code or symbol (USD, $, EUR, €,
+  // SAR, ﷼, etc.) on a note, receipt, slip, or invoice, where the printed
+  // currency always wins and pounds must NOT be assumed. v3's other fixes stand:
+  // money is only in play when actual money/figures are visible, and EGP
+  // denomination is read from the large printed numeral / spelled-out words.
   static const _scan =
       '$_spine\n\n'
       'Task: the user pointed the camera at something and wants to know what it '
       'is. Most things the camera sees are NOT money — only treat the subject as '
-      'money when a banknote or coin is clearly visible in the frame; otherwise '
-      'it is one of the other shapes below. Answer in one or two short spoken '
-      'sentences, choosing the right shape:\n'
-      '- Money (only if a note or coin is actually visible): identify each note '
+      'money when a banknote, coin, or a printed monetary amount is actually '
+      'visible; otherwise it is one of the other shapes below. Answer in one or '
+      'two short spoken sentences, choosing the right shape:\n'
+      '- Money with a printed currency code or symbol (USD, US\$, \$, EUR, €, GBP, '
+      '£, SAR, ﷼, AED, etc.) — whether on a banknote or on a receipt, payment '
+      'slip, or invoice: report the amount in THAT currency, exactly as printed. '
+      'The printed currency always wins — never call it Egyptian pounds unless '
+      'the text actually says pounds (EGP, LE, ج.م, جنيه). Read the number and '
+      'name the currency, e.g. "fifty US dollars" or "120 euros".\n'
+      '- A plain Egyptian banknote or coin with NO currency code printed: this '
+      'app is used in Egypt, so treat it as Egyptian pounds. Identify each note '
       'by its value. The English side shows the value in Western digits; the '
       'Arabic side shows it in Eastern-Arabic digits (٥ = 5, ١٠ = 10, ٢٠ = 20, '
       '٥٠ = 50, ١٠٠ = 100, ٢٠٠ = 200) AND spelled out in large Arabic words — '
@@ -47,8 +57,8 @@ class VlmPrompts {
       'مائتا جنيه = 200. Egyptian pound notes are only 5, 10, 20, 50, 100, or '
       '200, so the value must be one of those. State the TOTAL in Egyptian pounds '
       'first, then the breakdown if there is more than one note, like "250 '
-      'pounds: a 200 and a 50". If you cannot read a note\'s value from either '
-      'side, say which note you cannot read instead of guessing.\n'
+      'pounds: a 200 and a 50". If you cannot read a note\'s value, say which '
+      'note you cannot read instead of guessing.\n'
       '- A packaged product: read the text printed on the packaging and say the '
       'brand and product name, the variant or flavour, and the size if printed. '
       'Go by the printed words, not by what the logo or colours remind you of.\n'
@@ -101,7 +111,9 @@ class VlmPrompts {
       '$_spine\n\n'
       'Task: answer the user\'s spoken question about what is in front of them, '
       'using only what the camera shows. Answer directly. If the answer is not '
-      'visible, say you cannot tell from what you can see.';
+      'visible, say you cannot tell from what you can see. If money is involved, '
+      'go by the printed currency code or symbol (USD, \$, EUR, €, etc.) — do not '
+      'assume Egyptian pounds; only call it pounds if the text actually says so.';
 
   /// The tuned system prompt for [task].
   static String systemFor(VlmTask task) => switch (task) {
