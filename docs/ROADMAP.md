@@ -11,8 +11,9 @@ Wareeny runs on three tiers:
 
 - `Tier 1 — Realtime local CV`: obstacle, traffic light, danger-word/sign alerts, and the finder
   features. Frame-rate, worker-thread, never blocks the UI, never calls the VLM.
-- `Tier 2 — On-device VLM`: `Gemma 4` via MediaPipe LLM Inference. Reading, in-hand, currency,
-  brand. Private and offline-capable. Image + task prompt → natural spoken answer.
+- `Tier 2 — On-device VLM`: `Gemma 4` via MediaPipe LLM Inference. Reading and the unified scan
+  (object / money / brand / label). Private and offline-capable. Image + task prompt → natural
+  spoken answer.
 - `Tier 3 — Cloud VLM`: hosted Gemma (same family). Scene Q&A, heavier reasoning, and the fallback
   for Tier 2.
 
@@ -78,14 +79,14 @@ Fast safety logic stays local and deterministic where latency and reliability ar
 
 ### Confirmed Design Decisions
 
-- **Hybrid routing by task.** On-device VLM for private/light tasks (reading, in-hand, currency,
-  brand); cloud Gemma for scene Q&A and heavy reasoning. The router picks per task and network
+- **Hybrid routing by task.** On-device VLM for private/light tasks (reading, scan);
+  cloud Gemma for scene Q&A and heavy reasoning. The router picks per task and network
   state, with fallback in both directions.
 - **Full-VLM reading.** ML Kit is removed. If no local model **and** no network, reading is
   unavailable and the app says so (install a model or connect). No literal-OCR fallback.
 - **One-shot voice Q&A.** A spoken question yields a single VLM answer about the current frame. No
   conversation memory in v1.
-- **VLM scope:** document/scene reading, in-hand ID, currency, brand.
+- **VLM scope:** document/scene reading, unified scan (object / money / brand / label).
 - **Realtime local CV stays:** obstacle, traffic light, danger-word alerts, and the finders
   (stuff / lost-item / outdoor). These never call the VLM.
 - **Assistant-first delivery.** Build the VLM assistant core first as the demo headline; realtime
@@ -96,7 +97,10 @@ Fast safety logic stays local and deterministic where latency and reliability ar
 A single service, `VlmAssistant`, is the entry point for *image + task → spoken result*. It replaces
 the ad-hoc OCR controller logic.
 
-- `VlmTask` enum: `read`, `describeScene`, `inHand`, `currency`, `brand`, `askImage`.
+- `VlmTask` enum: `scan`, `read`, `describeScene`, `askImage`. The `scan` task is the unified
+  one-tap identifier — it subsumes what were once separate in-hand / currency / brand tasks: a single
+  capture and prompt let the model decide whether it is looking at money (total + breakdown), a
+  packaged product (read off the label), a sign/label (gist), or a generic object.
 - **Per-task prompt templates are the headline deliverable.** This is where "not robotic" lives.
   Each task ships a tuned system prompt — for example: *"You are the eyes of a blind user. Look at
   this image and say only what a sighted person would find relevant in this context. Be concise and
@@ -108,7 +112,7 @@ the ad-hoc OCR controller logic.
 
 ### Model Router (task-aware)
 
-- `read`, `inHand`, `currency`, `brand` → **local-preferred**; cloud fallback if the local model is
+- `scan`, `read` → **local-preferred**; cloud fallback if the local model is
   missing or unsupported and network is present; if neither, return `unavailable` (the accepted gap).
 - `askImage`, `describeScene` → **cloud-preferred** (heavy reasoning); local fallback when offline.
 
@@ -116,10 +120,8 @@ the ad-hoc OCR controller logic.
 
 | Feature | Tier | Supporting Services |
 | --- | --- | --- |
-| Document / Scene Reading | VLM | feedback, camera capture, model router |
-| What's In My Hand | VLM | feedback, camera capture, model router |
-| Currency Reader | VLM | feedback, camera capture, model router |
-| Brand Detector | VLM | feedback, camera capture, model router |
+| Document Reading | VLM | feedback, camera capture, model router |
+| Scan (object / money / brand / label, one tap) | VLM | feedback, camera capture, model router |
 | Scene Describe | VLM (cloud-pref) | feedback, camera capture |
 | Ask-Image Q&A (one-shot) | VLM (cloud-pref) | STT, feedback, camera capture |
 | Obstacle Avoidance | Realtime CV | safety alerts, haptics, battery controller |
@@ -169,24 +171,34 @@ Deliverables:
 - context-aware reading (sign vs document vs label) with streaming speech
 - safe `unavailable` behavior when no model and no network
 
-## Phase B: In-Hand, Currency, Brand
+## Phase B: Unified Scan (object / money / brand / label)
 
-Goal: add the remaining capture-and-identify VLM tasks by reusing the Phase A pipeline.
+Goal: ship one capture-and-identify mode that covers what were once separate in-hand, currency, and
+brand tasks, by reusing the Phase A pipeline. One tap → one VLM call → one spoken sentence; the model
+decides the answer shape.
 
 Module: `VLM`
 
 ### Task List
 
-- add `inHand`, `currency`, `brand` to `VlmTask` with tuned prompt templates
-- wire `inHand`, `currency`, `brand` modes into `AppMode` and `navigation_shell.dart`
-- reuse the capture + stream + speak pipeline; only prompt and routing differ
-- confidence-aware wording ("this looks like…") and unknown handling per task
-- retire the planned `/in-hand/detect` endpoint — in-hand is now `VlmTask.inHand`
-- test with personal objects, supported banknotes, and product packaging
+- add a single `scan` `VlmTask` whose prompt branches by what is in view (money / packaged product /
+  document-or-sign / generic object). The old `inHand` / `currency` / `brand` tasks are **not** added
+  separately — the merged `scan` prompt covers all three (scope-protection: no per-feature pipelines)
+- wire `AppMode.scan` into `AppMode` and `navigation_shell.dart` (replaces the empty `inHand` stub)
+- reuse the capture + stream + speak pipeline (`VlmReadController.scan`); only the prompt differs
+- money: state the **total in EGP plus breakdown** ("250 pounds: a 200 and a 50"). The prompt embeds
+  an EGP denomination cheat-sheet (colour / mosque / polymer-vs-paper) and tells the model to read
+  printed numerals first; cheat-sheet is the tiebreaker (100 vs 200 is the risky pair)
+- brand: read the packaging text (brand + product name + variant + size), never guess from logo memory
+- confidence-aware wording ("this looks like…") and unknown handling
+- retire the planned `/in-hand/detect` endpoint — identification is now `VlmTask.scan`
+- backend `NUM_PREDICT_SCAN` raised to 200 (a money total + breakdown needs more than a one-liner)
+- test with personal objects, supported banknotes (incl. polymer 10/20), and product packaging
 
 Deliverables:
 
-- in-hand, currency, and brand identification through the shared VLM pipeline
+- one-tap Scan mode identifying objects, money (total + breakdown), and products through the shared
+  VLM pipeline
 
 ## Phase C: Voice Q&A + Scene Describe
 
@@ -302,7 +314,7 @@ Deliverables:
 
 The build is done when all of these work on real phones:
 
-- VLM tasks (read, scene describe, in-hand, currency, brand, ask-image) run through one shared
+- VLM tasks (scan, read, scene describe, ask-image) run through one shared
   `VlmAssistant` with task-aware routing
 - reading is context-aware (sign vs document vs label), with streaming speech and a "thinking" earcon
 - only one heavy mode runs at a time
@@ -337,14 +349,13 @@ Keep:
 - backend and storage needed by the above
 
 Avoid re-introducing per-feature deterministic pipelines for tasks the VLM already covers
-(reading, in-hand, currency, brand). Avoid standalone AI modules for what are supporting services
-(safety alerts, voice commands, privacy suppression, storage).
+(reading, scan — i.e. object / money / brand / label). Avoid standalone AI modules for what are
+supporting services (safety alerts, voice commands, privacy suppression, storage).
 
 If time slips, protect these demo-critical features first:
 
 - context-aware reading
-- what's in my hand
-- currency reader
+- scan: object / money (total + breakdown) / product
 - one-shot voice Q&A
 - obstacle avoidance
 - danger mode and emergency contact
@@ -353,6 +364,6 @@ If time slips, protect these demo-critical features first:
 ## Recommended Ownership Split
 
 - `Person 1`: VLM core, model router, providers, prompt templates, reading
-- `Person 2`: in-hand / currency / brand tasks, voice Q&A, scene describe
+- `Person 2`: unified scan task (object / money / brand / label), voice Q&A, scene describe
 - `Person 3`: feedback engine, mode manager, voice commands, safety, battery/thermal hooks
 - `Person 4`: realtime CV detector, finders, backend, storage, deployment, integration testing

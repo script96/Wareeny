@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:flutter/foundation.dart';
 
 import 'package:wareeny/shared/vlm/model_router.dart';
@@ -47,20 +49,34 @@ class VlmAssistant {
           buffer.write(chunk.textDelta);
           yield VlmTokenEvent(chunk);
         }
-        yield _complete(request, provider.source, buffer.toString(), stopwatch,
-            firstTokenLatency);
+        yield _complete(
+          request,
+          provider.source,
+          buffer.toString(),
+          stopwatch,
+          firstTokenLatency,
+        );
         return;
       } on VlmProviderUnavailable catch (e) {
         if (buffer.isNotEmpty) {
           // Stream aborted after partial output — surface what we have rather
           // than restarting on another tier mid-sentence.
-          debugPrint('VlmAssistant: ${provider.source.name} aborted: ${e.reason}');
-          yield _complete(request, provider.source, buffer.toString(), stopwatch,
-              firstTokenLatency);
+          debugPrint(
+            'VlmAssistant: ${provider.source.name} aborted: ${e.reason}',
+          );
+          yield _complete(
+            request,
+            provider.source,
+            buffer.toString(),
+            stopwatch,
+            firstTokenLatency,
+          );
           return;
         }
-        debugPrint('VlmAssistant: ${provider.source.name} unavailable '
-            '(${e.reason}); trying next tier');
+        debugPrint(
+          'VlmAssistant: ${provider.source.name} unavailable '
+          '(${e.reason}); trying next tier',
+        );
       }
     }
 

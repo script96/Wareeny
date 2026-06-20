@@ -42,7 +42,10 @@ class SettingsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // ── Header with back button ──────────────────────────
-                    _SettingsHeader(title: l10n.settingsTitle, onClose: onClose),
+                    _SettingsHeader(
+                      title: l10n.settingsTitle,
+                      onClose: onClose,
+                    ),
                     const SizedBox(height: AppSpacing.xl),
 
                     // ── Language ─────────────────────────────────────────
@@ -55,10 +58,7 @@ class SettingsScreen extends StatelessWidget {
                             label: l10n.settingsLanguage,
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          _LanguageSelector(
-                            settings: settings,
-                            l10n: l10n,
-                          ),
+                          _LanguageSelector(settings: settings, l10n: l10n),
                         ],
                       ),
                     ),
@@ -83,6 +83,22 @@ class SettingsScreen extends StatelessWidget {
                     // ── Haptic Feedback ───────────────────────────────────
                     _GlassCard(
                       child: _HapticsToggle(settings: settings, l10n: l10n),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+
+                    // ── Server Address ────────────────────────────────────
+                    _GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _SectionLabel(
+                            icon: Icons.cloud_outlined,
+                            label: l10n.settingsServer,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          _ServerAddressField(settings: settings, l10n: l10n),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
 
@@ -448,6 +464,141 @@ class _HapticsToggle extends StatelessWidget {
   }
 }
 
+class _ServerAddressField extends StatefulWidget {
+  const _ServerAddressField({required this.settings, required this.l10n});
+
+  final SettingsController settings;
+  final AppLocalizations l10n;
+
+  @override
+  State<_ServerAddressField> createState() => _ServerAddressFieldState();
+}
+
+class _ServerAddressFieldState extends State<_ServerAddressField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.settings.serverAddress ?? '',
+    );
+    _focusNode = FocusNode();
+    widget.settings.addListener(_syncFromSettings);
+  }
+
+  @override
+  void dispose() {
+    widget.settings.removeListener(_syncFromSettings);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _syncFromSettings() {
+    if (_focusNode.hasFocus) return;
+    final nextValue = widget.settings.serverAddress ?? '';
+    if (_controller.text == nextValue) return;
+    _controller.value = TextEditingValue(
+      text: nextValue,
+      selection: TextSelection.collapsed(offset: nextValue.length),
+    );
+  }
+
+  Future<void> _save() async {
+    await widget.settings.setServerAddress(_controller.text);
+    if (!mounted) return;
+    final direction = widget.settings.isArabic
+        ? TextDirection.rtl
+        : TextDirection.ltr;
+    final message = (widget.settings.serverAddress?.isEmpty ?? true)
+        ? widget.l10n.settingsServerDefault
+        : widget.l10n.settingsServerSaved;
+    SemanticsService.sendAnnouncement(View.of(context), message, direction);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+    _focusNode.unfocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedAddress = widget.settings.resolvedServerAddress;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.l10n.settingsServerHint,
+          style: const TextStyle(
+            color: Colors.white60,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            keyboardType: TextInputType.url,
+            textInputAction: TextInputAction.done,
+            autocorrect: false,
+            enableSuggestions: false,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            onSubmitted: (_) => _save(),
+            decoration: InputDecoration(
+              labelText: widget.l10n.settingsServerAddress,
+              hintText: widget.l10n.settingsServerPlaceholder,
+              labelStyle: const TextStyle(color: Colors.white60),
+              hintStyle: const TextStyle(color: Colors.white24),
+              filled: true,
+              fillColor: Colors.black.withAlpha(70),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.glassBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.glassBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.electricGreen),
+              ),
+              suffixIcon: IconButton(
+                onPressed: _save,
+                icon: const Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: AppColors.electricGreen,
+                ),
+                tooltip: widget.l10n.settingsServerSave,
+              ),
+            ),
+          ),
+        ),
+        if (resolvedAddress != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            resolvedAddress,
+            style: const TextStyle(
+              color: AppColors.electricGreen,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 // ── Emergency Contacts Tile ─────────────────────────────────────────────────
 
 class _EmergencyContactsTile extends StatelessWidget {
@@ -462,13 +613,12 @@ class _EmergencyContactsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final count = settings.emergencyContacts.length;
-    final label =
-        isArabic ? 'جهات الطوارئ' : 'Emergency Contacts';
+    final label = isArabic ? 'جهات الطوارئ' : 'Emergency Contacts';
     final subtitle = count == 0
         ? (isArabic ? 'لم يتم الإعداد' : 'Not set up')
         : isArabic
-            ? '$count جهة اتصال مُضافة'
-            : '$count contact${count > 1 ? 's' : ''} saved';
+        ? '$count جهة اتصال مُضافة'
+        : '$count contact${count > 1 ? 's' : ''} saved';
 
     return Semantics(
       button: true,
@@ -476,8 +626,7 @@ class _EmergencyContactsTile extends StatelessWidget {
       child: GestureDetector(
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) =>
-                EmergencyContactsScreen(settings: settings),
+            builder: (_) => EmergencyContactsScreen(settings: settings),
           ),
         ),
         child: ClipRRect(
@@ -492,8 +641,7 @@ class _EmergencyContactsTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.red.withAlpha(25),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: Colors.red.withAlpha(80)),
+                border: Border.all(color: Colors.red.withAlpha(80)),
               ),
               child: Row(
                 children: [

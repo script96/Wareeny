@@ -10,20 +10,20 @@ import 'package:wareeny/shared/vlm/vlm_assistant.dart';
 import 'package:wareeny/shared/vlm/vlm_models.dart';
 import 'package:wareeny/shared/vlm/vlm_task.dart';
 
-/// SCAN = a quick one-shot reading (the sign, the label). READ = full reading
-/// with playback controls (stop / repeat / skip / cancel).
-enum ReadSubMode { scan, read }
-
-/// Drives context-aware reading through the shared [VlmAssistant]. Replaces the
-/// old ML Kit `OcrController`: capture → VLM `read` task → stream tokens → speak
-/// as they arrive. A short "thinking" cue covers first-token latency.
+/// Drives capture → VLM → streamed speech through the shared [VlmAssistant].
+/// Replaces the old ML Kit `OcrController`. Serves two screens:
+///   - Scan: [scan] runs the one-shot `scan` task (no playback controls).
+///   - Read: [startReading] runs the full document `read` task (stop / repeat /
+///     skip / cancel controls).
+/// A short "thinking" cue covers first-token latency.
 class VlmReadController extends ChangeNotifier {
   VlmReadController({
     required VlmAssistant assistant,
     required AudioHapticsBridge audioHaptics,
+    required String unavailableMessage,
   }) : _assistant = assistant,
        _audioHaptics = audioHaptics,
-       _speech = SpeechQueue(audioHaptics) {
+       _unavailableMessage = unavailableMessage {
     // Reading is "active" until generation finishes AND the queued audio has
     // actually been spoken — generation outruns playback, so the controls must
     // outlive the stream. The queue tells us when it has drained.
@@ -32,9 +32,9 @@ class VlmReadController extends ChangeNotifier {
 
   final VlmAssistant _assistant;
   final AudioHapticsBridge _audioHaptics;
-  final SpeechQueue _speech;
+  final SpeechQueue _speech = SpeechQueue();
+  final String _unavailableMessage;
 
-  ReadSubMode subMode = ReadSubMode.scan;
   bool isThinking = false;
   bool isReadingActive = false;
   bool isUnavailable = false;
@@ -46,13 +46,7 @@ class VlmReadController extends ChangeNotifier {
   // false and the speech queue is idle.
   bool _generating = false;
 
-  void toggleSubMode() {
-    cancel();
-    subMode = subMode == ReadSubMode.scan ? ReadSubMode.read : ReadSubMode.scan;
-    notifyListeners();
-  }
-
-  /// One-shot quick reading.
+  /// One-shot scan: identify the thing, speak one sentence (no controls).
   Future<void> scan(String imagePath) => _start(imagePath, withControls: false);
 
   /// Full reading with playback controls.
@@ -74,7 +68,7 @@ class VlmReadController extends ChangeNotifier {
       _audioHaptics.playHaptic(HapticSignal.confirmation).catchError((_) {}),
     );
 
-    // SCAN = quick gist; READ = full document read. Different tuned prompts.
+    // Scan = quick identification; Read = full document read. Tuned prompts.
     final task = withControls ? VlmTask.read : VlmTask.scan;
     final request = VlmRequest(imagePath: imagePath, task: task);
     _sub = _assistant
@@ -183,10 +177,7 @@ class VlmReadController extends ChangeNotifier {
     isReadingActive = false;
     isUnavailable = true;
     streamedText = '';
-    _speech.enqueue(
-      'Reading is unavailable. Install the on-device model or connect to the '
-      'internet, then try again.',
-    );
+    _speech.enqueue(_unavailableMessage);
     notifyListeners();
   }
 

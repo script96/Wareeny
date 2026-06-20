@@ -408,9 +408,10 @@ class NavigationController extends ChangeNotifier {
     if (!_isCocoFrame(frame.modelSource)) return frame;
 
     final filtered = frame.detections
-        .where((detection) {
-          return !isIgnoredCocoLabel(detection.label, indoorMode: _indoorMode);
-        })
+        .where(
+          (detection) =>
+              !isIgnoredCocoLabel(detection.label, indoorMode: _indoorMode),
+        )
         .toList(growable: false);
 
     if (filtered.length == frame.detections.length) return frame;

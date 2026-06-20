@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_items.dart';
@@ -206,16 +205,12 @@ class VoiceInteractionController extends ChangeNotifier {
       await _feedback.stopSpeech();
       await _feedback.playListeningStartedHaptic();
       _setState(VoiceInteractionState.listening);
-      final listenMode = purpose == _ListeningPurpose.stuffFinder
-          ? ListenMode.search
-          : ListenMode.confirmation;
       await _commandService.listen(
         localeId: _preferredLocaleId,
         onResult: _onSpeechResult,
         onSoundLevel: _onSoundLevel,
         listenFor: listenFor,
         pauseFor: pauseFor,
-        listenMode: listenMode,
       );
     } catch (error, stackTrace) {
       debugPrint('[VoiceInteraction] Listen failed: $error\n$stackTrace');
@@ -315,7 +310,7 @@ class VoiceInteractionController extends ChangeNotifier {
     debugPrint('[VoiceInteraction] normalized="$normalized"');
 
     if (rawText.trim().isEmpty) {
-      await _speakError('مسمعتش الكلام بوضوح، حاول تاني');
+      await _speakError('مسمعتش الأمر بوضوح، حاول تاني');
       return;
     }
 
@@ -333,7 +328,7 @@ class VoiceInteractionController extends ChangeNotifier {
       '${parsed == null ? "unknown" : "mode.${parsed.mode.name}"}',
     );
     if (parsed == null || _onModeSelected == null) {
-      await _speakError('مسمعتش الكلام بوضوح، حاول تاني');
+      await _speakError('مسمعتش الأمر بوضوح، حاول تاني');
       return;
     }
 
@@ -373,7 +368,7 @@ class VoiceInteractionController extends ChangeNotifier {
     final selectionHandler = _onStuffFinderItemSelected;
     if (parsed == null || selectionHandler == null) {
       await _feedback.speakAndWait(
-        'الحاجة دي مش متاحة دلوقتي. المتاح: '
+        'العنصر ده مش متاح حاليًا. المتاح: '
         '$availableStuffFinderItemsArabic',
       );
       _setState(VoiceInteractionState.idle);
@@ -412,8 +407,8 @@ class VoiceInteractionController extends ChangeNotifier {
     final denied = code.contains('permission') || code.contains('notAllowed');
     await _speakError(
       denied
-          ? 'لازم تسمح لوريني يستخدم الميكروفون ويتعرف على الكلام'
-          : 'مسمعتش الكلام بوضوح، حاول تاني',
+          ? 'لازم تسمح لوريني باستخدام الميكروفون والتعرف على الكلام'
+          : 'مسمعتش الأمر بوضوح، حاول تاني',
     );
     _endingSession = false;
   }
@@ -462,7 +457,7 @@ class VoiceInteractionController extends ChangeNotifier {
     AppMode.home => 'الرئيسية',
     AppMode.navigation => 'التنقل',
     AppMode.stuffFinder => 'البحث عن الأشياء',
-    AppMode.inHand => 'في اليد',
+    AppMode.scan => 'المسح',
     AppMode.read => 'القراءة',
     AppMode.settings => 'الإعدادات',
   };

@@ -236,14 +236,17 @@ class _HomeDetectionScreenState extends State<HomeDetectionScreen>
       }
     }
 
-    final announcement = _announcementForLabel(normalizedLabel);
+    final arabicLabel = _arabicObjectLabels[normalizedLabel];
+    final message = arabicLabel == null
+        ? 'أقرب شيء قدامك $normalizedLabel'
+        : 'أقرب شيء قدامك $arabicLabel';
     _lastAnnouncedLabel = normalizedLabel;
     _lastAnnouncementAt = now;
     unawaited(
       bridge.speak(
-        announcement.message,
+        message,
         interrupt: true,
-        languageCode: announcement.languageCode,
+        languageCode: 'ar-EG',
       ),
     );
   }
@@ -251,57 +254,46 @@ class _HomeDetectionScreenState extends State<HomeDetectionScreen>
   ObjectDetection? _closestDetection(ObjectDetectionFrame frame) {
     ObjectDetection? closest;
     var bestArea = 0.0;
+    final frameArea = frame.sourceSize.width * frame.sourceSize.height;
+    if (frameArea <= 0) return null;
+
     for (final detection in frame.detections) {
       if (detection.confidence < _minimumAnnouncementConfidence) continue;
       final area =
           (detection.boundingBox.width * detection.boundingBox.height) /
-          (frame.sourceSize.width * frame.sourceSize.height);
+          frameArea;
       if (area < _minimumAnnouncementArea || area <= bestArea) continue;
       bestArea = area;
       closest = detection;
     }
     return closest;
   }
-
-  _HomeObjectAnnouncement _announcementForLabel(String label) {
-    final arabic = _arabicObjectLabels[label];
-    if (arabic != null) {
-      return _HomeObjectAnnouncement(
-        message: 'أقرب حاجة $arabic',
-        languageCode: 'ar-EG',
-      );
-    }
-    return _HomeObjectAnnouncement(
-      message: 'Closest object $label',
-      languageCode: 'en-US',
-    );
-  }
-}
-
-class _HomeObjectAnnouncement {
-  const _HomeObjectAnnouncement({
-    required this.message,
-    required this.languageCode,
-  });
-
-  final String message;
-  final String languageCode;
 }
 
 const _arabicObjectLabels = <String, String>{
   'person': 'شخص',
+  'bicycle': 'عجلة',
+  'car': 'عربية',
+  'motorcycle': 'موتوسيكل',
+  'bus': 'أتوبيس',
+  'truck': 'شاحنة',
   'chair': 'كرسي',
   'couch': 'كنبة',
   'sofa': 'كنبة',
+  'bed': 'سرير',
   'bench': 'مقعد',
   'dining table': 'طاولة',
   'table': 'طاولة',
+  'door': 'باب',
+  'window': 'شباك',
   'bottle': 'زجاجة',
   'cup': 'كوب',
   'book': 'كتاب',
   'backpack': 'شنطة',
   'handbag': 'حقيبة',
+  'suitcase': 'شنطة سفر',
   'cell phone': 'موبايل',
+  'phone': 'موبايل',
   'laptop': 'لاب توب',
   'tv': 'تلفزيون',
   'remote': 'ريموت',

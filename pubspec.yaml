@@ -48,7 +48,6 @@ dependencies:
   flutter_phone_direct_caller: ^2.0.1
   flutter_native_contact_picker: ^0.0.12
   image: ^4.3.0
-  audioplayers: ^6.7.1
 
 dev_dependencies:
   flutter_test:
@@ -73,7 +72,6 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/audio/tts/
     - assets/models/home/home_object_detector_int8.tflite
     - assets/models/home/home_object_detector.mlpackage.zip
     - assets/models/navigation/indoor/indoor_navigation_int8.tflite

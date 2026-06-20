@@ -141,11 +141,15 @@ void main() {
     final timestamp = DateTime(2026);
 
     controller.processFrame(
-      _frameWithDetection(label: 'car', source: 'coco', timestamp: timestamp),
+      _frameWithDetections(
+        labels: ['car'],
+        source: 'coco',
+        timestamp: timestamp,
+      ),
     );
     controller.processFrame(
-      _frameWithDetection(
-        label: 'chair',
+      _frameWithDetections(
+        labels: ['chair'],
         source: 'coco',
         timestamp: timestamp.add(const Duration(milliseconds: 100)),
       ),

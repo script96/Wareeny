@@ -13,6 +13,7 @@ import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/navigation_mode/navigation_screen.dart';
 import 'package:wareeny/presentation/onboarding/emergency_onboarding_screen.dart';
 import 'package:wareeny/presentation/read/read_screen.dart';
+import 'package:wareeny/presentation/scan/scan_screen.dart';
 import 'package:wareeny/presentation/reusable/camera_top_bar.dart';
 import 'package:wareeny/presentation/reusable/hold_to_listen_detector.dart';
 import 'package:wareeny/presentation/reusable/mode_carousel_bar.dart';
@@ -134,6 +135,18 @@ class _NavigationShellState extends State<NavigationShell> {
       );
     }
 
+    if (_currentMode == AppMode.scan) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: ScanScreen(
+          previousMode: _previousMode,
+          nextMode: _nextMode,
+          onModeSelect: _selectMode,
+          settings: widget.settings,
+        ),
+      );
+    }
+
     if (_currentMode == AppMode.navigation) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -189,6 +202,7 @@ class _NavigationShellState extends State<NavigationShell> {
             children: [
               const CameraFeedView(),
               _TopOverlay(currentMode: _currentMode),
+              const _RightSideOverlay(),
               _BottomModeMenu(
                 previousMode: _previousMode,
                 currentMode: _currentMode,
@@ -265,6 +279,15 @@ class _TopOverlay extends StatelessWidget {
         child: CameraTopBar(currentMode: currentMode),
       ),
     );
+  }
+}
+
+class _RightSideOverlay extends StatelessWidget {
+  const _RightSideOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
   }
 }
 

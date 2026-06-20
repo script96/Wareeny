@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:wareeny/presentation/navigation/app_mode.dart';
 import 'package:wareeny/presentation/stuff_finder/stuff_finder_items.dart';
@@ -58,7 +57,6 @@ void main() {
 
       expect(controller.state, VoiceInteractionState.listening);
       expect(feedback.spoken, contains('عايز تدور على إيه؟'));
-      expect(speech.listenModes.last, ListenMode.search);
 
       speech.emit('دورلي على المحفظة', isFinal: true);
       await _flushAsync();
@@ -87,7 +85,7 @@ void main() {
       expect(showedItems, isTrue);
       expect(
         feedback.spoken.last,
-        contains('الحاجة دي مش متاحة دلوقتي. المتاح: محفظة'),
+        contains('العنصر ده مش متاح حاليًا. المتاح: محفظة'),
       );
     },
   );
@@ -108,7 +106,7 @@ void main() {
     await _flushAsync();
 
     expect(selectedItems.single.detectorLabel, 'keys');
-    expect(feedback.spoken, isNot(contains('مسمعتش الكلام بوضوح، حاول تاني')));
+    expect(feedback.spoken, isNot(contains('مسمعتش الأمر بوضوح، حاول تاني')));
     expect(controller.state, VoiceInteractionState.idle);
   });
 
@@ -175,7 +173,6 @@ class _FakeVoiceCommandService implements VoiceCommandService {
   void Function(String status)? _onStatus;
   void Function(VoiceRecognitionResult result)? _onResult;
   String? selectedLocale;
-  final List<ListenMode> listenModes = [];
 
   @override
   bool isListening = false;
@@ -199,12 +196,10 @@ class _FakeVoiceCommandService implements VoiceCommandService {
     required void Function(double level) onSoundLevel,
     required Duration listenFor,
     required Duration pauseFor,
-    ListenMode listenMode = ListenMode.confirmation,
   }) async {
     selectedLocale = localeId;
     _onResult = onResult;
     isListening = true;
-    listenModes.add(listenMode);
     _onStatus?.call('listening');
   }
 

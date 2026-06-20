@@ -214,14 +214,13 @@ class _StuffFinderScreenState extends State<StuffFinderScreen>
       'stuff_finder',
       useCustomModel: useCustomModel,
     );
-    final confidenceThreshold = useCustomModel ? 0.25 : 0.45;
 
     return YOLOView(
       modelPath: modelPath,
       task: YOLOTask.detect,
       controller: _yoloController,
       cameraResolution: '720p',
-      confidenceThreshold: confidenceThreshold,
+      confidenceThreshold: 0.45,
       iouThreshold: 0.45,
       useGpu: !(useCustomModel && Platform.isAndroid),
       lensFacing: LensFacing.back,

@@ -110,7 +110,7 @@ class _NavigationScreenState extends State<NavigationScreen>
       detectionSource: services.objectDetectionSource,
       feedback: BridgeNavigationFeedback(services.audioHapticsBridge),
       diagnosticsEnabled: services.config.enableDiagnostics,
-    );
+    )..addListener(_onNavigationChanged);
     _indoorCocoAssist = CocoNavigationAssistService(
       diagnosticsEnabled: services.config.enableDiagnostics,
       onFrame: (frame) {
@@ -128,7 +128,7 @@ class _NavigationScreenState extends State<NavigationScreen>
     _dangerDetection = DangerDetectionService(
       alertManager: _dangerAlerts!,
       diagnosticsEnabled: services.config.enableDiagnostics,
-    );
+    )..addListener(_onDangerChanged);
     _initialized = true;
     unawaited(_navigation!.start());
     unawaited(_indoorCocoAssist!.start());
@@ -155,8 +155,12 @@ class _NavigationScreenState extends State<NavigationScreen>
     unawaited(_yoloController.stop());
     _clearFrameCache();
     unawaited(_indoorCocoAssist?.stop());
-    _navigation?.dispose();
-    _dangerDetection?.dispose();
+    _navigation
+      ?..removeListener(_onNavigationChanged)
+      ..dispose();
+    _dangerDetection
+      ?..removeListener(_onDangerChanged)
+      ..dispose();
     _dangerAlerts?.dispose();
     _yoloController.dispose();
     super.dispose();
@@ -170,10 +174,6 @@ class _NavigationScreenState extends State<NavigationScreen>
     }
 
     final l10n = AppLocalizations.of(context);
-    final listenables = <Listenable>[navigation];
-    final dangerDetection = _dangerDetection;
-    if (dangerDetection != null) listenables.add(dangerDetection);
-    final overlayListenable = Listenable.merge(listenables);
     final modeActions = AppMode.navigation.getModeSwitchActions(
       l10n: l10n,
       settings: widget.settings,
@@ -203,18 +203,13 @@ class _NavigationScreenState extends State<NavigationScreen>
           children: [
             _buildCamera(),
             IgnorePointer(
-              child: ListenableBuilder(
-                listenable: overlayListenable,
-                builder: (context, _) {
-                  return NavigationOverlay(
-                    path: navigation.path,
-                    frame: navigation.latestFrame,
-                    assessment: navigation.assessment,
-                    dangerFrame: _dangerDetection?.latestFrame,
-                    showDebug: _debugEnabled,
-                    logProjection: _debugEnabled,
-                  );
-                },
+              child: NavigationOverlay(
+                path: navigation.path,
+                frame: navigation.latestFrame,
+                assessment: navigation.assessment,
+                dangerFrame: _dangerDetection?.latestFrame,
+                showDebug: _debugEnabled,
+                logProjection: _debugEnabled,
               ),
             ),
             Positioned(
@@ -294,7 +289,6 @@ class _NavigationScreenState extends State<NavigationScreen>
         includeClassifications: false,
         includeProcessingTimeMs: true,
         includeFps: true,
-        // Reuse streamed frames for danger/light analysis to avoid extra preview captures.
         includeOriginalImage: true,
         maxFPS: 12,
         inferenceFrequency: 12,
@@ -353,6 +347,14 @@ class _NavigationScreenState extends State<NavigationScreen>
       // The platform view may already be detached during lifecycle teardown.
     }
     await _navigation?.stop();
+  }
+
+  void _onNavigationChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onDangerChanged() {
+    if (mounted) setState(() {});
   }
 
   void _startDangerDetection() {
@@ -518,19 +520,13 @@ class _NavigationScreenState extends State<NavigationScreen>
     }
 
     _lastTorchProbeAt = now;
-    final wasTorchEnabled = _yoloController.isTorchEnabled;
-    if (!wasTorchEnabled) {
-      return _analyzeCurrentLightFrame();
-    }
-
     await _setTorch(false);
-    await Future<void>.delayed(_torchProbeSettleDelay);
-    _clearFrameCache();
+    if (_yoloController.isTorchEnabled) return null;
 
+    await Future<void>.delayed(_torchProbeSettleDelay);
     final result = await _analyzeCurrentLightFrame();
     if (result == null) {
       await _setTorch(true);
-      _clearFrameCache();
       return null;
     }
 
@@ -539,7 +535,6 @@ class _NavigationScreenState extends State<NavigationScreen>
     if (!shouldKeepTorchOff) {
       await _setTorch(true);
     }
-    _clearFrameCache();
     return result;
   }
 

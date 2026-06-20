@@ -23,7 +23,7 @@ class AppLocalizations {
   String get modeHome => isArabic ? 'الرئيسية' : 'Home';
   String get modeNavigation => isArabic ? 'التنقل' : 'Navigation';
   String get modeStuffFinder => isArabic ? 'البحث عن الأشياء' : 'Stuff Finder';
-  String get modeInHand => isArabic ? 'في اليد' : 'In-Hand';
+  String get modeScan => isArabic ? 'المسح' : 'Scan';
   String get modeRead => isArabic ? 'القراءة' : 'Read';
   String get modeSettings => isArabic ? 'الإعدادات' : 'Settings';
 
@@ -31,13 +31,6 @@ class AppLocalizations {
 
   String get navIndoor => isArabic ? 'داخلي' : 'Indoor';
   String get navOutdoor => isArabic ? 'خارجي' : 'Outdoor';
-
-  // ── OCR sub-modes ─────────────────────────────────────────────────────────
-
-  String get ocrDocument => isArabic ? 'قارئ المستندات' : 'Document Reader';
-  String get ocrCurrency => isArabic ? 'قارئ العملة' : 'Currency Reader';
-  String get ocrBrand => isArabic ? 'كاشف العلامات' : 'Brand Detector';
-  String get ocrQa => isArabic ? 'وضع السؤال والجواب' : 'Q&A Mode';
 
   // ── Semantic hints ────────────────────────────────────────────────────────
 
@@ -72,14 +65,33 @@ class AppLocalizations {
       isArabic ? 'ويرني جاهز. الوضع الرئيسي.' : 'Wareeny active. Home Mode.';
 
   String get appGreeting => isArabic
-      ? 'أهلا بيك في ويرني. مرر بإصبعين عشان تتنقل بين الأوضاع.'
+      ? 'مرحباً بك في ويرني. مرّر بإصبعين للتنقل بين الأوضاع.'
       : 'Welcome to Wareeny. Swipe with two fingers to navigate between modes.';
 
   String get scanComplete => isArabic ? 'اكتملت القراءة.' : 'Reading complete.';
 
   String get noTextFound => isArabic
-      ? 'ملقتش نص. وجّه الكاميرا على مستند وحاول تاني.'
+      ? 'لم يُعثر على نص. وجّه الكاميرا نحو مستند وحاول مرة أخرى.'
       : 'No text found. Aim at a document and try again.';
+
+  // ── Scan + Read status / actions ─────────────────────────────────────────
+
+  /// Pill shown while the Read mode VLM works before the first token arrives.
+  String get readingStatus => isArabic ? 'جارٍ القراءة…' : 'Reading…';
+
+  /// Pill shown while the Scan mode VLM works before the first token arrives.
+  String get scanningStatus => isArabic ? 'جارٍ التعرف…' : 'Identifying…';
+
+  /// Screen-reader action to re-speak the last scan result.
+  String get repeatResult => isArabic ? 'إعادة النتيجة' : 'Repeat result';
+
+  String get readUnavailable => isArabic
+      ? 'القراءة غير متاحة. ثبّت النموذج على الجهاز أو اتصل بالإنترنت ثم حاول مرة أخرى.'
+      : 'Reading is unavailable. Install the on-device model or connect to the internet, then try again.';
+
+  String get scanUnavailable => isArabic
+      ? 'المسح غير متاح. ثبّت النموذج على الجهاز أو اتصل بالإنترنت ثم حاول مرة أخرى.'
+      : 'Scan is unavailable. Install the on-device model or connect to the internet, then try again.';
 
   // ── Settings screen ───────────────────────────────────────────────────────
 
@@ -91,6 +103,20 @@ class AppLocalizations {
   String get settingsSpeechRateSlow => isArabic ? 'بطيء' : 'Slow';
   String get settingsSpeechRateFast => isArabic ? 'سريع' : 'Fast';
   String get settingsHaptics => isArabic ? 'الاهتزاز' : 'Haptic Feedback';
+  String get settingsServer => isArabic ? 'الخادم' : 'Server';
+  String get settingsServerAddress =>
+      isArabic ? 'عنوان الخادم' : 'Server Address';
+  String get settingsServerHint => isArabic
+      ? 'أدخل IP الخادم أو رابط النفق. إذا أدخلت IP فقط سيستخدم التطبيق المنفذ 8000.'
+      : 'Enter the server IP or tunnel URL. If you enter only an IP, the app uses port 8000.';
+  String get settingsServerPlaceholder =>
+      isArabic ? 'مثال: 192.168.1.38' : 'Example: 192.168.1.38';
+  String get settingsServerSave => isArabic ? 'حفظ' : 'Save';
+  String get settingsServerSaved =>
+      isArabic ? 'تم حفظ عنوان الخادم' : 'Server address saved';
+  String get settingsServerDefault => isArabic
+      ? 'تم الرجوع إلى خادم التطبيق الافتراضي'
+      : 'Reverted to the default app server';
   String get settingsHapticsHint => isArabic
       ? 'تفعيل أو إيقاف الاهتزاز عند التنبيهات'
       : 'Enable or disable vibration on alerts';

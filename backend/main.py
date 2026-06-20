@@ -13,9 +13,10 @@ tokens.
 
 import json
 import os
+import socket
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -26,9 +27,11 @@ APP_ENV = os.getenv("APP_ENV", "dev")
 # Default output cap; overridable per task below. Spoken answers are short, but a
 # full document READ needs room so it isn't truncated mid-page.
 NUM_PREDICT = int(os.getenv("NUM_PREDICT", "320"))
-# Per-task output budgets. `scan` is a one-liner; `read` reads a whole document.
+# Per-task output budgets. `scan` is a short identification (object, or a money
+# total + breakdown of several notes — needs more than a one-liner); `read` reads
+# a whole document.
 NUM_PREDICT_BY_TASK = {
-    "scan": int(os.getenv("NUM_PREDICT_SCAN", "80")),
+    "scan": int(os.getenv("NUM_PREDICT_SCAN", "200")),
     "read": int(os.getenv("NUM_PREDICT_READ", "1200")),
 }
 
@@ -47,8 +50,33 @@ def _sse(data: dict) -> str:
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _server_ip() -> str:
+    override = os.getenv("SERVER_IP", "").strip()
+    if override:
+        return override
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
+    except OSError:
+        try:
+            return socket.gethostbyname(socket.gethostname())
+        except OSError:
+            return "127.0.0.1"
+
+
+@app.middleware("http")
+async def attach_server_ip_header(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Wareeny-Server-IP"] = _server_ip()
+    return response
+
+
 async def _stream_gemma(req: VlmGenerateRequest):
     """Stream token deltas from Ollama's chat API as SSE lines."""
+    yield _sse({"serverIp": _server_ip()})
+
     payload = {
         "model": req.model or GEMMA_MODEL,
         "messages": [
@@ -101,7 +129,12 @@ async def vlm_generate(req: VlmGenerateRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": GEMMA_MODEL, "env": APP_ENV}
+    return {
+        "status": "ok",
+        "model": GEMMA_MODEL,
+        "env": APP_ENV,
+        "serverIp": _server_ip(),
+    }
 
 
 @app.get("/app-config")
@@ -109,7 +142,8 @@ def app_config():
     return {
         "cloudModelId": GEMMA_MODEL,
         "streaming": True,
-        "tasks": ["read", "describeScene", "inHand", "currency", "brand", "askImage"],
+        "tasks": ["scan", "read", "describeScene", "askImage"],
+        "serverIp": _server_ip(),
     }
 
 
@@ -117,6 +151,7 @@ def app_config():
 def model_manifest():
     # On-device model registry for the Phase F install flow. Stubbed for now.
     return {
+        "serverIp": _server_ip(),
         "models": [
             {
                 "id": "wareeny-gemma-4-e4b",

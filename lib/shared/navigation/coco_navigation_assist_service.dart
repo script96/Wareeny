@@ -225,8 +225,6 @@ class CocoNavigationAssistService {
   bool _inferenceInFlight = false;
   int _nextFrameId = 1;
 
-  bool get isReady => _ready;
-
   Future<void> start() async {
     if (_started || _loading) return;
     _started = true;

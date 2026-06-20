@@ -1,16 +1,19 @@
 import 'package:flutter/foundation.dart';
-import 'package:wareeny/shared/bridges/audio_haptics_bridge.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 /// Speaks queued text sequentially so streamed VLM tokens can be spoken as they
 /// arrive without utterances overlapping. Feed it sentences as they form; it
 /// drains them one at a time. Auto-detects Arabic vs English per item.
 ///
-/// Shared by the reading controller now and reused by the other VLM tasks
-/// (in-hand, currency, brand, ask-image) later.
+/// Shared by the scan and reading controllers, and reusable by the other VLM
+/// tasks (ask-image, scene describe) later.
 class SpeechQueue {
-  SpeechQueue(this._audioHaptics);
+  SpeechQueue() {
+    _tts.awaitSpeakCompletion(true);
+    _configure();
+  }
 
-  final AudioHapticsBridge _audioHaptics;
+  final FlutterTts _tts = FlutterTts();
   final List<String> _pending = [];
   bool _draining = false;
   String? _last;
@@ -20,6 +23,12 @@ class SpeechQueue {
   /// lull); the caller decides whether the work is truly done. Mid-stream lulls
   /// between sentences will fire this, so guard accordingly.
   VoidCallback? onIdle;
+
+  Future<void> _configure() async {
+    await _tts.setVolume(1.0);
+    await _tts.setSpeechRate(0.5);
+    await _tts.setPitch(1.0);
+  }
 
   /// Whether anything is currently queued or being spoken.
   bool get isBusy => _draining || _pending.isNotEmpty;
@@ -38,10 +47,8 @@ class SpeechQueue {
     _draining = true;
     while (_pending.isNotEmpty) {
       final next = _pending.removeAt(0);
-      await _audioHaptics.speakAndWait(
-        next,
-        languageCode: _isArabic(next) ? 'ar-EG' : 'en-US',
-      );
+      await _tts.setLanguage(_isArabic(next) ? 'ar-SA' : 'en-US');
+      await _tts.speak(next);
     }
     _draining = false;
     onIdle?.call();
@@ -54,24 +61,23 @@ class SpeechQueue {
   }
 
   /// Cut the current utterance; the queue keeps draining with the next item.
-  Future<void> skipCurrent() => _audioHaptics.stopSpeech();
+  Future<void> skipCurrent() => _tts.stop();
 
   /// Stop speaking and drop everything queued.
   Future<void> clear() async {
     _pending.clear();
     _draining = false;
-    await _audioHaptics.stopSpeech();
+    await _tts.stop();
   }
 
   Future<void> dispose() async {
     _pending.clear();
-    await _audioHaptics.stopSpeech();
+    await _tts.stop();
   }
 
   bool _isArabic(String text) {
-    final arabic = text.codeUnits
-        .where((c) => c >= 0x0600 && c <= 0x06FF)
-        .length;
+    final arabic =
+        text.codeUnits.where((c) => c >= 0x0600 && c <= 0x06FF).length;
     return arabic > text.length * 0.3;
   }
 }

@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -21,8 +23,9 @@ const int _kJpegQuality = 80;
 Uint8List _downscaleForUpload(Uint8List bytes) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) return bytes;
-  final longest =
-      decoded.width > decoded.height ? decoded.width : decoded.height;
+  final longest = decoded.width > decoded.height
+      ? decoded.width
+      : decoded.height;
   if (longest <= _kMaxImageEdge) {
     return img.encodeJpg(decoded, quality: _kJpegQuality);
   }
@@ -45,18 +48,20 @@ Uint8List _downscaleForUpload(Uint8List bytes) {
 ///   `data: [DONE]`.
 class CloudVlmProvider implements VlmProvider {
   CloudVlmProvider({
-    required String apiBaseUrl,
+    required String Function() apiBaseUrlResolver,
     required String modelId,
     HttpClient? client,
-  })  : _baseUrl = apiBaseUrl,
-        _modelId = modelId,
-        _client = client ?? HttpClient() {
+  }) : _apiBaseUrlResolver = apiBaseUrlResolver,
+       _modelId = modelId,
+       _client = client ?? HttpClient() {
     _client.connectionTimeout = const Duration(seconds: 8);
   }
 
-  final String _baseUrl;
+  final String Function() _apiBaseUrlResolver;
   final String _modelId;
   final HttpClient _client;
+
+  String get _baseUrl => _apiBaseUrlResolver();
 
   @override
   VlmSource get source => VlmSource.cloud;
@@ -67,7 +72,9 @@ class CloudVlmProvider implements VlmProvider {
       final request = await _client
           .getUrl(Uri.parse('$_baseUrl/health'))
           .timeout(const Duration(seconds: 4));
-      final response = await request.close().timeout(const Duration(seconds: 4));
+      final response = await request.close().timeout(
+        const Duration(seconds: 4),
+      );
       await response.drain<void>();
       return response.statusCode == 200;
     } catch (_) {
@@ -81,18 +88,21 @@ class CloudVlmProvider implements VlmProvider {
     try {
       final raw = await File(request.imagePath).readAsBytes();
       final bytes = await compute(_downscaleForUpload, raw);
-      final httpRequest =
-          await _client.postUrl(Uri.parse('$_baseUrl/vlm/generate'));
+      final httpRequest = await _client.postUrl(
+        Uri.parse('$_baseUrl/vlm/generate'),
+      );
       httpRequest.headers
         ..contentType = ContentType.json
         ..set(HttpHeaders.acceptHeader, 'text/event-stream');
-      httpRequest.write(jsonEncode({
-        'task': request.task.name,
-        'model': _modelId,
-        'prompt': VlmPrompts.build(request),
-        'image': base64Encode(bytes),
-        if (request.userQuestion != null) 'question': request.userQuestion,
-      }));
+      httpRequest.write(
+        jsonEncode({
+          'task': request.task.name,
+          'model': _modelId,
+          'prompt': VlmPrompts.build(request),
+          'image': base64Encode(bytes),
+          if (request.userQuestion != null) 'question': request.userQuestion,
+        }),
+      );
       response = await httpRequest.close();
     } catch (e) {
       debugPrint('CloudVlmProvider request failed: $e');
@@ -105,7 +115,9 @@ class CloudVlmProvider implements VlmProvider {
     }
 
     var first = true;
-    final lines = response.transform(utf8.decoder).transform(const LineSplitter());
+    final lines = response
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
     await for (final line in lines) {
       if (!line.startsWith('data:')) continue;
       final payload = line.substring(5).trim();

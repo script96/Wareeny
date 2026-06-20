@@ -8,7 +8,7 @@ enum AppMode {
   home('Home', Icons.home_outlined),
   navigation('Navigation', Icons.assistant_navigation),
   stuffFinder('Stuff Finder', Icons.search_outlined),
-  inHand('In-hand', Icons.back_hand_outlined),
+  scan('Scan', Icons.document_scanner_outlined),
   read('Read', Icons.menu_book_outlined),
   settings('Settings', Icons.settings_outlined);
 
@@ -24,7 +24,7 @@ enum AppMode {
       AppMode.home => l10n.modeHome,
       AppMode.navigation => l10n.modeNavigation,
       AppMode.stuffFinder => l10n.modeStuffFinder,
-      AppMode.inHand => l10n.modeInHand,
+      AppMode.scan => l10n.modeScan,
       AppMode.read => l10n.modeRead,
       AppMode.settings => l10n.modeSettings,
     };

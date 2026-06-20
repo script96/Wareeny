@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:flutter/foundation.dart';
 
 import 'package:wareeny/shared/bridges/local_ai_runtime_bridge.dart';
@@ -16,8 +18,8 @@ class LocalVlmProvider implements VlmProvider {
   const LocalVlmProvider({
     required LocalAiRuntimeBridge runtime,
     required String modelId,
-  })  : _runtime = runtime,
-        _modelId = modelId;
+  }) : _runtime = runtime,
+       _modelId = modelId;
 
   final LocalAiRuntimeBridge _runtime;
   final String _modelId;
