@@ -1,14 +1,22 @@
 <!-- PROJECT BANNER -->
-<!-- TODO: Replace with a real banner/logo, e.g. assets/branding/banner.png (1280×320 recommended) -->
+<!-- TODO: Drop a real banner/logo here, e.g. docs/assets/banner.png (1280×320 recommended), then uncomment:
 <p align="center">
   <img src="docs/assets/banner.png" alt="Wareeny — AI eyes for the blind" width="100%">
 </p>
+-->
 
 <h1 align="center">👁️ Wareeny — وريني</h1>
 
 <p align="center">
   <strong>An AI-powered mobile assistant that gives blind and low-vision users a pair of eyes.</strong><br>
   Point the camera. Wareeny <em>sees</em>, understands the context, and tells you only what matters.
+</p>
+
+<!-- ANIMATED TYPING TAGLINE (renders live on GitHub) -->
+<p align="center">
+  <a href="#-wareeny--وريني">
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&duration=3000&pause=900&color=02569B&center=true&vCenter=true&width=720&lines=Reads+the+sign%2C+not+every+pixel.;One+tap+to+count+money+%26+identify+products.;Real-time+obstacle+%26+danger+alerts.;Your+AI+eyes+%E2%80%94+in+English+%26+%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9." alt="What Wareeny does">
+  </a>
 </p>
 
 <!-- SHIELDS.IO BADGES -->
@@ -25,7 +33,7 @@
   <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Platform">
   <img src="https://img.shields.io/badge/Languages-English%20%7C%20العربية-orange?style=flat-square" alt="Languages">
   <img src="https://img.shields.io/badge/Accessibility-First-blueviolet?style=flat-square" alt="Accessibility First">
-  <img src="https://img.shields.io/badge/Build-Passing-success?style=flat-square&logo=githubactions&logoColor=white" alt="Build">
+  <img src="https://img.shields.io/badge/Status-Complete-success?style=flat-square" alt="Status">
   <img src="https://img.shields.io/badge/License-Academic-lightgrey?style=flat-square" alt="License">
 </p>
 
@@ -42,13 +50,13 @@
 - [Key Features](#-key-features)
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
 - [Getting Started](#-getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Environment Variables](#environment-variables)
   - [Running Locally](#running-locally)
 - [Usage](#-usage)
-- [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
 - [License](#-license)
 - [Acknowledgements](#-acknowledgements)
@@ -72,15 +80,15 @@ hard real-time safety stays on fast, deterministic on-device computer vision, wh
 needs *understanding* is driven by a vision-language model (VLM) — on-device first for privacy, cloud
 as the heavy-lifting fallback.
 
-<!-- SCREENSHOTS / GIFs -->
+<!-- SCREENSHOTS / GIFs — TODO: add real demo captures to docs/assets/ then uncomment:
 <p align="center">
-  <!-- TODO: Replace with real screenshots / demo GIFs -->
   <img src="docs/assets/screen-read.gif"   alt="Reading mode demo"   width="30%">
   &nbsp;
   <img src="docs/assets/screen-scan.gif"   alt="Scan mode demo"      width="30%">
   &nbsp;
   <img src="docs/assets/screen-navigate.gif" alt="Navigation demo"   width="30%">
 </p>
+-->
 
 ---
 
@@ -166,6 +174,29 @@ model, and the UI never freezes on inference:
 | **Kotlin / Swift** | Native bridges (camera, haptics, battery/thermal, downloads) |
 | **shared_preferences** | Local settings & lightweight persistence |
 | **flutter_lints** | Static analysis & code style |
+
+---
+
+## 📁 Project Structure
+
+```text
+wareeny/
+├── lib/                       # Flutter app
+│   ├── main.dart              # Minimal entry point
+│   ├── app/                   # Bootstrap & root app setup
+│   ├── core/                  # Config, DI, theme, localization, emergency
+│   ├── presentation/          # Feature screens (home, navigation, scan,
+│   │                          #   read, stuff_finder, voice, settings…)
+│   └── shared/                # VLM, danger, navigation, object detection,
+│                              #   camera & native bridges
+├── backend/                   # FastAPI cloud VLM service (Ollama → Gemma 4)
+├── assets/models/             # On-device models (int8 TFLite + CoreML)
+├── android/ · ios/            # Native platform projects
+├── test/                      # Unit & widget tests
+└── docs/                      # Architecture, contracts & design notes
+```
+
+See [`RULES.md`](RULES.md) for the layering conventions behind this structure.
 
 ---
 
@@ -261,24 +292,6 @@ Once running, the app opens to a camera-first interface controlled by gesture an
 
 All feedback is spoken and haptic, prioritized so that **safety alerts always interrupt** lower-priority
 speech. Spoken output follows the app language (English or Arabic).
-
----
-
-## 🗺️ Roadmap
-
-The full delivery roadmap (`Phase A → G`) around the VLM-assistant core is **complete** ✅ — the
-VLM core & reading, unified scan, voice Q&A & scene describe, feedback/mode backbone, realtime CV
-safety & finders, on-device model lifecycle, and the cloud backend with storage all shipped in the
-graduation build.
-
-**Ideas beyond the thesis scope:**
-
-- 🧠 **Conversational memory** — multi-turn Q&A about a scene (v1 is intentionally one-shot).
-- 💱 **More currencies** — extend the money-scan beyond EGP.
-- 🌍 **Additional languages** — beyond the current English/Arabic support.
-- 🏪 **Public release** — Play Store / App Store distribution.
-
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full phase-by-phase plan and design decisions.
 
 ---
 
